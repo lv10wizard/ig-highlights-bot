@@ -2,8 +2,8 @@ import time
 
 from utillib import logger
 
-from ...constants import DEFAULT_BLACKLIST_PATH
 from _database import Database
+from constants import BLACKLIST_DEFAULTS_PATH
 
 
 class BlacklistDatabase(Database):
@@ -49,18 +49,18 @@ class BlacklistDatabase(Database):
         if self.do_seed:
             logger.prepend_id(logger.debug, self,
                     'Seeding blacklist database from \'{path}\' ...',
-                    path=DEFAULT_BLACKLIST_PATH,
+                    path=BLACKLIST_DEFAULTS_PATH,
             )
 
             try:
-                with open(DEFAULT_BLACKLIST_PATH, 'rb') as fd:
+                with open(BLACKLIST_DEFAULTS_PATH, 'rb') as fd:
                     # assumption: all lines are subreddits
                     subreddits = fd.read().split('\n')
 
             except OSError as e:
                 logger.prepend_id(logger.error, self,
                         'Failed to seed blacklist database from \'{path}\'!', e,
-                        path=DEFAULT_BLACKLIST_PATH,
+                        path=BLACKLIST_DEFAULTS_PATH,
                 )
 
             else:
