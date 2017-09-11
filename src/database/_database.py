@@ -4,6 +4,8 @@ import sqlite3
 
 from utillib import logger
 
+from src import config
+
 
 class FailedInit(Exception):
     def __init__(self, error, *args, **kwargs):
@@ -21,7 +23,7 @@ class Database(object):
     def resolve_path(path):
         if path == ':memory:':
             return path
-        return os.path.realpath( os.path.abspath( os.path.expanduser(path) ) )
+        return config.resolve_path(path)
 
     def __init__(self, path):
         self.path = path

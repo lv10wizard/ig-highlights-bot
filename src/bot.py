@@ -18,6 +18,7 @@ from utillib import logger
 
 from src import (
         comments,
+        config,
         database,
         instagram,
         mentions,
@@ -269,44 +270,34 @@ class IgHighlightsBot(object):
 
         if (
                 hasattr(err, 'error_type')
-                and isinstance(err.error_type, str)
+                and isinstance(err.error_type, basestring)
                 and err.error_type.lower() == 'ratelimit'
         ):
-            to_seconds = {
-                    's': 1,
-                    'm': 60,
-                    'h': 60 * 60,
-                    'd': 24 * 60 * 60,
-            }
             delay = 10 * 60
 
-            match = re.search(
-                    r'(\d+) ({0})'.format('|'.join(to_seconds.keys())),
-                    err.message,
-                    flags=re.IGNORECASE
+            logger.prepend_id(logger.debug, self,
+                    '{error_type}: trying to find proper delay ...',
+                    error_type=err.error_type,
             )
-            if match:
-                num = match.group(0)
-                unit = match.group(1)
+            try:
+                delay = config.parse_time(err.message)
+
+            except config.InvalidTime:
                 logger.prepend_id(logger.debug, self,
-                        'Found rate-limit delay: {num} {unit}',
-                        num=num,
-                        unit=unit,
+                        'Failed to set appropriate delay;'
+                        ' using default ({time})',
+                        time=delay,
                 )
-                try:
-                    num = int(num)
-                    num *= to_seconds[unit]
-                except (KeyError, TypeError, ValueError) as e:
-                    logger.prepend_id(logger.error, self,
-                            'Failed to set delay to {num} {unit}', e,
-                            num=num,
-                            unit=unit,
-                    )
-                else:
-                    delay = num
+
+            else:
+                logger.prepend_id(logger.debug, self,
+                        'Found rate-limit delay: {time}',
+                        time=parsed_delay,
+                )
 
             logger.prepend_id(logger.error, self,
-                    'Rate limited! Trying again in {time} ...', err,
+                    'Rate limited! Retrying \'{callback}\' in {time} ...', err,
+                    callback=callback.__name__,
                     time=delay,
             )
             time.sleep(delay)
