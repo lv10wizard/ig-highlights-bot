@@ -12,7 +12,9 @@ class ReplyDatabase(Database):
                 'comments('
                 '   comment_id TEXT PRIMARY KEY'
                 '   submission_id TEXT NOT NULL,'
-                '   ig_user TEXT NOT NULL,'
+                # case-insensitive
+                # https://stackoverflow.com/a/973785
+                '   ig_user TEXT NOT NULL COLLATE NOCASE,'
                 # apply unique constraint on specified keys
                 # https://stackoverflow.com/a/15822009
                 '   UNIQUE(submission_id, ig_user)'
@@ -22,12 +24,12 @@ class ReplyDatabase(Database):
     def _insert(self, comment, ig_list):
         if isinstance(ig_list, (list, tuple)):
             values = [
-                    (comment.id, comment.submission.id, ig.user.lower())
+                    (comment.id, comment.submission.id, ig.user)
                     for ig in ig_list
             ]
         else:
             # assume ig_list is a single Instagram instance
-            values = [(comment.id, comment.submission.id, ig_list.user.lower())]
+            values = [(comment.id, comment.submission.id, ig_list.user)]
 
         with self._db as connection:
             connection.executemany(
