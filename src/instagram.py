@@ -8,7 +8,7 @@ from utillib (
 )
 
 from src import (
-        history,
+        database,
 )
 
 
@@ -73,7 +73,7 @@ class Instagram(object):
         return user
 
     def __init__(self, link):
-        self.history = history.History()
+        # self.history = database.Database()
         self.user = Instagram._parse_user_from_link(link)
         self.link = None
         if self.user:

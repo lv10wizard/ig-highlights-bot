@@ -17,7 +17,7 @@ from utillib import (
 from src import (
         config,
         comments,
-        history,
+        database,
         instagram,
         mentions,
         messages,
@@ -45,7 +45,7 @@ class IgHighlightsBot(object):
 
     def __init__(self):
         # self.config = config.Config()
-        # self.reply_history = history.History()
+        self.reply_history = database.ReplyDatabase()
         # self.messages = messages.Messages()
         # self.mentions = mentions.Mentions()
 
