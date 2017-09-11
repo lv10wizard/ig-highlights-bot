@@ -1,5 +1,8 @@
 from getpass import getpass
+import multiprocessing
+import Queue
 import re
+import signal
 import sys
 import time
 from urlparse import urlparse
@@ -28,11 +31,11 @@ class IgHighlightsBot(object):
     """
     """
 
-    WANT_MORE = 'More'
+    COMMENT_CHARACTER_LIMIT = 1e4 # 10 000
 
     # TODO: move to config
     ME = 'ig-highlights-bot'
-    AUTHOR = '/u/lv10wizard'
+    AUTHOR = 'lv10wizard'
     SITENAME_PATH = os.path.join(
             os.path.dirname(
                 os.path.realpath(os.path.abspath(__file__))
@@ -43,17 +46,28 @@ class IgHighlightsBot(object):
             'SITENAME',
     )
 
-    def __init__(self):
-        # self.config = config.Config()
+    def __init__(self, cfg):
+        signal.signal(signal.SIGINT, self.graceful_exit)
+        signal.signal(signal.SIGTERM, self.graceful_exit)
+
+        self.config = cfg
         self.reply_history = database.ReplyDatabase()
+        # queue of submissions to be processed (produced through separate
+        # processes -- eg. summoned to post through user mention)
+        self.submission_queue = multiprocessing.JoinableQueue()
         # self.messages = messages.Messages()
-        # self.mentions = mentions.Mentions()
+        # self.mentions = mentions.Mentions(self.submission_queue)
 
         self._reddit = praw.Reddit(
                 site_name=self.site_name,
                 user_agent=self.user_agent,
         )
+        self.try_set_username()
         self.try_set_password()
+
+        # try to auth immediately to catch anything wrong with credentials
+        # TODO: wrap in try/catch to print human-readable message
+        self._reddit.user.me()
 
         logger.prepend_id(logger.debug, self,
                 'client id: {client_id}'
@@ -66,6 +80,21 @@ class IgHighlightsBot(object):
 
     def __str__(self):
         return self.username_raw
+
+    def graceful_exit(self, signum=None, frame=None):
+        """
+        """
+        pass
+
+    def try_set_username(self):
+        """
+        Asks the user to enter the bot account username if not defined in
+        praw.ini
+        """
+        if isinstance(self._reddit.config.username, praw.config._NotSet):
+            self._reddit.config.username = raw_input('bot account username: ')
+            self.warn_if_wrong_praw_version()
+            self._reddit._prepare_prawcore()
 
     def try_set_password(self):
         """
@@ -155,7 +184,7 @@ class IgHighlightsBot(object):
         except AttributeError:
             version = '0.1' # TODO: read from file
             self.__user_agent = (
-                    '{platform}:{appname}:{version} (by {author})'
+                    '{platform}:{appname}:{version} (by /u/{author})'
             ).format(
                     platform=sys.platform,
                     appname=IgHighlightsBot.ME,
@@ -165,79 +194,135 @@ class IgHighlightsBot(object):
             user_agent = self.__user_agent
         return user_agent
 
-    def _format_reply(self, comment, ig):
-        more = ' ^^Reply ^^`{more}` ^^for ^^more ^^highlights'.format(
-                more=IgHighlightsBot.WANT_MORE,
-        )
+    def _format_reply(self, ig_list):
+        # TODO: move to separate file for easier maintanence (this file getting too big)
+        #   - loop over ig_list
+        #   ? split into multiple replies if > COMMENT_CHARACTER_LIMIT
+        #       or maybe just ignore comment?
+        #       or maybe blacklist the user that posted the comment?
+
         header = '### [{user}]({link}) highlights:'.format(
                 user=ig.user,
                 link=ig.link,
         )
-        # only allow more to be posted once per comment chain
-        if False: # TODO
-            header += more
+
+        # https://www.reddit.com/message/compose/
+        #   ?to={author/bot}&subject={subject}&message={message_skeleton}
+
         footer = (
                 '\n---\n^Beep ^Boop. ^I ^am ^definitely ^human.'
                 ' ^[[Contact]({contact_url})]'
                 # ' ^[[Source]({source_url})]'
         ).format(
                 contact_url= >> TODO <<,
-                # source_url= >> TODO <<,
+                # source_url= TODO ,
         )
 
-    def reply(self, comment, ig, is_callback=False):
+        return [] # TODO
+
+    def reply(self, comment, ig_list, callback_depth=0):
         """
+        Reply to a single comment with (potentially) multiple instagram user
+        highlights
         """
         logger.prepend_id(logger.debug, self,
                 '',
         )
-        ig = instagram.Instagram(link)
-        if ig.valid:
-            try:
-                # TODO: comment.reply(...); history.add(comment.id, ig.user)
-                pass
 
-            except Forbidden as e:
-                logger.prepend_id(logger.error, self,
-                        'Failed to reply to comment {color_sub}/{color_id}!',
-                        e, True,
-                        color_sub=comment.subreddit_name_prefixed,
-                        color_id=comment.id,
-                )
+        reply_text_list = self._format_reply(ig_list)
+        if len(reply_text_list) > 0: # TODO: self.cfg[config.MAX_HIGHLIGHTS_REPLIES]:
+            logger.prepend_id(logger.debug, self,
+                    '{color_comment} ({color_author}) almost made me reply'
+                    ' #{num} times: skipping.',
+                    color_comment=comments.display_id(comment),
+                    color_author=(
+                        comments.author.name.lower()
+                        if comments.author
+                        # can this happen? (no author but has body text)
+                        else '[deleted/removed]'
+                    ),
+                    num=len(reply_text_list),
+            )
+            # TODO? temporarily blacklist (O(days)) user? could be trolling bot
+            return
 
-            except praw.exceptions.APIException as e:
-                if is_callback:
-                    # this is the second (or more) time that reply has failed;
-                    # something is probably wrong
-                    raise
+        try:
+            # TODO: comment.reply(...)
+            pass
 
-                self._handle_rate_limit(
-                        err=e,
-                        callback=self.reply,
-                        callback_kwargs={
-                            'comment': comment,
-                            'ig': ig,
-                            'is_callback': True,
-                        },
-                )
+        except Forbidden as e:
+            logger.prepend_id(logger.error, self,
+                    'Failed to reply to comment {color_comment}!', e, True,
+                    color_comment=comments.display_id(comment),
+            )
 
-    def _handle_rate_limit(self, err, callback, callback_args=(),
+        except praw.exceptions.APIException as e:
+            # TODO: map APIException handlers to their corresponding error_type
+            #   - ratelimit
+            #   - too_old
+            #   - no_text
+            #   - no_links
+            self._handle_rate_limit(
+                    err=e,
+                    depth=callback_depth,
+                    callback=self.reply,
+                    callback_kwargs={
+                        'comment': comment,
+                        'ig_list': ig_list,
+                        'callback_depth': callback_depth+1,
+                    },
+            )
+
+        else:
+            self.reply_history.insert(comment, ig)
+
+    def _handle_rate_limit(self, err, depth, callback, callback_args=(),
             callback_kwargs={},
     ):
         """
         """
+        if depth > 10:
+            # (N+1)-th try in chain.. something is wrong
+            raise
+
         if (
                 hasattr(err, 'error_type')
                 and isinstance(err.error_type, str)
-                and re.search(r'ratelimit', err.error_type.lower())
+                and err.error_type.lower() == 'ratelimit'
         ):
-            delay = 10
+            to_seconds = {
+                    's': 1,
+                    'm': 60,
+                    'h': 60 * 60,
+                    'd': 24 * 60 * 60,
+            }
+            delay = 10 * 60
 
-            try:
-            except (TypeError, ValueError):
-                pass
+            match = re.search(
+                    r'(\d+) ({0})'.format('|'.join(to_seconds.keys())),
+                    err.message,
+                    flags=re.IGNORECASE
+            )
+            if match:
+                num = match.group(0)
+                unit = match.group(1)
+                logger.prepend_id(logger.debug, self,
+                        'Found rate-limit delay: {num} {unit}',
+                        num=num,
+                        unit=unit,
+                )
+                try:
+                    num = int(num)
+                    num *= to_seconds[unit]
+                except (KeyError, TypeError, ValueError) as e:
+                    logger.prepend_id(logger.error, self,
+                            'Failed to set delay to {num} {unit}', e,
+                            num=num,
+                            unit=unit,
+                    )
+                else:
+                    delay = num
 
-            delay *= 60
             logger.prepend_id(logger.error, self,
                     'Rate limited! Trying again in {time} ...', err,
                     time=delay,
@@ -248,22 +333,243 @@ class IgHighlightsBot(object):
         else:
             raise
 
+    def by_me(self, comment):
+        """
+        Returns True if the comment was posted by the bot
+        """
+        return (
+                # in case of deleted/removed
+                bool(comment.author)
+                and comment.author.name.lower() == self.username_raw.lower()
+        )
+
+    def is_blacklisted(self, comment):
+        """
+        Returns the name of the blacklisted subreddit/user (str) if the comment
+        was posted to a blacklisted subreddit or by a blacklisted user
+                None otherwise
+        """
+        return None # TODO (prepend with u/ or r/)
+
+    def can_reply(self, comment):
+        """
+        Returns True if
+            - comment not already replied to by the bot
+            - the bot has not replied too many times to the submission (too many
+              defined in config)
+            - comment not archived (too old)
+            - comment not itself posted by the bot
+            - comment not in a blacklisted subreddit or posted by a blacklisted
+              user
+        """
+        # XXX: the code is fully written out instead of being a simple boolean
+        # (eg. return not (a or b or c)) so that appropriate logging calls can
+        # be made
+
+        # check the database first (guaranteed to incur no network request)
+        already_replied = self.reply_history.has_replied(comment)
+        if already_replied:
+            logger.prepend_id(logger.debug, self,
+                    'I already replied to {color_comment}: skipping.',
+                    color_comment=comments.display_id(comment),
+            )
+            return False
+
+        replies = self.reply_history.replied_comments_for_submission(
+                comment.submission.id
+        )
+        if False: # TODO: len(replies) > self.cfg[config.MAX_REPLIES_PER_POST]
+            logger.prepend_id(logger.debug, self,
+                    'I\'ve made too many replies (#{num}) to {color_post}:'
+                    ' skipping.',
+                    # num=self.cfg[config.MAX_REPLIES_PER_POST],
+                    num=-1,
+                    color_post=comments.display_id(comment.submission),
+            )
+            return False
+
+        if comment.archived:
+            logger.prepend_id(logger.debug, self,
+                    '{color_comment} is too old: skipping.',
+                    color_comment=comments.display_id(comment),
+            )
+
+        by_me = self.by_me(comment)
+        if by_me:
+            logger.prepend_id(logger.debug, self,
+                    'I posted {color_comment}: skipping.',
+                    color_comment=comments.display_id(comment),
+            )
+            return False
+
+        is_blacklisted = self.is_blacklisted(comment)
+        if is_blacklisted:
+            logger.prepend_id(logger.debug, self,
+                    '{color_comment} is blacklisted ({color_name}): skipping.',
+                    color_comment=comments.display_id(comment),
+                    color_name=is_blacklisted,
+            )
+            return False
+        return True
+
+    def prune_already_posted_users(self, submission_id, ig_usernames):
+        """
+        """
+        already_posted = self.reply_history.replied_ig_users_for_submission(
+                submission_id
+        )
+        pruned = ig_username.intersection(already_posted)
+        ig_usernames -= already_posted
+        if pruned:
+            logger.prepend_id(logger.debug, self,
+                    'Pruned #{num_posted} usernames: {unpack_color_posted}'
+                    '\n\t#{num_users}: {unpack_color_users}',
+                    num_posted=len(pruned),
+                    unpack_color_posted=pruned,
+                    num_users=len(ig_usernames),
+                    unpack_color_users=ig_usernames,
+            )
+        return ig_usernames
+
+    def get_ancestor_tree(self, comment, to_lower=True):
+        """
+        Returns a list of comments starting with the parent of the given
+        comment, traversing up until the root comment is hit. That is, the list
+        is ordered from parent [0] -> root [N-1]. In other words, a reversed
+        comment tree.
+
+        comment (praw.models.Comment) - the comment to get the ancestors of
+        to_lower (bool, optional) - whether the list results should be lower-
+                                    cased
+        """
+
+        # TODO? cache results for each comment-id hit to potentially lower
+        # number of requests made (in the unlikely event that we need the
+        # ancestors of a sibling this comment)
+
+        # https://praw.readthedocs.io/en/latest/code_overview/models/comment.html#praw.models.Comment.parent
+        result = []
+        ancestor = comment
+        refresh_counter = 0
+        while not ancestor.is_root:
+            ancestor = ancestor.parent()
+            result.append(ancestor)
+            if refresh_counter % 9 == 0:
+                ancestor.refresh()
+            refresh_counter += 1
+
+        logger.prepend_id(logger.debug, self,
+                '{color_comment} ancestor authors: [#{num}] {unpack_color}',
+                color_comment=comments.display_id(comment),
+                num=len(result),
+                unpack_color=result,
+        )
+        return result
+
+    def process_submission_queue(self, num=1):
+        """
+        Tries to process num elements in the submission_queue
+
+        num (int, optional) - number of elements to process (halts if the queue
+                                is empty regardless of number of elements
+                                processed).
+        """
+        if not isinstance(num, int) or num < 0:
+            num = 1
+
+        try:
+            for i in range(num):
+                submission = self.submission_queue.get_nowait()
+                logger.prepend_id(logger.debug, self,
+                        '[{i}/{num}] Processing submission {color_submission}'
+                        ' (#{qnum} remaining) ...',
+                        i=i+1,
+                        num=num,
+                        color_submission=submission,
+                        qnum=self.submission_queue.qsize(),
+                )
+
+                for comment in submission.comments.list():
+
+                    # -----
+                    # TODO: move to function so that run_forever can reuse
+                    if comment and self.can_reply(comment):
+                        parsed_comment = comments.Parser(comment)
+                        ig_usernames = self.prune_already_posted_users(
+                                comment.submission.id,
+                                parsed_comment.ig_usernames,
+                        )
+                        if ig_usernames:
+                            ancestor_tree = self.get_ancestor_tree(comment)
+                            author_tree = [
+                                    c.author.name.lower()
+                                    # XXX: specifically insert None for comments
+                                    # missing authors (deleted/removed)
+                                    if bool(c.author) else None
+                                    for c in ancestor_tree
+                            ]
+
+                            logger.prepend_id(logger.debug, self,
+                                    '{color_comment} author tree:'
+                                    ' [#{num}] {unpack_color}',
+                                    color_comment=comments.display_id(comment),
+                                    num=len(author_tree),
+                                    unpack_color=author_tree,
+                            )
+
+                            num_comments_by_me = author_tree.count(
+                                    self.username_raw.lower()
+                            )
+                            # TODO: self.cfg[config.MAX_REPLIES_IN_COMMENT_THREAD]
+                            max_comments_by_me = 0
+                            if num_comments_by_me > max_comments_by_me:
+                                logger.prepend_id(logger.debug, self,
+                                        'I\'ve made too many replies in'
+                                        ' {color_comment}\'s thread: skipping.',
+                                        color_comment=comments.display_id(
+                                            comment
+                                        ),
+                                )
+                                continue # TODO: change to 'return'
+
+                            ig_list = [
+                                    instagram.Instagram(ig_user)
+                                    for ig_user in ig_usernames
+                            ]
+                            # TODO: examine if any 404 or otherwise invalid
+                            # & increment comment.author.name.lower()'s
+                            # to_blacklist count
+                            #   if count > threshold => add to temporary blacklist
+                            #       ( temporary as in O(days) )
+                            # >>> store to_blacklist in memory?
+                            self.reply(comment, ig_list)
+                    # -----
+
+                self.submission_queue.task_done()
+
+        except Queue.Empty:
+            pass
+
     def run_forever(self):
         """
         """
         # TODO: start inbox message forwarding process
         # TODO: start mentions parser process
-        # TODO: start comment replies process
+        # TODO? start comment replies process
         subs = self._reddit.subreddit(self.subs)
         try:
             for comment in subs.stream.comments(pause_after=0):
-                pass # TODO: if is_valid_link(c) => reply
+                # process a single submission from a producer process
+                # (eg. summoned through user mention)
+                self.process_submission_queue()
+
+                # TODO: self._consider_reply(comment) .. maybe name something better
 
         except Redirect as e:
             if re.search(r'/subreddits/search', e.message):
                 logger.prepend_id(logger.error, self,
                         'One or more non-existent subreddits:'
-                        ' {unpack_color}', e,
+                        ' {unpack_color}', e, True,
                         unpack_color=subs.split('+'),
                 )
 

@@ -170,25 +170,25 @@ class ReplyDatabase(Database):
 
     def replied_comments_for_submission(self, submission_id):
         """
-        Returns a list of comment ids that the bot has replied to for a given
+        Returns a set of comment ids that the bot has replied to for a given
         post
         """
         cursor = self._db.execute(
                 'SELECT comment_id FROM comments WHERE submission_id = ?',
                 (submission_id,),
         )
-        return [row['comment_id'] for row in cursor]
+        return set([row['comment_id'] for row in cursor])
 
     def replied_ig_users_for_submission(self, submission_id):
         """
-        Returns the list of instagram user names that the bot has replied with
+        Returns the set of instagram user names that the bot has replied with
         for a given post
         """
         cursor = self._db.execute(
                 'SELECT ig_user FROM comments WHERE submission_id = ?',
                 (submission_id,),
         )
-        return [row['ig_user'] for row in cursor]
+        return set([row['ig_user'] for row in cursor])
 
     def has_replied(self, comment):
         """

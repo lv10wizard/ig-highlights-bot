@@ -63,18 +63,12 @@ class Instagram(object):
     """
     """
 
-    @staticmethod
-    def _parse_user_from_link(link):
-        user = None
-        parsed = urlparse(link)
-        link_path = filter(None, parsed.path.split('/'))
-        if len(link_path) == 1:
-            user = link_path[0]
-        return user
+    BASE_URL = 'instagram.com'
+    BASE_URL_SHORT = 'instagr.am'
 
-    def __init__(self, link):
+    def __init__(self, user):
         # self.history = database.Database()
-        self.user = Instagram._parse_user_from_link(link)
+        self.user = user
         self.link = None
         if self.user:
             # hard-code the landing page link to sanitize any trailing queries
