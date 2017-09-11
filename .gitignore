@@ -1,0 +1,3 @@
+*.pyc
+*.api
+praw.ini
