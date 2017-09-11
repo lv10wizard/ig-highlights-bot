@@ -6,6 +6,12 @@ import sys
 
 from utillib import logger
 
+from constants import (
+        CONFIG_ROOT_DIR,
+        DATA_ROOT_DIR,
+        DEFAULT_APP_NAME,
+)
+
 
 # ######################################################################
 # key constants
@@ -26,8 +32,6 @@ LOGGING_PATH                  = 'logging_path'
 INSTAGRAM_DB_PATH             = 'instagram_db_path'
 
 # ######################################################################
-
-DEFAULT_APP_NAME = 'ig-highlights-bot'
 
 def resolve_path(path):
     return os.path.realpath( os.path.abspath( os.path.expanduser(path) ) )
@@ -102,37 +106,7 @@ class Config(object):
     """
 
     SECTION = 'DEFAULT'
-
-    HOME = None
-    if sys.platform == 'win32':
-        # windows
-        try:
-            BASEDIR = os.environ['APPDATA']
-        except KeyError:
-            # fuck windows (can this happen though?)
-            raise
-        try:
-            HOME = os.environ['USERPROFILE']
-        except KeyError:
-            raise
-
-    elif sys.platform == 'darwin':
-        # https://stackoverflow.com/a/3376074
-        BASEDIR = '~/Library/Application Support'
-
-    else:
-        # linux / cygwin / other
-        try:
-            BASEDIR = os.environ['XDG_CONFIG_HOME']
-        except KeyError:
-            BASEDIR = '~/.config'
-
-    ME = 'ig_highlights_bot'
-    BASEDIR = os.path.join(BASEDIR, ME)
-    if not HOME:
-        HOME = '~'
-    HOME = os.path.join(HOME, ME)
-    PATH = os.path.join(BASEDIR, 'bot.cfg')
+    PATH = os.path.join(CONFIG_ROOT_DIR, 'bot.cfg')
 
     # XXX: this does not account for leap seconds/years and assumes all months
     # are 30 days.
@@ -156,7 +130,7 @@ class Config(object):
                 PRAW_SITENAME: DEFAULT_APP_NAME,
 
                 # path to the replies database file
-                REPLIES_DB_PATH: os.path.join(Config.HOME, 'replies.db'),
+                REPLIES_DB_PATH: os.path.join(DATA_ROOT_DIR, 'replies.db'),
 
                 # max number of replies that can be made to the same comment
                 # (in the event that a reply is > COMMENT_CHARACTER_LIMIT)
@@ -172,16 +146,16 @@ class Config(object):
                 MAX_REPLIES_IN_COMMENT_THREAD: '3',
 
                 # path to the blacklist database file
-                BLACKLIST_DB_PATH: os.path.join(Config.HOME, 'blacklist.db'),
+                BLACKLIST_DB_PATH: os.path.join(DATA_ROOT_DIR, 'blacklist.db'),
 
                 # the amount of time temp bans last (see parse_time)
                 BLACKLIST_TEMP_BAN_TIME: '4d',
 
                 # the path where log files are stored
-                LOGGING_PATH: os.path.join(Config.HOME, 'logs'),
+                LOGGING_PATH: os.path.join(DATA_ROOT_DIR, 'logs'),
 
                 # path to the instagram database file
-                INSTAGRAM_DB_PATH: os.path.join(Config.HOME, 'instagram.db'),
+                INSTAGRAM_DB_PATH: os.path.join(DATA_ROOT_DIR, 'instagram.db'),
         }
 
     def __init__(self):
@@ -346,7 +320,6 @@ class Config(object):
 
 
 __all__ = [
-        'DEFAULT_APP_NAME',
         'resolve_path',
         'parse_time',
         'InvalidTime',
