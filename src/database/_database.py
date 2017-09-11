@@ -102,6 +102,16 @@ class Database(object):
                                 type=type(self._create_table_data)
                             )
                     )
+
+                try:
+                    self._initialize_tables(db)
+                except sqlite3.IntegrityError:
+                    # probably attempted a duplicate INSERT (UNIQUE constraint)
+                    # => tables were already initialized
+                    logger.prepend_id(logger.error, self,
+                            'Failed to initialize tables!', e,
+                    )
+
                 db.commit()
 
             except sqlite3.DatabaseError as e:
@@ -120,8 +130,9 @@ class Database(object):
         try:
             self._insert(*args, **kwargs)
 
-        except sqlite3.IntegrityError as e:
-            # probably UNIQUE constraint failed
+        except Exception as e:
+            # probably UNIQUE or CHECK constraint failed
+            # or could be something more nefarious...
             logger.prepend_id(logger.error, self,
                     'INSERT Failed!'
                     '\n\targs={args}'
@@ -129,6 +140,16 @@ class Database(object):
                     args=args,
                     kwargs=kwargs,
             )
+
+    def _initialize_tables(self, db):
+        """
+        Overrideable method for child classes to do extra initialization of
+        tables after creation.
+
+        ** IMPORTANT: self._db should not be referenced within this method **
+        Instead, use the db parameter.
+        """
+        pass
 
     @abc.abstractproperty
     def _create_table_data(self): pass
@@ -140,7 +161,7 @@ class Database(object):
     @abc.abstractmethod
     def delete(self, *args, **kwargs): pass
     @abc.abstractmethod
-    def udpate(self, *args, **kwargs): pass
+    def update(self, *args, **kwargs): pass
 
 
 __all__ = [

@@ -1,5 +1,6 @@
 from getpass import getpass
 import multiprocessing
+import os
 import Queue
 import re
 import signal
@@ -10,15 +11,12 @@ from urlparse import urlparse
 import praw
 from prawcore.exceptions import (
         Forbidden,
+        OAuthException,
         Redirect,
 )
-from utillib import (
-        logger,
-        soup,
-)
+from utillib import logger
 
 from src import (
-        config,
         comments,
         database,
         instagram,
@@ -33,25 +31,21 @@ class IgHighlightsBot(object):
 
     COMMENT_CHARACTER_LIMIT = 1e4 # 10 000
 
-    # TODO: move to config
-    ME = 'ig-highlights-bot'
     AUTHOR = 'lv10wizard'
-    SITENAME_PATH = os.path.join(
-            os.path.dirname(
-                os.path.realpath(os.path.abspath(__file__))
-            ),
-            # XXX: assumes the this file is one directory below where the
-            # SITENAME file lives
-            '..',
-            'SITENAME',
-    )
 
     def __init__(self, cfg):
         signal.signal(signal.SIGINT, self.graceful_exit)
         signal.signal(signal.SIGTERM, self.graceful_exit)
 
-        self.config = cfg
-        self.reply_history = database.ReplyDatabase()
+        self.cfg = cfg
+        self.reply_history = database.ReplyDatabase(self.cfg.replies_db_path)
+
+        self.blacklist = database.BlacklistDatabase(
+                path=self.cfg.blacklist_db_path,
+                cfg=cfg,
+                do_seed=os.path.exists(self.cfg.blacklist_db_path),
+        )
+
         # queue of submissions to be processed (produced through separate
         # processes -- eg. summoned to post through user mention)
         self.submission_queue = multiprocessing.JoinableQueue()
@@ -59,15 +53,23 @@ class IgHighlightsBot(object):
         # self.mentions = mentions.Mentions(self.submission_queue)
 
         self._reddit = praw.Reddit(
-                site_name=self.site_name,
+                site_name=self.cfg.praw_sitename,
                 user_agent=self.user_agent,
         )
         self.try_set_username()
         self.try_set_password()
 
         # try to auth immediately to catch anything wrong with credentials
-        # TODO: wrap in try/catch to print human-readable message
-        self._reddit.user.me()
+        try:
+            self._reddit.user.me()
+
+        except OAuthException as e:
+            logger.prepend_id(logger.error, self,
+                    'Login failed! Please check that praw.ini contains the'
+                    ' correct login information under the section:'
+                    ' \'[{section}]\'', e, True,
+                    section=self.cfg.praw_sitename,
+            )
 
         logger.prepend_id(logger.debug, self,
                 'client id: {client_id}'
@@ -84,7 +86,7 @@ class IgHighlightsBot(object):
     def graceful_exit(self, signum=None, frame=None):
         """
         """
-        pass
+        pass # TODO
 
     def try_set_username(self):
         """
@@ -140,44 +142,17 @@ class IgHighlightsBot(object):
                 )
 
     @property
-    def site_name(self):
-        # TODO: move to config
-        result = ME
-        try:
-            with open(IgHighlightsBot.SITENAME_PATH, 'rb') as fd:
-                sitename = fd.read()
-        except (IOError, OSError) as e:
-            logger.prepend_id(logger.info, self,
-                    'Failed to read sitename: defaulting to {result}',
-                    result=result,
-            )
-        else:
-            if not sitename:
-                logger.prepend_id(logger.info, self,
-                        'Invalid sitename=\'{sitename}\';'
-                        ' defaulting to {result}',
-                        sitename=sitename,
-                        result=result,
-                )
-            else:
-                result = sitename
-        return result
-
-    @property
     def username_raw(self):
-        """
-        """
         return self._reddit.config.username
 
     @property
     def username(self):
-        """
-        """
         return '/u/{0}'.format(self.username_raw)
 
     @property
     def user_agent(self):
         """
+        Memoized user agent string
         """
         try:
             user_agent = self.__user_agent
@@ -187,7 +162,7 @@ class IgHighlightsBot(object):
                     '{platform}:{appname}:{version} (by /u/{author})'
             ).format(
                     platform=sys.platform,
-                    appname=IgHighlightsBot.ME,
+                    appname=self.cfg.app_name,
                     version=version,
                     author=IgHighlightsBot.AUTHOR,
             )
@@ -230,7 +205,7 @@ class IgHighlightsBot(object):
         )
 
         reply_text_list = self._format_reply(ig_list)
-        if len(reply_text_list) > 0: # TODO: self.cfg[config.MAX_HIGHLIGHTS_REPLIES]:
+        if len(reply_text_list) > self.cfg.max_highlights_replies:
             logger.prepend_id(logger.debug, self,
                     '{color_comment} ({color_author}) almost made me reply'
                     ' #{num} times: skipping.',
@@ -243,8 +218,15 @@ class IgHighlightsBot(object):
                     ),
                     num=len(reply_text_list),
             )
-            # TODO? temporarily blacklist (O(days)) user? could be trolling bot
+            # TODO? temporarily blacklist (O(days)) user? could be trying to
+            # break the bot
             return
+
+        logger.prepend_id(logger.debug, self,
+                'Replying to {color_comment}:\n{reply}',
+                color_comment=comments.display_id(comment),
+                reply='\n\n'.join(reply_text_list),
+        )
 
         try:
             # TODO: comment.reply(...)
@@ -274,7 +256,7 @@ class IgHighlightsBot(object):
             )
 
         else:
-            self.reply_history.insert(comment, ig)
+            self.reply_history.insert(comment, ig_list)
 
     def _handle_rate_limit(self, err, depth, callback, callback_args=(),
             callback_kwargs={},
@@ -349,7 +331,15 @@ class IgHighlightsBot(object):
         was posted to a blacklisted subreddit or by a blacklisted user
                 None otherwise
         """
-        return None # TODO (prepend with u/ or r/)
+        subreddit = comment.subreddit.display_name
+        if self.blacklist.is_blacklisted_subreddit(subreddit):
+            return comment.subreddit_name_prefixed
+
+        author = comment.author.name
+        if self.blacklist.is_blacklisted_user(author):
+            return 'u/{0}'.format(author)
+
+        return None
 
     def can_reply(self, comment):
         """
@@ -378,12 +368,11 @@ class IgHighlightsBot(object):
         replies = self.reply_history.replied_comments_for_submission(
                 comment.submission.id
         )
-        if False: # TODO: len(replies) > self.cfg[config.MAX_REPLIES_PER_POST]
+        if len(replies) > self.cfg.max_replies_per_post:
             logger.prepend_id(logger.debug, self,
                     'I\'ve made too many replies (#{num}) to {color_post}:'
                     ' skipping.',
-                    # num=self.cfg[config.MAX_REPLIES_PER_POST],
-                    num=-1,
+                    num=self.cfg.max_replies_per_post,
                     color_post=comments.display_id(comment.submission),
             )
             return False
@@ -520,9 +509,8 @@ class IgHighlightsBot(object):
                             num_comments_by_me = author_tree.count(
                                     self.username_raw.lower()
                             )
-                            # TODO: self.cfg[config.MAX_REPLIES_IN_COMMENT_THREAD]
-                            max_comments_by_me = 0
-                            if num_comments_by_me > max_comments_by_me:
+                            max_by_me = self.cfg.max_replies_in_comment_thread
+                            if num_comments_by_me > max_by_me:
                                 logger.prepend_id(logger.debug, self,
                                         'I\'ve made too many replies in'
                                         ' {color_comment}\'s thread: skipping.',

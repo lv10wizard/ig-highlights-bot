@@ -2,10 +2,9 @@ import re
 import os
 from urlparse import urlparse
 
-from utillib (
-        logger,
-        soup,
-)
+from bs4 import BeautifulSoup
+import requests
+from utillib logger
 
 from src import (
         database,
