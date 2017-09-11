@@ -324,7 +324,7 @@ class IgHighlightsBot(object):
         """
         subreddit = comment.subreddit.display_name
         if self.blacklist.is_blacklisted_subreddit(subreddit):
-            return comment.subreddit_name_prefixed
+            return 'r/{0}'.format(subreddit)
 
         author = comment.author.name
         if self.blacklist.is_blacklisted_user(author):

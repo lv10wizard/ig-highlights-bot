@@ -1,3 +1,4 @@
+import re
 import time
 
 from utillib import logger
@@ -66,7 +67,11 @@ class BlacklistDatabase(Database):
             else:
                 sub_type = BlacklistDatabase.TYPE_SUBREDDIT
                 subreddits = [
-                    (sub.strip(), sub_type, -1)
+                    (
+                        self.__sanitize(sub, sub_type),
+                        sub_type,
+                        -1,
+                    )
                     for sub in subreddits
                     if bool(sub.strip())
                 ]
@@ -77,6 +82,14 @@ class BlacklistDatabase(Database):
                             subreddits,
                     )
 
+    def __sanitize(self, name, name_type):
+        # coerce user profile "subreddits" to their display name
+        # eg. 'u/foobar' -> 'u_foobar'
+        # https://reddit.com/6cfu55
+        if name_type == BlacklistDatabase.TYPE_SUBREDDIT:
+            return re.sub(r'^/?u/', 'u_', name.strip())
+        return name # TODO? do names need sanitization?
+
     def _insert(self, name, name_type, is_tmp=False):
         """
         name (str) - the name to blacklist
@@ -84,6 +97,7 @@ class BlacklistDatabase(Database):
         is_tmp (bool, optional) - whether the name is a temporary blacklist
         """
         now = time.time() if is_tmp else -1
+        name = self.__sanitize(name, name_type)
         with self._db as connection:
             connection.execute(
                     'INSERT INTO blacklist(name, type, start) VALUES(?, ?, ?)',
@@ -94,6 +108,7 @@ class BlacklistDatabase(Database):
         """
         Returns whether the given subreddit is blacklisted
         """
+        name = self.__sanitize(name, BlacklistDatabase.TYPE_SUBREDDIT)
         cursor = self._db.execute(
                 'SELECT start FROM blacklist WHERE name = ? AND type = ?',
                 (name, BlacklistDatabase.TYPE_SUBREDDIT),
@@ -129,9 +144,10 @@ class BlacklistDatabase(Database):
         elapsed = time.time() - start
         remaining = self.cfg.blacklist_temp_ban_time - elapsed
         if remaining <= 0:
+            name = self.__sanitize(name, name_type)
             # blacklist expired
             logger.prepend_id(logger.debug, self,
-                    '/u/{user} temp blacklist expired {time} ago:'
+                    'u/{user} temp blacklist expired {time} ago:'
                     ' lifting blacklist ...',
                     user=name,
                     time=remaining,
