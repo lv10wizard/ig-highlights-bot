@@ -128,14 +128,32 @@ class BlacklistDatabase(Database):
         self.__try_prune_temp_ban(row, name, BlacklistDatabase.TYPE_USER)
         return bool(row)
 
+    def is_blacklisted_temporarily(self, name):
+        """
+        Returns whether the given username is temporarily blacklisted
+        """
+        cursor = self._db.execute(
+                'SELECT start FROM blacklist WHERE name = ? AND type = ?',
+                (name, BlacklistDatabase.TYPE_USER),
+        )
+        row = cursor.fetchone()
+        remaining = self.__try_prune_temp_ban(
+                row, name, BlacklistDatabase.TYPE_USER
+        )
+        return (
+                remaining > 0
+                if isinstance(remaining, (int, float, long))
+                else False
+        )
+
     def __try_prune_temp_ban(self, row, name, name_type):
         """
         Returns float ban time remaining in seconds if still banned
                 -1 if ban is permanent
-                None if not banned
+                0 if not banned
         """
         if not row:
-            return None
+            return 0
 
         start = row['start']
         if start < 0:
@@ -158,7 +176,7 @@ class BlacklistDatabase(Database):
                         ' name = ? AND type = ?',
                         (name, name_type),
                 )
-            remaining = None
+            remaining = 0
 
         return remaining
 
@@ -166,7 +184,7 @@ class BlacklistDatabase(Database):
         """
         Returns the time left in seconds of a temporary blacklist
                 -1 if the blacklist is permanent
-                None if the name is not blacklisted
+                0 if the name is not blacklisted
         """
         cursor = self._db.execute(
                 'SELECT start FROM blacklist WHERE name = ? AND type = ?',

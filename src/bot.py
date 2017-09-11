@@ -318,19 +318,27 @@ class IgHighlightsBot(object):
 
     def is_blacklisted(self, comment):
         """
-        Returns the name of the blacklisted subreddit/user (str) if the comment
-        was posted to a blacklisted subreddit or by a blacklisted user
+        Returns a tuple (name, ban_time_left)
+            if the comment was posted to a blacklisted subreddit or by a
+            blacklisted user. ban_time_left is either the time remaining
+            (seconds) if the ban is temporary or -1 if permanent.
+
                 None otherwise
         """
+        result = None
+
         subreddit = comment.subreddit.display_name
         if self.blacklist.is_blacklisted_subreddit(subreddit):
-            return 'r/{0}'.format(subreddit)
+            # subreddit bans can only be permanent
+            result = ('r/{0}'.format(subreddit), -1)
 
         author = comment.author.name
-        if self.blacklist.is_blacklisted_user(author):
-            return 'u/{0}'.format(author)
+        time_left = self.blacklist.blacklist_time_left_seconds(author)
+        # 0 == False; any other number == True
+        if time_left:
+            result = ('u/{0}'.format(author), time_left)
 
-        return None
+        return result
 
     def can_reply(self, comment):
         """
@@ -368,6 +376,7 @@ class IgHighlightsBot(object):
             )
             return False
 
+        # potentially spammy
         if comment.archived:
             logger.prepend_id(logger.debug, self,
                     '{color_comment} is too old: skipping.',
@@ -382,12 +391,24 @@ class IgHighlightsBot(object):
             )
             return False
 
+        # potentially spammy
         is_blacklisted = self.is_blacklisted(comment)
         if is_blacklisted:
+            name = is_blacklisted[0]
+            time_left = is_blacklisted[1]
+
+            msg = []
+            msg.append('{color_name} is blacklisted')
+            if time_left > 0:
+                msg.append('for {time}')
+            msg.append('({color_comment}):')
+            msg.append('skipping.')
+
             logger.prepend_id(logger.debug, self,
-                    '{color_comment} is blacklisted ({color_name}): skipping.',
-                    color_comment=comments.display_id(comment),
+                    ' '.join(msg),
                     color_name=is_blacklisted,
+                    time=time_left,
+                    color_comment=comments.display_id(comment),
             )
             return False
         return True
