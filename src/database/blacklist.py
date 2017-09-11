@@ -36,6 +36,7 @@ class BlacklistDatabase(Database):
                 '   name TEXT NOT NULL COLLATE NOCASE,'
                 '   type TEXT NOT NULL CHECK(type IN (\'{0}\')),'
                 '   start REAL'
+                # TODO? blacklist trigger (eg. comment.id, message.id, etc)
                 '   UNIQUE(name, type)'
                 ')'.format(
                     # format in the valid type strings: foo','bar','...','baz

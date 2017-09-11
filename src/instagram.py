@@ -1,6 +1,4 @@
-import re
-import os
-from urlparse import urlparse
+import operator
 
 from bs4 import BeautifulSoup
 import requests
@@ -68,11 +66,13 @@ class Instagram(object):
     def __init__(self, user):
         # self.history = database.Database()
         self.user = user
-        self.link = None
+        self.url = None
         if self.user:
             # hard-code the landing page link to sanitize any trailing queries
             # or paths
-            self.link = 'https://www.instagram.com/{0}'.format(self.user)
+            self.url = 'https://www.{0}/{1}'.format(
+                    Instagram.BASE_URL, self.user
+            )
         self.media = None # TODO: fetch data & parse responses
 
     def __str__(self):
@@ -81,6 +81,13 @@ class Instagram(object):
     @property
     def valid(self):
         return bool(self.user) and bool(self.media)
+
+    @property
+    def links_by_likes(self):
+        # https://stackoverflow.com/a/613218
+        # TODO: return [link for link, likes in sorted(self.__links.iteritems(), key=operator.itemgetter(1))]
+        # TODO: memoize
+        pass
 
 
 __all__ = [

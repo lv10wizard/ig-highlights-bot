@@ -20,6 +20,7 @@ APP_NAME                      = 'app_name'
 PRAW_SITENAME                 = 'praw_sitename'
 
 REPLIES_DB_PATH               = 'replies_db_path'
+NUM_HIGHLIGHTS_PER_IG_USER    = 'num_highlights_per_ig_user'
 MAX_REPLIES_PER_COMMENT       = 'max_replies_per_comment'
 MAX_REPLIES_PER_POST          = 'max_replies_per_post'
 MAX_REPLIES_IN_COMMENT_THREAD = 'max_replies_in_comment_thread'
@@ -131,6 +132,10 @@ class Config(object):
 
                 # path to the replies database file
                 REPLIES_DB_PATH: os.path.join(DATA_ROOT_DIR, 'replies.db'),
+
+                # the number of media to link per instagram user (per reply)
+                # (ie, the number of highlights to reply with)
+                NUM_HIGHLIGHTS_PER_IG_USER: '15',
 
                 # max number of replies that can be made to the same comment
                 # (in the event that a reply is > COMMENT_CHARACTER_LIMIT)
@@ -277,6 +282,10 @@ class Config(object):
     @property
     def replies_db_path_raw(self):
         return self.__get_path_raw(REPLIES_DB_PATH)
+
+    @property
+    def num_highlights_per_ig_user(self):
+        return self.__get_int(NUM_HIGHLIGHTS_PER_IG_USER)
 
     @property
     def max_replies_per_comment(self):

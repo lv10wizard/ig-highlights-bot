@@ -1,5 +1,6 @@
 import os
 import sys
+import urllib
 
 
 HOME = None
@@ -29,4 +30,21 @@ DATA_ROOT_DIR = os.path.join(HOME, DEFAULT_APP_NAME)
 
 ROOT_DIR = os.path.dirname( os.path.realpath(os.path.abspath(__file__)) )
 BLACKLIST_DEFAULTS_PATH = os.path.join(ROOT_DIR, 'BLACKLIST')
+
+AUTHOR = 'lv10wizard'
+COMPOSE_MESSAGE_BASE_URL = 'https://www.reddit.com/message/compose/'
+CONTACT_URL_FMT = (
+        COMPOSE_MESSAGE_BASE_URL
+        + '?to='
+        + AUTHOR
+        + '&subject={subject}'
+)
+BLACKLIST_SUBJECT = urllib.quote('BLACKLIST ME')
+BLACKLIST_URL_FMT = (
+        COMPOSE_MESSAGE_BASE_URL
+        + '?to={to}&subject='
+        + BLACKLIST_SUBJECT
+)
+REPO_URL = 'https://github.com/lv10wizard/ig-highlights-bot'
+HELP_URL = '' # TODO
 

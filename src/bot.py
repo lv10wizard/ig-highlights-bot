@@ -16,6 +16,7 @@ from prawcore.exceptions import (
 )
 from utillib import logger
 
+from constants import AUTHOR
 from src import (
         comments,
         config,
@@ -23,6 +24,7 @@ from src import (
         instagram,
         mentions,
         messages,
+        replies,
 )
 
 
@@ -31,8 +33,6 @@ class IgHighlightsBot(object):
     """
 
     COMMENT_CHARACTER_LIMIT = 1e4 # 10 000
-
-    AUTHOR = 'lv10wizard'
 
     def __init__(self, cfg):
         signal.signal(signal.SIGINT, self.graceful_exit)
@@ -71,6 +71,9 @@ class IgHighlightsBot(object):
                     ' \'[{section}]\'', e, True,
                     section=self.cfg.praw_sitename,
             )
+
+        # initialize stuff that require correct credentials
+        self._formatter = replies.Formatter(self._reddit.config)
 
         logger.prepend_id(logger.debug, self,
                 'client id: {client_id}'
@@ -165,36 +168,10 @@ class IgHighlightsBot(object):
                     platform=sys.platform,
                     appname=self.cfg.app_name,
                     version=version,
-                    author=IgHighlightsBot.AUTHOR,
+                    author=AUTHOR,
             )
             user_agent = self.__user_agent
         return user_agent
-
-    def _format_reply(self, ig_list):
-        # TODO: move to separate file for easier maintanence (this file getting too big)
-        #   - loop over ig_list
-        #   ? split into multiple replies if > COMMENT_CHARACTER_LIMIT
-        #       or maybe just ignore comment?
-        #       or maybe blacklist the user that posted the comment?
-
-        header = '### [{user}]({link}) highlights:'.format(
-                user=ig.user,
-                link=ig.link,
-        )
-
-        # https://www.reddit.com/message/compose/
-        #   ?to={author/bot}&subject={subject}&message={message_skeleton}
-
-        footer = (
-                '\n---\n^Beep ^Boop. ^I ^am ^definitely ^human.'
-                ' ^[[Contact]({contact_url})]'
-                # ' ^[[Source]({source_url})]'
-        ).format(
-                contact_url= >> TODO <<,
-                # source_url= TODO ,
-        )
-
-        return [] # TODO
 
     def reply(self, comment, ig_list, callback_depth=0):
         """
@@ -205,8 +182,10 @@ class IgHighlightsBot(object):
                 '',
         )
 
-        reply_text_list = self._format_reply(ig_list)
-        if len(reply_text_list) > self.cfg.max_highlights_replies:
+        reply_text_list = self._formatter.format(
+                ig_list, self.cfg.num_highlights_per_ig_user
+        )
+        if len(reply_text_list) > self.cfg.max_replies_per_comment:
             logger.prepend_id(logger.debug, self,
                     '{color_comment} ({color_author}) almost made me reply'
                     ' #{num} times: skipping.',
