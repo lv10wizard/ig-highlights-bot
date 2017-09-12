@@ -1,3 +1,4 @@
+import multiprocessing
 import os
 
 from utillib import logger
@@ -19,6 +20,7 @@ class Blacklist(object):
                 cfg=cfg,
                 do_seed=os.path.exists(cfg.blacklist_db_path),
         )
+        self.__lock = multiprocessing.RLock()
 
     def __str__(self):
         return self.__class__.__name__
@@ -75,49 +77,54 @@ class Blacklist(object):
 
         else:
             _, name_raw = redditprefix.split_prefixed_name(name)
-            is_blacklisted = self.__database.is_blacklisted(name_raw, name_type)
-            temporary = self.__database.is_blacklisted_temporarily(name_raw)
 
-            if is_blacklisted and temporary:
-                if is_tmp:
-                    # tried to ban temporarily but was already temporarily
-                    # banned
-                    logger.prepend_id(logger.debug, self,
-                            'Could not temporarily add {color_name} to'
-                            ' blacklist: already temporarily blacklisted.',
-                            color_name=name_raw,
-                    )
+            with self.__lock:
+                is_blacklisted = self.__database.is_blacklisted(
+                        name_raw, name_type
+                )
+                temporary = self.__database.is_blacklisted_temporarily(name_raw)
 
-                else:
-                    # flag the record to be made permanent
-                    time_left = self.__database.blacklist_time_left_seconds(
-                            name_raw,
-                    )
+                if is_blacklisted and temporary:
+                    if is_tmp:
+                        # tried to ban temporarily but was already temporarily
+                        # banned
+                        logger.prepend_id(logger.debug, self,
+                                'Could not temporarily add {color_name} to'
+                                ' blacklist: already temporarily blacklisted.',
+                                color_name=name_raw,
+                        )
+
+                    else:
+                        # flag the record to be made permanent
+                        time_left = self.__database.blacklist_time_left_seconds(
+                                name_raw,
+                        )
+                        logger.prepend_id(logger.debug, self,
+                                'Flagging {color_name}\'s ban to be made'
+                                ' permanent ({time} remaining)',
+                                color_name=name_raw,
+                                time=time_left,
+                        )
+                        self.__database.set_make_permanent(name, name_type)
+                        success = True
+
+                elif not is_blacklisted:
                     logger.prepend_id(logger.debug, self,
-                            'Flagging {color_name}\'s ban to be made permanent'
-                            ' ({time} remaining)',
+                            'Adding {color_name} to blacklist'
+                            ' (is_tmp? {is_tmp})',
                             color_name=name_raw,
-                            time=time_left,
+                            is_tmp=('yes' if is_tmp else 'no'),
                     )
-                    self.__database.set_make_permanent(name, name_type)
+                    self.__database.insert(name_raw, name_type, is_tmp)
+                    # XXX: assumes insert was successful
                     success = True
 
-            elif not is_blacklisted:
-                logger.prepend_id(logger.debug, self,
-                        'Adding {color_name} to blacklist (is_tmp? {is_tmp})',
-                        color_name=name_raw,
-                        is_tmp=('yes' if is_tmp else 'no'),
-                )
-                self.__database.insert(name_raw, name_type, is_tmp)
-                # XXX: assumes insert was successful
-                success = True
-
-            else:
-                logger.prepend_id(logger.debug, self,
-                        'Could not add {color_name} to blacklist:'
-                        ' already blacklisted.',
-                        color_name=name_raw,
-                )
+                else:
+                    logger.prepend_id(logger.debug, self,
+                            'Could not add {color_name} to blacklist:'
+                            ' already blacklisted.',
+                            color_name=name_raw,
+                    )
 
         return success
 
@@ -146,25 +153,31 @@ class Blacklist(object):
 
         else:
             _, name_raw = redditprefix.split_prefixed_name(name)
-            time_left = self.__database.blacklist_time_left_seconds(name_raw)
-            if time_left < 0:
-                logger.prepend_id(logger.debug, self,
-                        'Removing {color_name} from blacklist',
-                        color_name=name_raw,
-                )
-                self.__database.delete(name_raw, name_type)
-                # XXX: assumes delete was successful
-                success = True
 
-            elif time_left > 0:
-                logger.prepend_id(logger.debug, self,
-                        'Clearing flag to make {color_name}\'s ban permanent'
-                        ' ({time} remaining)',
-                        color_name=name_raw,
-                        time=time_left,
+            # I'm not 100% certain this requires locking.. maybe in extremely
+            # rare situations.
+            with self.__lock:
+                time_left = self.__database.blacklist_time_left_seconds(
+                        name_raw
                 )
-                self.__database.clear_make_permanent(name_raw, name_type)
-                success = True
+                if time_left < 0:
+                    logger.prepend_id(logger.debug, self,
+                            'Removing {color_name} from blacklist',
+                            color_name=name_raw,
+                    )
+                    self.__database.delete(name_raw, name_type)
+                    # XXX: assumes delete was successful
+                    success = True
+
+                elif time_left > 0:
+                    logger.prepend_id(logger.debug, self,
+                            'Clearing flag to make {color_name}\'s ban'
+                            ' permanent ({time} remaining)',
+                            color_name=name_raw,
+                            time=time_left,
+                    )
+                    self.__database.clear_make_permanent(name_raw, name_type)
+                    success = True
 
         return success
 
@@ -223,7 +236,7 @@ class Blacklist(object):
                 redditprefix.is_user_prefix(prefix)
                 or redditprefix.is_user_prefix(parsed_prefix)
         ):
-            return self.__defaults.is_blacklisted_user(name_raw)
+            return self.__database.is_blacklisted_user(name_raw)
 
         return False
 
