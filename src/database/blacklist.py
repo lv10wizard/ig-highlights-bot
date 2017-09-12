@@ -15,6 +15,10 @@ class BlacklistDatabase(Database):
     Storage of blacklisted subreddits/users
     """
 
+    PERMANENT = -1
+
+    # XXX: use arbitrary type strings in case reddit's 'u/', 'r/' prefixes
+    # change or in case I ever want to add some arbitrary type
     TYPE_SUBREDDIT = '__subreddit__'
     TYPE_USER      = '__user__'
 
@@ -38,7 +42,17 @@ class BlacklistDatabase(Database):
                 # https://stackoverflow.com/a/973785
                 '   name TEXT NOT NULL COLLATE NOCASE,'
                 '   type TEXT NOT NULL CHECK(type IN (\'{0}\')),'
-                '   start REAL'
+                '   start REAL,'
+                # flag indicating that a temporary ban should be made permanent
+                # when it expires
+                # -- this exists to prevent users from side-stepping temporary
+                # bans by requesting a permanent ban then requesting an unban
+                # (the chance that this happens are probably close to zero but
+                #  it could in theory happen with how blacklisting is handled
+                #  at the moment)
+                # XXX: there is no check that the record is temporary (ie, that
+                # start is not None) at this level.
+                '   make_permanent INTEGER DEFAULT 0,'
                 # TODO? blacklist trigger (eg. comment.id, message.id, etc)
                 '   UNIQUE(name, type)'
                 ')'.format(
@@ -74,7 +88,7 @@ class BlacklistDatabase(Database):
                     (
                         self.__sanitize(sub, sub_type),
                         sub_type,
-                        -1,
+                        BlacklistDatabase.PERMANENT,
                     )
                     for sub in subreddits
                     if bool(sub.strip())
@@ -100,7 +114,7 @@ class BlacklistDatabase(Database):
         name_type (str) - should correspond to one of the TYPE_* constants
         is_tmp (bool, optional) - whether the name is a temporary blacklist
         """
-        now = time.time() if is_tmp else -1
+        now = time.time() if is_tmp else BlacklistDatabase.PERMANENT
         name = self.__sanitize(name, name_type)
         with self._lock, self._db as connection:
             connection.execute(
@@ -115,6 +129,41 @@ class BlacklistDatabase(Database):
                     'DELETE FROM blacklist WHERE name = ? AND type = ?',
                     (name, name_type),
             )
+
+    def set_make_permanent(self, name, name_type, value=True):
+        flag = 1 if value else 0
+        with self._lock, self._db as connection:
+            connection.execute(
+                    'UPDATE blacklist'
+                    ' SET make_permanent = ?'
+                    ' WHERE name = ? AND type = ?',
+                    (flag, name, name_type),
+            )
+
+    def clear_make_permanent(self, name, name_type):
+        with self._lock, self._db as connection:
+            connection.execute(
+                    'UPDATE blacklist'
+                    ' SET make_permanent = ?'
+                    ' WHERE name = ? AND type = ?',
+                    (0, name, name_type),
+            )
+
+    def is_blacklisted(self, name, name_type):
+        """
+        Returns whether the given name is blacklisted
+        """
+        if name_type == BlacklistDatabase.TYPE_SUBREDDIT:
+            return self.is_blacklisted_subreddit(name)
+
+        elif name_type == BlacklistDatabase.TYPE_USER:
+            return self.is_blacklisted_user(name)
+
+        logger.prepend_id(logger.debug, self,
+                'Unrecognized name_type: \'{type}\'',
+                type=name_type,
+        )
+        return False
 
     def is_blacklisted_subreddit(self, name):
         """
@@ -158,6 +207,18 @@ class BlacklistDatabase(Database):
                 else False
         )
 
+    def is_flagged_to_be_made_permanent(self, name):
+        """
+        Returns whether the given username is flagged to be made permanent when
+        their temporary ban expires
+        """
+        cursor = self._db.execute(
+                'SELECT make_permanent FROM blacklist'
+                ' WHERE name = ? AND type = ?',
+                (name, BlacklistDatabase.TYPE_USER),
+        )
+        return bool(cursor.fetchone())
+
     def __try_prune_temp_ban(self, row, name, name_type):
         """
         Returns float ban time remaining in seconds if still banned
@@ -174,21 +235,42 @@ class BlacklistDatabase(Database):
         elapsed = time.time() - start
         remaining = self.cfg.blacklist_temp_ban_time - elapsed
         if remaining <= 0:
-            name = self.__sanitize(name, name_type)
             # blacklist expired
+            name = self.__sanitize(name, name_type)
+            make_permanent = self.is_flagged_to_be_made_permanent(name)
+            if make_permanent:
+                action = 'making permanent'
+            else:
+                action = 'lifting blacklist'
+
             logger.prepend_id(logger.debug, self,
                     '{prefix}{user} temp blacklist expired {time} ago:'
-                    ' lifting blacklist ...',
+                    ' {action} ...',
                     prefix=PREFIX_USER,
                     user=name,
                     time=remaining,
+                    action=action,
             )
             with self._lock, self._db as connection:
-                connection.execute(
-                        'DELETE FROM blacklist WHERE'
-                        ' name = ? AND type = ?',
-                        (name, name_type),
-                )
+                if make_permanent:
+                    connection.execute(
+                            'UPDATE blacklist'
+                            ' SET start = ?, make_permanent = ?'
+                            ' WHERE name = ? AND type = ?',
+                            (
+                                BlacklistDatabase.PERMANENT,
+                                0,
+                                name,
+                                name_type,
+                            ),
+                    )
+
+                else:
+                    connection.execute(
+                            'DELETE FROM blacklist WHERE'
+                            ' name = ? AND type = ?',
+                            (name, name_type),
+                    )
             remaining = 0
 
         return remaining

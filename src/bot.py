@@ -27,15 +27,16 @@ from constants import (
         PREFIX_USER,
 )
 from src import (
+        blacklist,
         comments,
         config,
-        database,
         instagram,
         mentions,
         messages,
-        prefix,
+        redditprefix,
         replies,
 )
+from src.database import ReplyDatabase
 
 
 class IgHighlightsBot(object):
@@ -49,13 +50,8 @@ class IgHighlightsBot(object):
         signal.signal(signal.SIGTERM, self.graceful_exit)
 
         self.cfg = cfg
-        self.reply_history = database.ReplyDatabase(self.cfg.replies_db_path)
-
-        self.blacklist = database.BlacklistDatabase(
-                path=self.cfg.blacklist_db_path,
-                cfg=cfg,
-                do_seed=os.path.exists(self.cfg.blacklist_db_path),
-        )
+        self.reply_history = ReplyDatabase(self.cfg.replies_db_path)
+        self.blacklist = blacklist.Blacklist(self.cfg)
 
         self._reddit = praw.Reddit(
                 site_name=self.cfg.praw_sitename,
@@ -173,7 +169,7 @@ class IgHighlightsBot(object):
 
     @property
     def username(self):
-        return prefix.prefix_user(self.username_raw)
+        return redditprefix.prefix_user(self.username_raw)
 
     @property
     def user_agent(self):
@@ -337,21 +333,21 @@ class IgHighlightsBot(object):
             subreddit = thing.subreddit.display_name
             if self.blacklist.is_blacklisted_subreddit(subreddit):
                 # subreddit bans can only be permanent
-                result = (prefix.prefix_subreddit(subreddit), -1)
+                result = (redditprefix.prefix_subreddit(subreddit), -1)
 
             author = thing.author.name
             time_left = self.blacklist.blacklist_time_left_seconds(author)
             # 0 == False; any other number == True
             if time_left:
-                result = (prefix.prefix_user(author), time_left)
+                result = (redditprefix.prefix_user(author), time_left)
 
         elif isinstance(thing, basestring):
-            prefix, name = prefix.split_prefixed_name(thing)
-            if prefix.is_subreddit(thing):
+            prefix, name = redditprefix.split_prefixed_name(thing)
+            if redditprefix.is_subreddit(thing):
                 if self.blacklist.is_blacklisted_subreddit(name):
                     result = (thing, -1)
 
-            elif prefix.is_user(thing):
+            elif redditprefix.is_user(thing):
                 time_left = self.blacklist.blacklist_time_left_seconds(name)
                 if time_left:
                     result = (thing, time_left)
@@ -410,10 +406,9 @@ class IgHighlightsBot(object):
             return False
 
         # potentially spammy
-        is_blacklisted = self.is_blacklisted(comment)
-        if is_blacklisted:
-            name = is_blacklisted[0]
-            time_left = is_blacklisted[1]
+        prefixed_name = self.blacklist.is_blacklisted_thing(comment)
+        if prefixed_name:
+            time_left = self.blacklist.time_left_seconds_name(prefixed_name)
 
             msg = []
             msg.append('{color_name} is blacklisted')
@@ -424,7 +419,7 @@ class IgHighlightsBot(object):
 
             logger.prepend_id(logger.debug, self,
                     ' '.join(msg),
-                    color_name=is_blacklisted,
+                    color_name=prefixed_name,
                     time=time_left,
                     color_comment=comments.display_id(comment),
             )
@@ -519,7 +514,18 @@ class IgHighlightsBot(object):
                     )
 
                 else:
-                    prefix, name = prefix.split_prefixed_name(name_full)
+
+                    # TODO: replace self.blacklist calls (requires re-logicking)
+                    # >>>>> 1. add multiprocessing.RLock to blacklist database calls
+                    #           a. remove database/* locks
+                    #       2. instead of communicating with messages through a queue,
+                    #          just pass self.blacklist & have messages make blacklist calls
+                    #       3. refactor Reddit instantiation
+                    #           - instantiate in bot.__init__
+                    #           - instantiate another instance in messages.run_forever
+                    #           - instantiate another in mentions.run_forever
+
+                    prefix, name = redditprefix.split_prefixed_name(name_full)
                     if not prefix:
                         raise TypeError(
                                 'Failed to process data:'
@@ -530,9 +536,9 @@ class IgHighlightsBot(object):
                         )
 
                     name_type = None
-                    if prefix.is_subreddit(name_full):
+                    if redditprefix.is_subreddit(name_full):
                         name_type = database.BlacklistDatabase.TYPE_SUBREDDIT
-                    elif prefix.is_user(name_full):
+                    elif redditprefix.is_user(name_full):
                         name_type = database.BlacklistDatabase.TYPE_USER
                     if not name_type:
                         raise TypeError(

@@ -14,23 +14,22 @@ from constants import (
         KEY_BLACKLIST_ADD,
         KEY_BLACKLIST_REMOVE,
 )
-from src import database
+from src import (
+        database,
+        redditprefix,
+)
 
 
 class Messages(object):
     """
+    Inbox message parser
     """
 
-    def __init__(self, cfg, reddit, blacklist_queue):
+    def __init__(self, cfg, blacklist_queue):
         self.cfg = cfg
         self.blacklist_queue = blacklist_queue
 
-        self.__proc = multiprocessing.Process(
-                target=self.run_forever,
-                kwargs={
-                    'reddit_obj': reddit,
-                },
-        )
+        self.__proc = multiprocessing.Process(target=self.run_forever)
         self.__proc.daemon = True
 
     def __str__(self):
@@ -131,12 +130,13 @@ class Messages(object):
             )
 
         return (
-                '{0}{1}'.format(prefix, name)
+                redditprefix.prefix(name, prefix)
                 if bool(prefix) and bool(name)
                 else None
         )
 
-    def run_forever(self, reddit_obj):
+    def run_forever(self):
+        reddit_obj = >>> TODO <<<
         blacklist_re = re.compile(r'^({0}|{1})$'.format(
             BLACKLIST_SUBJECT, REMOVE_BLACKLIST_SUBJECT
         ))
