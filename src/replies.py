@@ -1,3 +1,5 @@
+import urllib
+
 from utillib import logger
 
 from constants import (
@@ -28,7 +30,7 @@ class Formatter(object):
         # wrap the string in a list so it is easier to work with
         self.FOOTER = list(Formatter.FOOTER.format(
                 contact_url=CONTACT_URL_FMT.format(
-                    subject='Instagram highlights bot',
+                    subject=urllib.quote('Instagram highlights bot'),
                 ),
                 source_url=REPO_URL,
                 blacklist_url=BLACKLIST_URL_FMT.format(

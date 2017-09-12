@@ -1,5 +1,7 @@
 import abc
+import multiprocessing
 import os
+import pprint
 import sqlite3
 
 from utillib import logger
@@ -11,6 +13,47 @@ class FailedInit(Exception):
     def __init__(self, error, *args, **kwargs):
         Exception.__init__(self, *args, **kwargs)
         self.error = error
+
+class _SqliteConnectionWrapper(object):
+    """
+    SQLite Connection wrapper (for logging)
+    """
+
+    def __init__(self, connection, id):
+        self.connection = connection
+        self.id = id
+
+    def __str__(self):
+        return self.id
+
+    def __getattr__(self, attr):
+        return getattr(self.connection, attr)
+
+    def __construct_msg(self, *args, **kwargs):
+        msg = ['{sql}']
+        if args:
+            msg.append('args: {args}')
+        if kwargs:
+            msg.append('kwargs: {kwargs}')
+        return msg
+
+    def execute(self, sql, *args, **kwargs):
+        logger.prepend_id(logger.debug, self,
+                '\n\t'.join(self.__construct_msg(*args, **kwargs)),
+                sql=sql,
+                args=args,
+                kwargs=kwargs,
+        )
+        return self.connection.execute(sql, *args, **kwargs)
+
+    def executemany(self, sql, *args, **kwargs):
+        logger.prepend_id(logger.debug, self,
+                '\n\t'.join(self.__construct_msg(*args, **kwargs)),
+                sql=sql,
+                args=args,
+                kwargs=kwargs,
+        )
+        return self.connection.executemany(sql, *args, **kwargs)
 
 class Database(object):
     """
@@ -26,6 +69,7 @@ class Database(object):
         return config.resolve_path(path)
 
     def __init__(self, path):
+        self._lock = multiprocessing.RLock()
         self.path = path
         self._resolved_path = Database.resolve_path(path)
         self._dirname = os.path.dirname(path)
@@ -45,7 +89,10 @@ class Database(object):
             db = self.__the_connection
 
         except AttributeError:
-            self.__the_connection = self.__init_db()
+            self.__the_connection = _SqliteConnectionWrapper(
+                    connection=self.__init_db(),
+                    id=self._basename,
+            )
             db = self.__the_connection
 
         return db
@@ -90,53 +137,90 @@ class Database(object):
                     )
                 db.execute('CREATE TABLE IF NOT EXISTS {0}'.format(table))
 
-            try:
-                if isinstance(self._create_table_data, basestring):
-                    create_table(self._create_table_data)
-                elif isinstance(self._create_table_data, (list, tuple)):
-                    for table in self._create_table_data:
-                        create_table(table)
-                else:
-                    # programmer error
-                    raise TypeError(
-                            'Unhandled _create_table_data'
-                            ' type=\'{type}\''.format(
-                                type=type(self._create_table_data)
-                            )
-                    )
-
+            with self._lock:
                 try:
-                    self._initialize_tables(db)
-                except sqlite3.IntegrityError:
-                    # probably attempted a duplicate INSERT (UNIQUE constraint)
-                    # => tables were already initialized
-                    logger.prepend_id(logger.error, self,
-                            'Failed to initialize tables!', e,
-                    )
+                    if isinstance(self._create_table_data, basestring):
+                        create_table(self._create_table_data)
+                    elif isinstance(self._create_table_data, (list, tuple)):
+                        for table in self._create_table_data:
+                            create_table(table)
+                    else:
+                        # programmer error
+                        raise TypeError(
+                                'Unhandled _create_table_data'
+                                ' type=\'{type}\''.format(
+                                    type=type(self._create_table_data)
+                                )
+                        )
 
-                db.commit()
+                    try:
+                        self._initialize_tables(db)
+                    except sqlite3.IntegrityError:
+                        # probably attempted a duplicate INSERT (UNIQUE
+                        # constraint)
+                        # => tables were already initialized
+                        logger.prepend_id(logger.error, self,
+                                'Failed to initialize tables!', e,
+                        )
 
-            except sqlite3.DatabaseError as e:
-                db.close()
-                raise FailedInit(e, e.message)
+                    db.commit()
 
-            else:
-                # https://docs.python.org/2/library/sqlite3.html#row-objects
-                db.row_factory = sqlite3.Row
+                except sqlite3.DatabaseError as e:
+                    db.close()
+                    raise FailedInit(e, e.message)
+
+                else:
+                    # https://docs.python.org/2/library/sqlite3.html#row-objects
+                    db.row_factory = sqlite3.Row
         return db
 
     def insert(self, *args, **kwargs):
         """
-        Wrapper to non-abstract _insert method
+        Wrapper to abstract _insert method
         """
         try:
-            self._insert(*args, **kwargs)
+            with self._lock:
+                self._insert(*args, **kwargs)
 
         except Exception as e:
             # probably UNIQUE or CHECK constraint failed
             # or could be something more nefarious...
             logger.prepend_id(logger.error, self,
                     'INSERT Failed!'
+                    '\n\targs={args}'
+                    '\n\tkwargs={kwargs}', e,
+                    args=args,
+                    kwargs=kwargs,
+            )
+
+    def delete(self, *args, **kwargs):
+        """
+        Wrapper to overrideable _delete method
+        """
+        try:
+            with self._lock:
+                self._delete(*args, **kwargs)
+
+        except Exception as e:
+            logger.prepend_id(logger.error, self,
+                    'DELETE Failed!'
+                    '\n\targs={args}'
+                    '\n\tkwargs={kwargs}', e,
+                    args=args,
+                    kwargs=kwargs,
+            )
+
+    def update(self, *args, **kwargs):
+        """
+        Wrapper to overrideable _update method
+        """
+        try:
+            with self._lock:
+                self._update(*args, **kwargs)
+
+        except Exception as e:
+            logger.prepend_id(logger.error, self,
+                    'UPDATE Failed!'
                     '\n\targs={args}'
                     '\n\tkwargs={kwargs}', e,
                     args=args,
@@ -159,11 +243,9 @@ class Database(object):
     @abc.abstractmethod
     def _insert(self, *args, **kwargs): pass
 
-    # TODO? needed?
-    @abc.abstractmethod
-    def delete(self, *args, **kwargs): pass
-    @abc.abstractmethod
-    def update(self, *args, **kwargs): pass
+    def _delete(self, *args, **kwargs): pass
+
+    def _update(self, *args, **kwargs): pass
 
 
 __all__ = [

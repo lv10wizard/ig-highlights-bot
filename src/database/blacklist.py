@@ -4,7 +4,10 @@ import time
 from utillib import logger
 
 from _database import Database
-from constants import BLACKLIST_DEFAULTS_PATH
+from constants import (
+        BLACKLIST_DEFAULTS_PATH,
+        PREFIX_USER,
+)
 
 
 class BlacklistDatabase(Database):
@@ -88,7 +91,7 @@ class BlacklistDatabase(Database):
         # eg. 'u/foobar' -> 'u_foobar'
         # https://reddit.com/6cfu55
         if name_type == BlacklistDatabase.TYPE_SUBREDDIT:
-            return re.sub(r'^/?u/', 'u_', name.strip())
+            return re.sub(r'^/?{0}'.format(PREFIX_USER), 'u_', name.strip())
         return name # TODO? do names need sanitization?
 
     def _insert(self, name, name_type, is_tmp=False):
@@ -103,6 +106,14 @@ class BlacklistDatabase(Database):
             connection.execute(
                     'INSERT INTO blacklist(name, type, start) VALUES(?, ?, ?)',
                     (name, name_type, now),
+            )
+
+    def _delete(self, name, name_type):
+        name = self.__sanitize(name, name_type)
+        with self._db as connection:
+            connection.execute(
+                    'DELETE FROM blacklist WHERE name = ? AND type = ?',
+                    (name, name_type),
             )
 
     def is_blacklisted_subreddit(self, name):
@@ -166,8 +177,9 @@ class BlacklistDatabase(Database):
             name = self.__sanitize(name, name_type)
             # blacklist expired
             logger.prepend_id(logger.debug, self,
-                    'u/{user} temp blacklist expired {time} ago:'
+                    '{prefix}{user} temp blacklist expired {time} ago:'
                     ' lifting blacklist ...',
+                    prefix=PREFIX_USER,
                     user=name,
                     time=remaining,
             )

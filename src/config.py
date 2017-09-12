@@ -28,6 +28,8 @@ MAX_REPLIES_IN_COMMENT_THREAD = 'max_replies_in_comment_thread'
 BLACKLIST_DB_PATH             = 'blacklist_db_path'
 BLACKLIST_TEMP_BAN_TIME       = 'blacklist_temp_ban_time'
 
+MESSAGES_DB_PATH              = 'messages_db_path'
+
 LOGGING_PATH                  = 'logging_path'
 
 INSTAGRAM_DB_PATH             = 'instagram_db_path'
@@ -156,6 +158,9 @@ class Config(object):
                 # the amount of time temp bans last (see parse_time)
                 BLACKLIST_TEMP_BAN_TIME: '4d',
 
+                # path to the database file storing processed messages
+                MESSAGES_DB_PATH = os.path.join(DATA_ROOT_DIR, 'messages.db'),
+
                 # the path where log files are stored
                 LOGGING_PATH: os.path.join(DATA_ROOT_DIR, 'logs'),
 
@@ -168,7 +173,7 @@ class Config(object):
         self._load()
 
     def __str__(self):
-        return 'config' # TODO: more descriptive
+        return os.path.basename(Config.PATH)
 
     def _load(self):
         """
@@ -310,6 +315,14 @@ class Config(object):
     @property
     def blacklist_temp_ban_time(self):
         return self.__get_time(BLACKLIST_TEMP_BAN_TIME)
+
+    @property
+    def messages_db_path(self):
+        return self.__get_path_resolved(MESSAGES_DB_PATH)
+
+    @property
+    def messages_db_path_raw(self):
+        return self.__get_path_raw(MESSAGES_DB_PATH)
 
     @property
     def logging_path(self):

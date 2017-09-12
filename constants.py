@@ -39,12 +39,20 @@ CONTACT_URL_FMT = (
         + AUTHOR
         + '&subject={subject}'
 )
-BLACKLIST_SUBJECT = urllib.quote('BLACKLIST ME')
+BLACKLIST_SUBJECT = 'BLACKLIST ME'
+REMOVE_BLACKLIST_SUBJECT = 'UNBLACKLIST ME'
 BLACKLIST_URL_FMT = (
         COMPOSE_MESSAGE_BASE_URL
         + '?to={to}&subject='
-        + BLACKLIST_SUBJECT
+        + urllib.quote(BLACKLIST_SUBJECT)
 )
 REPO_URL = 'https://github.com/lv10wizard/ig-highlights-bot'
 HELP_URL = '' # TODO
+
+PREFIX_SUBREDDIT = 'r/'
+PREFIX_USER = 'u/'
+
+KEY_BLACKLIST_NAME = 'blacklist_name'
+KEY_BLACKLIST_ADD = 'blacklist_add'
+KEY_BLACKLIST_REMOVE = 'blacklist_remove'
 
