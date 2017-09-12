@@ -102,7 +102,7 @@ class BlacklistDatabase(Database):
         """
         now = time.time() if is_tmp else -1
         name = self.__sanitize(name, name_type)
-        with self._db as connection:
+        with self._lock, self._db as connection:
             connection.execute(
                     'INSERT INTO blacklist(name, type, start) VALUES(?, ?, ?)',
                     (name, name_type, now),
@@ -110,7 +110,7 @@ class BlacklistDatabase(Database):
 
     def _delete(self, name, name_type):
         name = self.__sanitize(name, name_type)
-        with self._db as connection:
+        with self._lock, self._db as connection:
             connection.execute(
                     'DELETE FROM blacklist WHERE name = ? AND type = ?',
                     (name, name_type),
@@ -183,7 +183,7 @@ class BlacklistDatabase(Database):
                     user=name,
                     time=remaining,
             )
-            with self._db as connection:
+            with self._lock, self._db as connection:
                 connection.execute(
                         'DELETE FROM blacklist WHERE'
                         ' name = ? AND type = ?',
