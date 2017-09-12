@@ -10,52 +10,60 @@ class ReplyDatabase(Database):
     def _create_table_data(self):
         return (
                 'comments('
-                '   comment_id TEXT PRIMARY KEY'
-                '   submission_id TEXT NOT NULL,'
+                '   comment_fullname TEXT PRIMARY KEY'
+                '   submission_fullname TEXT NOT NULL,'
                 # case-insensitive
                 # https://stackoverflow.com/a/973785
                 '   ig_user TEXT NOT NULL COLLATE NOCASE,'
                 # apply unique constraint on specified keys
                 # https://stackoverflow.com/a/15822009
-                '   UNIQUE(submission_id, ig_user)'
+                '   UNIQUE(submission_fullname, ig_user)'
                 ')'
         )
 
     def _insert(self, comment, ig_list):
         if isinstance(ig_list, (list, tuple)):
             values = [
-                    (comment.id, comment.submission.id, ig.user)
+                    (comment.fullname, comment.submission.fullname, ig.user)
                     for ig in ig_list
             ]
         else:
             # assume ig_list is a single Instagram instance
-            values = [(comment.id, comment.submission.id, ig_list.user)]
+            values = [
+                    (
+                        comment.fullname,
+                        comment.submission.fullname,
+                        ig_list.user
+                    )
+            ]
 
         with self._db as connection:
             connection.executemany(
-                    'INSERT INTO comments(comment_id, submission_id, ig_user)'
-                    ' VALUES(?, ?, ?)', values,
+                    'INSERT INTO comments('
+                    '   comment_fullname, submission_fullname, ig_user'
+                    ') VALUES(?, ?, ?)', values,
             )
 
-    def replied_comments_for_submission(self, submission_id):
+    def replied_comments_for_submission(self, submission):
         """
-        Returns a set of comment ids that the bot has replied to for a given
-        post
+        Returns a set of comment fullnames that the bot has replied to for a
+        given post
         """
         cursor = self._db.execute(
-                'SELECT comment_id FROM comments WHERE submission_id = ?',
-                (submission_id,),
+                'SELECT comment_fullname FROM comments'
+                ' WHERE submission_fullname = ?',
+                (submission.fullname,),
         )
-        return set([row['comment_id'] for row in cursor])
+        return set([row['comment_fullname'] for row in cursor])
 
-    def replied_ig_users_for_submission(self, submission_id):
+    def replied_ig_users_for_submission(self, submission):
         """
         Returns the set of instagram user names that the bot has replied with
         for a given post
         """
         cursor = self._db.execute(
-                'SELECT ig_user FROM comments WHERE submission_id = ?',
-                (submission_id,),
+                'SELECT ig_user FROM comments WHERE submission_fullname = ?',
+                (submission.fullname,),
         )
         return set([row['ig_user'] for row in cursor])
 
@@ -64,8 +72,9 @@ class ReplyDatabase(Database):
         Returns True if the bot has replied to the specified comment
         """
         cursor = self._db.execute(
-                'SELECT comment_id FROM comments WHERE comment_id = ?',
-                (comment.id,),
+                'SELECT comment_fullname FROM comments'
+                ' WHERE comment_fullname = ?',
+                (comment.fullname,),
         )
         return bool(cursor.fetchone())
 

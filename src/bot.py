@@ -379,7 +379,7 @@ class IgHighlightsBot(object):
             return False
 
         replies = self.reply_history.replied_comments_for_submission(
-                comment.submission.id
+                comment.submission
         )
         if len(replies) > self.cfg.max_replies_per_post:
             logger.prepend_id(logger.debug, self,
@@ -426,11 +426,11 @@ class IgHighlightsBot(object):
             return False
         return True
 
-    def prune_already_posted_users(self, submission_id, ig_usernames):
+    def prune_already_posted_users(self, submission, ig_usernames):
         """
         """
         already_posted = self.reply_history.replied_ig_users_for_submission(
-                submission_id
+                submission
         )
         pruned = ig_username.intersection(already_posted)
         ig_usernames -= already_posted
@@ -643,7 +643,7 @@ class IgHighlightsBot(object):
                     if comment and self.can_reply(comment):
                         parsed_comment = comments.Parser(comment)
                         ig_usernames = self.prune_already_posted_users(
-                                comment.submission.id,
+                                comment.submission,
                                 parsed_comment.ig_usernames,
                         )
                         if ig_usernames:
