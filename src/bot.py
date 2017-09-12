@@ -33,6 +33,7 @@ from src import (
         instagram,
         mentions,
         messages,
+        prefix,
         replies,
 )
 
@@ -172,7 +173,7 @@ class IgHighlightsBot(object):
 
     @property
     def username(self):
-        return '{0}{1}'.format(PREFIX_USER, self.username_raw)
+        return prefix.prefix_user(self.username_raw)
 
     @property
     def user_agent(self):
@@ -336,21 +337,21 @@ class IgHighlightsBot(object):
             subreddit = thing.subreddit.display_name
             if self.blacklist.is_blacklisted_subreddit(subreddit):
                 # subreddit bans can only be permanent
-                result = ('{0}{1}'.format(PREFIX_SUBREDDIT, subreddit), -1)
+                result = (prefix.prefix_subreddit(subreddit), -1)
 
             author = thing.author.name
             time_left = self.blacklist.blacklist_time_left_seconds(author)
             # 0 == False; any other number == True
             if time_left:
-                result = ('{0}{1}'.format(PREFIX_USER, author), time_left)
+                result = (prefix.prefix_user(author), time_left)
 
         elif isinstance(thing, basestring):
-            prefix, name = messages.split_prefixed_name(thing)
-            if messages.is_subreddit(thing):
+            prefix, name = prefix.split_prefixed_name(thing)
+            if prefix.is_subreddit(thing):
                 if self.blacklist.is_blacklisted_subreddit(name):
                     result = (thing, -1)
 
-            elif messages.is_user(thing):
+            elif prefix.is_user(thing):
                 time_left = self.blacklist.blacklist_time_left_seconds(name)
                 if time_left:
                     result = (thing, time_left)
@@ -518,7 +519,7 @@ class IgHighlightsBot(object):
                     )
 
                 else:
-                    prefix, name = messages.split_prefixed_name(name_full)
+                    prefix, name = prefix.split_prefixed_name(name_full)
                     if not prefix:
                         raise TypeError(
                                 'Failed to process data:'
@@ -529,9 +530,9 @@ class IgHighlightsBot(object):
                         )
 
                     name_type = None
-                    if messages.is_subreddit(name_full):
+                    if prefix.is_subreddit(name_full):
                         name_type = database.BlacklistDatabase.TYPE_SUBREDDIT
-                    elif messages.is_user(name_full):
+                    elif prefix.is_user(name_full):
                         name_type = database.BlacklistDatabase.TYPE_USER
                     if not name_type:
                         raise TypeError(
