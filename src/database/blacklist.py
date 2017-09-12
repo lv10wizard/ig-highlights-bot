@@ -53,7 +53,8 @@ class BlacklistDatabase(Database):
                 # XXX: there is no check that the record is temporary (ie, that
                 # start is not None) at this level.
                 '   make_permanent INTEGER DEFAULT 0,'
-                # TODO? blacklist trigger (eg. comment.id, message.id, etc)
+                # TODO? blacklist trigger
+                #   (eg. comment.fullname, message.fullname, etc)
                 '   UNIQUE(name, type)'
                 ')'.format(
                     # format in the valid type strings: foo','bar','...','baz
