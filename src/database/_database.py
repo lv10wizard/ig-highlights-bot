@@ -1,5 +1,4 @@
 import abc
-import multiprocessing
 import os
 import pprint
 import sqlite3
@@ -69,7 +68,6 @@ class Database(object):
         return config.resolve_path(path)
 
     def __init__(self, path):
-        self._lock = multiprocessing.RLock()
         self.path = path
         self._resolved_path = Database.resolve_path(path)
         self._dirname = os.path.dirname(path)
@@ -137,41 +135,40 @@ class Database(object):
                     )
                 db.execute('CREATE TABLE IF NOT EXISTS {0}'.format(table))
 
-            with self._lock:
-                try:
-                    if isinstance(self._create_table_data, basestring):
-                        create_table(self._create_table_data)
-                    elif isinstance(self._create_table_data, (list, tuple)):
-                        for table in self._create_table_data:
-                            create_table(table)
-                    else:
-                        # programmer error
-                        raise TypeError(
-                                'Unhandled _create_table_data'
-                                ' type=\'{type}\''.format(
-                                    type=type(self._create_table_data)
-                                )
-                        )
-
-                    try:
-                        self._initialize_tables(db)
-                    except sqlite3.IntegrityError:
-                        # probably attempted a duplicate INSERT (UNIQUE
-                        # constraint)
-                        # => tables were already initialized
-                        logger.prepend_id(logger.error, self,
-                                'Failed to initialize tables!', e,
-                        )
-
-                    db.commit()
-
-                except sqlite3.DatabaseError as e:
-                    db.close()
-                    raise FailedInit(e, e.message)
-
+            try:
+                if isinstance(self._create_table_data, basestring):
+                    create_table(self._create_table_data)
+                elif isinstance(self._create_table_data, (list, tuple)):
+                    for table in self._create_table_data:
+                        create_table(table)
                 else:
-                    # https://docs.python.org/2/library/sqlite3.html#row-objects
-                    db.row_factory = sqlite3.Row
+                    # programmer error
+                    raise TypeError(
+                            'Unhandled _create_table_data'
+                            ' type=\'{type}\''.format(
+                                type=type(self._create_table_data)
+                            )
+                    )
+
+                try:
+                    self._initialize_tables(db)
+                except sqlite3.IntegrityError:
+                    # probably attempted a duplicate INSERT (UNIQUE
+                    # constraint)
+                    # => tables were already initialized
+                    logger.prepend_id(logger.error, self,
+                            'Failed to initialize tables!', e,
+                    )
+
+                db.commit()
+
+            except sqlite3.DatabaseError as e:
+                db.close()
+                raise FailedInit(e, e.message)
+
+            else:
+                # https://docs.python.org/2/library/sqlite3.html#row-objects
+                db.row_factory = sqlite3.Row
         return db
 
     def insert(self, *args, **kwargs):
@@ -179,8 +176,7 @@ class Database(object):
         Wrapper to abstract _insert method
         """
         try:
-            with self._lock:
-                self._insert(*args, **kwargs)
+            self._insert(*args, **kwargs)
 
         except Exception as e:
             # probably UNIQUE or CHECK constraint failed
@@ -198,8 +194,7 @@ class Database(object):
         Wrapper to overrideable _delete method
         """
         try:
-            with self._lock:
-                self._delete(*args, **kwargs)
+            self._delete(*args, **kwargs)
 
         except Exception as e:
             logger.prepend_id(logger.error, self,
@@ -215,8 +210,7 @@ class Database(object):
         Wrapper to overrideable _update method
         """
         try:
-            with self._lock:
-                self._update(*args, **kwargs)
+            self._update(*args, **kwargs)
 
         except Exception as e:
             logger.prepend_id(logger.error, self,
