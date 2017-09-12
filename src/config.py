@@ -159,7 +159,7 @@ class Config(object):
                 BLACKLIST_TEMP_BAN_TIME: '4d',
 
                 # path to the database file storing processed messages
-                MESSAGES_DB_PATH = os.path.join(DATA_ROOT_DIR, 'messages.db'),
+                MESSAGES_DB_PATH: os.path.join(DATA_ROOT_DIR, 'messages.db'),
 
                 # the path where log files are stored
                 LOGGING_PATH: os.path.join(DATA_ROOT_DIR, 'logs'),
