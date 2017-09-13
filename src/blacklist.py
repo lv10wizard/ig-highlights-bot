@@ -3,7 +3,7 @@ import os
 
 from utillib import logger
 
-from src import redditprefix
+from src import reddit
 from src.database import BlacklistDatabase
 
 
@@ -36,14 +36,14 @@ class Blacklist(object):
         name_type = None
         def get_type(prefix):
             if prefix:
-                if redditprefix.is_subreddit_prefix(prefix):
+                if reddit.is_subreddit_prefix(prefix):
                     name_type = BlacklistDatabase.TYPE_SUBREDDIT
-                elif redditprefix.is_user_prefix(prefix):
+                elif reddit.is_user_prefix(prefix):
                     name_type = BlacklistDatabase.TYPE_USER
 
         name_type = get_type(prefix)
         if not name_type:
-            prefix, name = redditprefix.split_prefixed_name(name)
+            prefix, name = reddit.split_prefixed_name(name)
             name_type = get_type(prefix)
 
         return name_type
@@ -76,7 +76,7 @@ class Blacklist(object):
             )
 
         else:
-            _, name_raw = redditprefix.split_prefixed_name(name)
+            _, name_raw = reddit.split_prefixed_name(name)
 
             with self.__lock:
                 is_blacklisted = self.__database.is_blacklisted(
@@ -151,7 +151,7 @@ class Blacklist(object):
             )
 
         else:
-            _, name_raw = redditprefix.split_prefixed_name(name)
+            _, name_raw = reddit.split_prefixed_name(name)
 
             # I'm not 100% certain this requires locking.. maybe in extremely
             # rare situations.
@@ -194,11 +194,11 @@ class Blacklist(object):
         try:
             subreddit = thing.subreddit.display_name
             if self.__database.is_blacklisted_subreddit(subreddit):
-                return redditprefix.prefix_subreddit(subreddit)
+                return reddit.prefix_subreddit(subreddit)
 
             author = thing.author.name
             if self.__database.is_blacklisted_user(author):
-                return redditprefix.prefix_user(author)
+                return reddit.prefix_user(author)
 
         except AttributeError:
             # eg. deleted comment
@@ -223,17 +223,17 @@ class Blacklist(object):
             )
             return False
 
-        parsed_prefix, name_raw = redditprefix.split_prefixed_name(name)
+        parsed_prefix, name_raw = reddit.split_prefixed_name(name)
         if (
                 # check both in case one if a random string
-                redditprefix.is_subreddit_prefix(prefix)
-                or redditprefix.is_subreddit_prefix(parsed_prefix)
+                reddit.is_subreddit_prefix(prefix)
+                or reddit.is_subreddit_prefix(parsed_prefix)
         ):
             return self.__database.is_blacklisted_subreddit(name_raw)
 
         if (
-                redditprefix.is_user_prefix(prefix)
-                or redditprefix.is_user_prefix(parsed_prefix)
+                reddit.is_user_prefix(prefix)
+                or reddit.is_user_prefix(parsed_prefix)
         ):
             return self.__database.is_blacklisted_user(name_raw)
 
@@ -256,7 +256,7 @@ class Blacklist(object):
             )
             return 0
 
-        parsed_prefix, name_raw = redditprefix.split_prefixed_name(name)
+        parsed_prefix, name_raw = reddit.split_prefixed_name(name)
         return self.__database.blacklist_time_left_seconds(name_raw)
 
 

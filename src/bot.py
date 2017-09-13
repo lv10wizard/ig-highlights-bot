@@ -33,7 +33,7 @@ from src import (
         instagram,
         mentions,
         messages,
-        redditprefix,
+        reddit,
         replies,
 )
 from src.database import ReplyDatabase
@@ -160,7 +160,7 @@ class IgHighlightsBot(object):
 
     @property
     def username(self):
-        return redditprefix.prefix_user(self.username_raw)
+        return reddit.prefix_user(self.username_raw)
 
     @property
     def user_agent(self):

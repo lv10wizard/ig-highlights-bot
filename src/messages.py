@@ -20,7 +20,7 @@ from constants import (
 )
 from src import (
         database,
-        redditprefix,
+        reddit,
 )
 
 
@@ -160,11 +160,11 @@ class Messages(object):
         reply_text = None
         you = None
 
-        prefixed_name = redditprefix.prefix(name, prefix)
-        if redditprefix.is_subreddit_prefix(prefix):
+        prefixed_name = reddit.prefix(name, prefix)
+        if reddit.is_subreddit_prefix(prefix):
             you = ' '.join(['posts/comments in', prefixed_name])
 
-        elif redditprefix.is_user_prefix(prefix):
+        elif reddit.is_user_prefix(prefix):
             you = ''.join(['you (', prefixed_name, ')'])
 
         if not you:
@@ -204,7 +204,7 @@ class Messages(object):
         if not hasattr(self, '_maintainer'):
             self._maintainer = reddit_obj.redditor(AUTHOR)
 
-        prefixed_name = redditprefix.prefix(name, prefix)
+        prefixed_name = reddit.prefix(name, prefix)
         LINE_SEP = '---'
         TIME_FMT = '%Y/%m/%d @ %H:%M:%S'
         try:
