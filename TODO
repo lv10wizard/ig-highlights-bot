@@ -1,0 +1,47 @@
+----- STREAM OF CONSCIOUSNESS TODO FILE --------------------------------
+The contents of this file may not make sense to anyone (including me).
+Proceed at your own peril.
+------------------------------------------------------------------------
+
+
+O. add multiprocessing.RLock to blacklist database calls
+    O. remove database/* locks
+O. instead of communicating with messages through a queue,
+    just pass self.blacklist & have messages make blacklist calls
+3. refactor Reddit instantiation
+    => move to reddit.py (maybe rename redditprefix -> reddit)
+    - refactor bot.py:_handle_rate_limit -> reddit.py
+        - create a generic error handler which calls the pertinent
+          error-handler (map APIException handlers by error_type)
+        * need to notify all processes of rate-limit & put all to sleep
+    - instantiate in bot.__init__
+    - instantiate another instance in messages.run_forever
+    - instantiate another in mentions.run_forever
+3.1 add config options:
+    - SEND_DEBUG_PM on/off
+        -> refactor into separate class? (in replies.py maybe?)
+            -- needs to instantiate its own Reddit instance (to get the
+            redditor object)
+        ? add more debug pms
+4? move messages.py reply methods to replies.py .. maybe
+    I don't think anything else should need those specific methods
+    (but the same can probably said of the methods in replies.py)
+5. mentions parsing
+    - queue.put( thing.submission )
+    ? gate by time -- don't parse through the same submission within
+        T time
+        - but there could be new comments with usable links
+        - someone could spam mentions in a single submission
+            eg. hitting enter a bunch of times because of lag
+        > maybe keep a database of (username, submission) & only
+            queue.put if the specific combination has not been seen
+            (prevents the same user summoning multiple times)
+6. instagram stuff
+    - fetching & caching (+config option to expire cache)
+        - parse data into usable format
+        - caching = save data to file .. maybe a database? json?
+    - bad links db for temp bans (404s only?)
+        => if #bad_links > THRESHOLD: temp ban user!
+
+N. testing!
+
