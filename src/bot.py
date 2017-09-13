@@ -43,8 +43,6 @@ class IgHighlightsBot(object):
     """
     """
 
-    COMMENT_CHARACTER_LIMIT = 1e4 # 10 000
-
     def __init__(self, cfg):
         signal.signal(signal.SIGINT, self.graceful_exit)
         signal.signal(signal.SIGTERM, self.graceful_exit)
