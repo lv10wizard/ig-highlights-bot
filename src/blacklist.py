@@ -110,10 +110,9 @@ class Blacklist(object):
 
                 elif not is_blacklisted:
                     logger.prepend_id(logger.debug, self,
-                            'Adding {color_name} to blacklist'
-                            ' (is_tmp? {is_tmp})',
+                            'Adding {color_name} {tmp}to blacklist'
                             color_name=name_raw,
-                            is_tmp=('yes' if is_tmp else 'no'),
+                            tmp=('temporarily ' if is_tmp else ''),
                     )
                     self.__database.insert(name_raw, name_type, is_tmp)
                     # XXX: assumes insert was successful

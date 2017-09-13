@@ -52,6 +52,10 @@ class IgHighlightsBot(object):
         self.cfg = cfg
         self.reply_history = ReplyDatabase(self.cfg.replies_db_path)
         self.blacklist = blacklist.Blacklist(self.cfg)
+        self.messages = messages.Messages(
+                cfg=cfg,
+                blacklist=self.blacklist,
+        )
 
         self._reddit = praw.Reddit(
                 site_name=self.cfg.praw_sitename,
@@ -74,19 +78,6 @@ class IgHighlightsBot(object):
 
         # initialize stuff that require correct credentials
         self._formatter = replies.Formatter(self._reddit.config)
-
-        # queue of things to add/remove from blacklist
-        # XXX: done through a queue rather than having the messages process
-        # add/remove because I keep reading that sqlite3 does not play well with
-        # concurrency (even if clashes would probably be rare in this use case)
-        # -- I'm not sure if the advice still applies or if it even ever applied
-        # to multiprocessing
-        self.blacklist_queue = multiprocessing.JoinableQueue()
-        self.messages = messages.Messages(
-                cfg=cfg,
-                reddit=self._reddit,
-                blacklist_queue=self.blacklist_queue,
-        )
 
         # queue of submissions to be processed (produced through separate
         # processes -- eg. summoned to post through user mention)
@@ -314,46 +305,6 @@ class IgHighlightsBot(object):
                 and comment.author.name.lower() == self.username_raw.lower()
         )
 
-    def is_blacklisted(self, thing):
-        """
-        thing (Comment, str) - either a Comment to check against or a string
-            prefixed with either 'u/' or 'r/'
-
-        Returns a tuple (prefixed_name, ban_time_left)
-            if the comment was posted to a blacklisted subreddit or by a
-            blacklisted user. ban_time_left is either the time remaining
-            (seconds) if the ban is temporary or -1 if permanent.
-            or if the string is a blacklisted subreddit / user.
-
-                None otherwise
-        """
-        result = None
-
-        if isinstance(thing, Comment):
-            subreddit = thing.subreddit.display_name
-            if self.blacklist.is_blacklisted_subreddit(subreddit):
-                # subreddit bans can only be permanent
-                result = (redditprefix.prefix_subreddit(subreddit), -1)
-
-            author = thing.author.name
-            time_left = self.blacklist.blacklist_time_left_seconds(author)
-            # 0 == False; any other number == True
-            if time_left:
-                result = (redditprefix.prefix_user(author), time_left)
-
-        elif isinstance(thing, basestring):
-            prefix, name = redditprefix.split_prefixed_name(thing)
-            if redditprefix.is_subreddit(thing):
-                if self.blacklist.is_blacklisted_subreddit(name):
-                    result = (thing, -1)
-
-            elif redditprefix.is_user(thing):
-                time_left = self.blacklist.blacklist_time_left_seconds(name)
-                if time_left:
-                    result = (thing, time_left)
-
-        return result
-
     def can_reply(self, comment):
         """
         Returns True if
@@ -378,10 +329,10 @@ class IgHighlightsBot(object):
             )
             return False
 
-        replies = self.reply_history.replied_comments_for_submission(
+        replied = self.reply_history.replied_comments_for_submission(
                 comment.submission
         )
-        if len(replies) > self.cfg.max_replies_per_post:
+        if len(replied) > self.cfg.max_replies_per_post:
             logger.prepend_id(logger.debug, self,
                     'I\'ve made too many replies (#{num}) to {color_post}:'
                     ' skipping.',
@@ -405,7 +356,14 @@ class IgHighlightsBot(object):
             )
             return False
 
-        # potentially spammy
+        # XXX: there is the possibility that the blacklist check fails just as
+        # that account/subreddit becomes blacklisted
+        #   eg. 1. user requests to be blacklisted
+        #       2. bot finds comment & sees not blacklisted
+        #       3. messages process adds user to blacklist
+        #       4. bot replies to comment
+        # .. should only cause one erroneous reply post-blacklist (and only in
+        # this rare situation)
         prefixed_name = self.blacklist.is_blacklisted_thing(comment)
         if prefixed_name:
             time_left = self.blacklist.time_left_seconds_name(prefixed_name)
@@ -417,6 +375,8 @@ class IgHighlightsBot(object):
             msg.append('({color_comment}):')
             msg.append('skipping.')
 
+            # potentially spammy (for subreddits)
+            # TODO? don't log if is_subreddit
             logger.prepend_id(logger.debug, self,
                     ' '.join(msg),
                     color_name=prefixed_name,
@@ -479,139 +439,6 @@ class IgHighlightsBot(object):
                 unpack_color=result,
         )
         return result
-
-    def process_blacklist_queue(self, num=1):
-        """
-        Tries to process num elements in the blacklist_queue
-
-        num (int, optional) - number of elements to process
-        """
-        if not isinstance(num, int) or num < 0:
-            num = 1
-
-        try:
-            for i in xrange(num):
-                data = self.blacklist_queue.get_nowait()
-                logger.prepend_id(logger.debug, self,
-                        '[{i}/{num}] Processing blacklist data'
-                        ' (#{qnum} remaining):'
-                        '\n{data}',
-                        i=i+1,
-                        num=num,
-                        qnum=self.blacklist_queue.qsize(),
-                        data=pprint.pformat(data),
-                )
-
-                try:
-                    name_full = data[KEY_BLACKLIST_NAME]
-                    is_add = data[KEY_BLACKLIST_ADD]
-                    is_remove = data[KEY_BLACKLIST_REMOVE]
-
-                except (AttributeError, KeyError, TypeError) as e:
-                    logger.prepend_id(logger.error, self,
-                            'Failed to process data:'
-                            ' blacklist_queue structure changed!', e, True,
-                    )
-
-                else:
-
-                    # TODO: replace self.blacklist calls (requires re-logicking)
-                    # >>>>> 1. add multiprocessing.RLock to blacklist database calls
-                    #           a. remove database/* locks
-                    #       2. instead of communicating with messages through a queue,
-                    #          just pass self.blacklist & have messages make blacklist calls
-                    #       3. refactor Reddit instantiation
-                    #           - instantiate in bot.__init__
-                    #           - instantiate another instance in messages.run_forever
-                    #           - instantiate another in mentions.run_forever
-
-                    prefix, name = redditprefix.split_prefixed_name(name_full)
-                    if not prefix:
-                        raise TypeError(
-                                'Failed to process data:'
-                                ' blacklist_queue name structure changed!'
-                                ' (name=\'{name}\')'.format(
-                                    name=name_full,
-                                )
-                        )
-
-                    name_type = None
-                    if redditprefix.is_subreddit(name_full):
-                        name_type = database.BlacklistDatabase.TYPE_SUBREDDIT
-                    elif redditprefix.is_user(name_full):
-                        name_type = database.BlacklistDatabase.TYPE_USER
-                    if not name_type:
-                        raise TypeError(
-                                'Failed to process data:'
-                                ' blacklist_queue prefix structure changed!'
-                                ' (prefix=\'{prefix}\')'.format(
-                                    prefix=prefix,
-                                )
-                        )
-
-                    # make sure this name is not blacklisted before adding
-                    # or is permanently blacklisted before removing
-                    # (don't give temp banned users a way to circumvent the
-                    #  temp ban)
-                    is_blacklisted = self.is_blacklisted(name_full)
-
-                    if is_add:
-                        if not is_blacklisted:
-                            logger.prepend_id(logger.debug, self,
-                                    'Blacklisting {color_name} ...',
-                                    color_name=name_full,
-                            )
-                            self.blacklist.insert(name, name_type)
-                        else:
-                            time_left = is_blacklisted[1]
-                            if time_left > 0:
-                                # TODO: update to be permanent
-                                pass
-                            else:
-                                logger.prepend_id(logger.debug, self,
-                                        'Attempted to add to blacklist:'
-                                        ' {color_name} is already blacklisted!',
-                                        color_name=name_full,
-                                )
-
-                    elif is_remove:
-                        if not is_blacklisted:
-                            logger.prepend_id(logger.debug, self,
-                                    'Attempted to remove from blacklist:'
-                                    ' {color_name} is not blacklisted!',
-                                    color_name=name_full,
-                            )
-                        else:
-                            time_left = is_blacklisted[1]
-                            if time_left > 0:
-                                # TODO: what if a user was wrongly temp
-                                # blacklisted and wants to be permanently
-                                # blacklisted?
-                                logger.prepend_id(logger.debug, self,
-                                        'Attempted to remove from blacklist:'
-                                        ' {color_name} ({time} remaining)',
-                                        color_name=name_full,
-                                        time=time_left,
-                                )
-
-                            else:
-                                logger.prepend_id(logger.debug, self,
-                                        'Removing {color_name} from blacklist'
-                                        ' ...',
-                                        color_name=name_full,
-                                )
-                                self.blacklist.delete(name, name_type)
-
-                    else:
-                        raise TypeError(
-                                'Failed to process data:'
-                                ' blacklist_queue action structure changed!'
-                        )
-
-                self.blacklist_queue.task_done()
-
-        except Queue.Empty:
-            pass
 
     def process_submission_queue(self, num=1):
         """
@@ -707,9 +534,6 @@ class IgHighlightsBot(object):
                 # process a single submission from a producer process
                 # (eg. summoned through user mention)
                 self.process_submission_queue()
-
-                # process a blacklist request
-                self.process_blacklist_queue()
 
                 # TODO: self._consider_reply(comment) .. maybe name something better
 
