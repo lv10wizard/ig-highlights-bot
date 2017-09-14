@@ -19,6 +19,8 @@ from constants import (
 APP_NAME                      = 'app_name'
 PRAW_SITENAME                 = 'praw_sitename'
 
+SEND_DEBUG_PM                 = 'send_debug_pm'
+
 REPLIES_DB_PATH               = 'replies_db_path'
 NUM_HIGHLIGHTS_PER_IG_USER    = 'num_highlights_per_ig_user'
 MAX_REPLIES_PER_COMMENT       = 'max_replies_per_comment'
@@ -132,6 +134,9 @@ class Config(object):
                 # the sitename (section) in praw.ini to use
                 PRAW_SITENAME: DEFAULT_APP_NAME,
 
+                # whether the bot should send debug pms to AUTHOR reddit account
+                SEND_DEBUG_PM: 'true',
+
                 # path to the replies database file
                 REPLIES_DB_PATH: os.path.join(DATA_ROOT_DIR, 'replies.db'),
 
@@ -156,7 +161,7 @@ class Config(object):
                 BLACKLIST_DB_PATH: os.path.join(DATA_ROOT_DIR, 'blacklist.db'),
 
                 # the amount of time temp bans last (see parse_time)
-                BLACKLIST_TEMP_BAN_TIME: '4d',
+                BLACKLIST_TEMP_BAN_TIME: '3d',
 
                 # path to the database file storing processed messages
                 MESSAGES_DB_PATH: os.path.join(DATA_ROOT_DIR, 'messages.db'),
@@ -233,32 +238,16 @@ class Config(object):
         self.__parser.set(Config.SECTION, key, default)
         self.__write()
 
-    def __get_path(self, key):
+    def __get(self, key, get_func='get'):
+        # possible AttributeError if get_func has a typo
+        getter = getattr(self.__parser, get_func)
         try:
-            path = self.__parser.get(Config.SECTION, key)
+            result = getter(Config.SECTION, key)
 
-        # catch-all.. not great but I'm not sure what errors can be thrown
-        except Exception as e:
+        except ValueError as e:
             self.__handle_bad_val(key, e)
-            path = self.__parser.get(Config.SECTION, key)
-
-        return path
-
-    def __get_path_resolved(self, key):
-        return resolve_path(self.__get_path(key))
-
-    def __get_path_raw(self, key):
-        return self.__get_path(key)
-
-    def __get_int(self, key):
-        try:
-            num = self.__parser.getint(Config.SECTION, key)
-
-        except (TypeError, ValueError) as e:
-            self.__handle_bad_val(key, e)
-            num = self.__parser.getint(Config.SECTION, key)
-
-        return num
+            result = getter(Config.SECTION, key)
+        return result
 
     def __get_time(self, key):
         time_str = self.__parser.get(Config.SECTION, key)
@@ -274,43 +263,47 @@ class Config(object):
 
     @property
     def app_name(self):
-        return self.__parser.get(Config.SECTION, APP_NAME)
+        return self.__get(APP_NAME)
 
     @property
     def praw_sitename(self):
-        return self.__parser.get(Config.SECTION, PRAW_SITENAME)
+        return self.__get(PRAW_SITENAME)
+
+    @property
+    def send_debug_pm(self):
+        return self.__get(SEND_DEBUG_PM, 'getboolean')
 
     @property
     def replies_db_path(self):
-        return self.__get_path_resolved(REPLIES_DB_PATH)
+        return resolve_path(self.__get(REPLIES_DB_PATH))
 
     @property
     def replies_db_path_raw(self):
-        return self.__get_path_raw(REPLIES_DB_PATH)
+        return self.__get(REPLIES_DB_PATH)
 
     @property
     def num_highlights_per_ig_user(self):
-        return self.__get_int(NUM_HIGHLIGHTS_PER_IG_USER)
+        return self.__get(NUM_HIGHLIGHTS_PER_IG_USER, 'getint')
 
     @property
     def max_replies_per_comment(self):
-        return self.__get_int(MAX_REPLIES_PER_COMMENT)
+        return self.__get(MAX_REPLIES_PER_COMMENT, 'getint')
 
     @property
     def max_replies_per_post(self):
-        return self.__get_int(MAX_REPLIES_PER_POST)
+        return self.__get(MAX_REPLIES_PER_POST, 'getint')
 
     @property
     def max_replies_in_comment_thread(self):
-        return self.__get_int(MAX_REPLIES_IN_COMMENT_THREAD)
+        return self.__get(MAX_REPLIES_IN_COMMENT_THREAD, 'getint')
 
     @property
     def blacklist_db_path(self):
-        return self.__get_path_resolved(BLACKLIST_DB_PATH)
+        return resolve_path(self.__get(BLACKLIST_DB_PATH))
 
     @property
     def blacklist_db_path_raw(self):
-        return self.__get_path_raw(BLACKLIST_DB_PATH)
+        return self.__get(BLACKLIST_DB_PATH)
 
     @property
     def blacklist_temp_ban_time(self):
@@ -318,27 +311,27 @@ class Config(object):
 
     @property
     def messages_db_path(self):
-        return self.__get_path_resolved(MESSAGES_DB_PATH)
+        return resolve_path(self.__get(MESSAGES_DB_PATH))
 
     @property
     def messages_db_path_raw(self):
-        return self.__get_path_raw(MESSAGES_DB_PATH)
+        return self.__get(MESSAGES_DB_PATH)
 
     @property
     def logging_path(self):
-        return self.__get_path_resolved(LOGGING_PATH)
+        return resolve_path(self.__get(LOGGING_PATH))
 
     @property
     def logging_path_raw(self):
-        return self.__get_path_raw(LOGGING_PATH)
+        return self.__get(LOGGING_PATH)
 
     @property
     def instagram_db_path(self):
-        return self.__get_path_resolved(INSTAGRAM_DB_PATH)
+        return resolve_path(self.__get(INSTAGRAM_DB_PATH))
 
     @property
     def instagram_db_path_raw(self):
-        return self.__get_path_raw(INSTAGRAM_DB_PATH)
+        return self.__get(INSTAGRAM_DB_PATH)
 
 
 __all__ = [
