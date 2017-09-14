@@ -8,18 +8,17 @@ O. add multiprocessing.RLock to blacklist database calls
     O. remove database/* locks
 O. instead of communicating with messages through a queue,
     just pass self.blacklist & have messages make blacklist calls
-3. refactor Reddit instantiation
-    => move to reddit.py (maybe rename redditprefix -> reddit)
-    - refactor bot.py:_handle_rate_limit -> reddit.py
-        - create a generic error handler which calls the pertinent
+O. refactor Reddit instantiation
+    O. move to reddit.py (maybe rename redditprefix -> reddit)
+    O. refactor bot.py:_handle_rate_limit -> reddit.py
+        O. create a generic error handler which calls the pertinent
           error-handler (map APIException handlers by error_type)
-        * need to notify all processes of rate-limit & put all to sleep
-    - instantiate in bot.__init__
-    - instantiate another instance in messages.run_forever
-    - instantiate another in mentions.run_forever
-3.1 add config options:
-    - SEND_DEBUG_PM on/off
-        -> refactor into separate class? (in replies.py maybe?)
+        O. need to notify all processes of rate-limit & put all to sleep
+    O. instantiate in bot.__init__
+    O. instantiate another instance in messages.run_forever
+O. add config options:
+    O. SEND_DEBUG_PM on/off
+        O. refactor into separate class? (in replies.py maybe?)
             -- needs to instantiate its own Reddit instance (to get the
             redditor object)
         ? add more debug pms
@@ -42,6 +41,7 @@ O. instead of communicating with messages through a queue,
         - caching = save data to file .. maybe a database? json?
     - bad links db for temp bans (404s only?)
         => if #bad_links > THRESHOLD: temp ban user!
+7. refactor logging
 
 N. testing!
 

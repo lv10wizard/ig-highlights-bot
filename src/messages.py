@@ -7,6 +7,7 @@ import time
 from praw.models import (
         Message,
         SubredditMessage,
+        util as praw_util,
 )
 from utillib import logger
 
@@ -53,9 +54,9 @@ class Messages(object):
         Sets the kill flag for the messages process. Will wait for the process
         to finish if block == True
         """
-        if hasattr(self, '_kill') and hasattr(self._kill, 'set'):
+        if hasattr(self, '_killed') and hasattr(self._killed, 'set'):
             logger.prepend_id(logger.debug, self, 'Setting kill flag ...')
-            self._kill.set()
+            self._killed.set()
             if block:
                 self.__proc.join()
 
@@ -67,8 +68,8 @@ class Messages(object):
 
     def start(self):
         logger.prepend_id(logger.debug, self, 'Starting process ...')
-        if not hasattr(self, '_kill'):
-            self._kill = multiprocessing.Event()
+        if not hasattr(self, '_killed'):
+            self._killed = multiprocessing.Event()
         try:
             self.__proc.start()
 
@@ -132,27 +133,6 @@ class Messages(object):
 
         return prefix, name
 
-    def _reply(self, message, reply_text):
-        """
-        Replies to the message with the reply_text
-        """
-        if not (isinstance(reply_text, basestring) and reply_text):
-            logger.prepend_id(logger.debug, self,
-                    'Cannot reply to message \'{mid}\':'
-                    ' bad reply_text, string expected got \'{type}\''
-                    ' (\'{text}\')',
-                    mid=message.id,
-                    type=type(reply_text),
-                    text=reply_text,
-            )
-            return
-
-        try:
-            message.reply(reply_text)
-
-        except praw.exceptions.APIException as e:
-            pass # TODO: handle api exception function
-
     def _format_reply(self, message, subject, name, prefix):
         """
         Formats a reply for a successfully processed message
@@ -195,57 +175,45 @@ class Messages(object):
 
         return reply_text
 
-    def _send_debug_pm(self, reddit_obj, message, name, prefix, regex):
+    def _debug_pm(self, message, name, prefix, regex):
         """
-        Sends a pm with some debugging information in the event that something
-        goes catstrophically wrong. (This is mainly in case logs are not being
-        closely monitored.)
-        """
-        if not hasattr(self, '_maintainer'):
-            self._maintainer = reddit_obj.redditor(AUTHOR)
+        Constructs a pm with some debugging information in the event that
+        something goes catstrophically wrong. (This is mainly in case logs are
+        not being closely monitored.)
 
+        Returns tuple(str, str)
+        """
         prefixed_name = reddit.prefix(name, prefix)
         LINE_SEP = '---'
         TIME_FMT = '%Y/%m/%d @ %H:%M:%S'
-        try:
-            self._maintainer.message(
-                    'Unhandled message from \'{name}\''.format(
-                        name=prefixed_name,
-                    ),
-
-                    '\n\n'.join([
-                        '{0} @ {1}'.format(
-                            os.path.basename(__file__),
-                            inspect.currentframe().f_lineno,
-                        ),
-                        LINE_SEP,
-                        'subject regex: `{0}`'.format(regex.pattern),
-                        'processed at: `{0}` (`{1}`)'.format(
-                            time.strftime(TIME_FMT),
-                            time.time(),
-                        ),
-                        LINE_SEP,
-                        # TODO? trim very long subjects (may cause message body
-                        # to exceed character limit)
-                        'message subject: `{0}`'.format(message.subject),
-                        'message from: `{0}`'.format(prefixed_name),
-                        'sent at: `{0}` (`{1}`)'.format(
-                            time.strftime(
-                                TIME_FMT,
-                                time.localtime(message.created_utc),
-                            ),
-                            message.created_utc,
-                        ),
-                        # LINE_SEP,
-                        # '`message body:` {0}'.format(message.body),
-                    ])
-            )
-
-        except Exception as e:
-            logger.prepend_id(logger.error, self,
-                    'Failed to send debugging pm to \'{color_author}\'!', e,
-                    color_author=self._maintainer.name,
-            )
+        subject = 'Unhandled message from \'{name}\''.format(name=prefixed_name)
+        body = '\n\n'.join([
+            '{0} @ {1}'.format(
+                os.path.basename(__file__),
+                inspect.currentframe().f_lineno,
+            ),
+            LINE_SEP,
+            'subject regex: `{0}`'.format(regex.pattern),
+            'processed at: `{0}` (`{1}`)'.format(
+                time.strftime(TIME_FMT),
+                time.time(),
+            ),
+            LINE_SEP,
+            # TODO? trim very long subjects (may cause message body
+            # to exceed character limit)
+            'message subject: `{0}`'.format(message.subject),
+            'message from: `{0}`'.format(prefixed_name),
+            'sent at: `{0}` (`{1}`)'.format(
+                time.strftime(
+                    TIME_FMT,
+                    time.localtime(message.created_utc),
+                ),
+                message.created_utc,
+            ),
+            # LINE_SEP,
+            # '`message body:` {0}'.format(message.body),
+        ])
+        return subject, body
 
     def _is_add(self, subject):
         return BLACKLIST_SUBJECT in subject
@@ -254,22 +222,25 @@ class Messages(object):
         return REMOVE_BLACKLIST_SUBJECT in subject
 
     def run_forever(self):
-        reddit_obj = >>> TODO <<<
+        reddit_obj = reddit.Reddit(self.cfg)
         blacklist_re = re.compile(r'^({0}|{1})$'.format(
             BLACKLIST_SUBJECT,
             REMOVE_BLACKLIST_SUBJECT,
         ))
         messages_db = database.MessagesDatabase(self.cfg.messages_db_path)
-        delay = 5 * 60
+        messages_stream = praw_util.stream_generator(
+                reddit_obj.inbox.messages,
+                pause_after=0,
+        )
+        # XXX: a manual delay is used instead of relying on praw's stream
+        # delay so that external shutdown events can be received in a timely
+        # fashion.
+        delay = 5 * 60 # probably too long
 
         try:
-            while not self._kill.is_set():
+            while not self._killed.is_set():
                 logger.prepend_id(logger.debug, self, 'Processing messages ...')
-                # pull the default number of messages since processing halts
-                # upon seeing the first already-processed message
-                # assumption: the default number of messages incurs only a
-                # single hit to reddit
-                for message in reddit_obj.inbox.messages():
+                for message in messages_stream:
                     # don't rely on read/unread flag in case someone logs in
                     # to the bot account and reads all the messages
                     # assumption: inbox.messages() fetches newest -> oldest
@@ -285,6 +256,13 @@ class Messages(object):
                                     else message.subreddit.display_name
                                 ),
                         )
+                        break
+
+                    elif self._killed.is_set():
+                        logger.prepend_id(logger.debug, self, 'Killed!')
+                        break
+
+                    elif messages is None:
                         break
 
                     # blindly mark messages as seen even if processing fails.
@@ -342,12 +320,12 @@ class Messages(object):
 
                         # send a pm to the maintainer in case logs aren't being
                         # monitored closely
-                        self._send_debug_pm(
-                                reddit_obj=reddit_obj,
-                                subject=subject,
-                                name=name,
-                                prefix=prefix,
-                                regex=blacklist_re,
+                        pm_subject, pm_body = self._debug_pm(
+                                message, name, prefix, blacklist_re,
+                        )
+                        reddit_obj.send_debug_pm(
+                                subject=pm_subject,
+                                body=pm_body,
                         )
 
                     if do_reply:
@@ -358,18 +336,24 @@ class Messages(object):
                                 prefix=prefix,
                         )
                         if reply_text:
-                            self._reply(message, reply_text)
+                            reddit_obj.do_reply(message, reply_text)
 
-                logger.prepend_id(logger.debug, self,
-                        'Waiting {time} before checking messages again ...',
-                        time=delay,
-                )
-                self._kill.wait(delay)
+                if not self._killed.is_set():
+                    logger.prepend_id(logger.debug, self,
+                            'Waiting {time} before checking messages again ...',
+                            time=delay,
+                    )
+                self._killed.wait(delay)
 
         except Exception as e:
             # TODO? only catch praw errors
             logger.prepend_id(logger.error, self,
                     'Something went wrong! Message processing terminated.',
+            )
+
+        finally:
+            logger.prepend_id(logger.info, self,
+                    'Exiting ...',
             )
 
 

@@ -47,6 +47,7 @@ class IgHighlightsBot(object):
         signal.signal(signal.SIGINT, self.graceful_exit)
         signal.signal(signal.SIGTERM, self.graceful_exit)
 
+        self._killed = False
         self.cfg = cfg
         self.reply_history = ReplyDatabase(self.cfg.replies_db_path)
         self.blacklist = blacklist.Blacklist(self.cfg)
@@ -54,132 +55,54 @@ class IgHighlightsBot(object):
                 cfg=cfg,
                 blacklist=self.blacklist,
         )
-
-        self._reddit = praw.Reddit(
-                site_name=self.cfg.praw_sitename,
-                user_agent=self.user_agent,
-        )
-        self.try_set_username()
-        self.try_set_password()
-
-        # try to auth immediately to catch anything wrong with credentials
-        try:
-            self._reddit.user.me()
-
-        except OAuthException as e:
-            logger.prepend_id(logger.error, self,
-                    'Login failed! Please check that praw.ini contains the'
-                    ' correct login information under the section:'
-                    ' \'[{section}]\'', e, True,
-                    section=self.cfg.praw_sitename,
-            )
-
-        # initialize stuff that require correct credentials
-        self._formatter = replies.Formatter(self._reddit.config)
-
         # queue of submissions to be processed (produced through separate
         # processes -- eg. summoned to post through user mention)
         self.submission_queue = multiprocessing.JoinableQueue()
         # self.mentions = mentions.Mentions(self.submission_queue)
 
-        logger.prepend_id(logger.debug, self,
-                'client id: {client_id}'
-                '\nuser name: {username}'
-                '\nuser agent: {user_agent}',
-                client_id=self._reddit.config.client_id,
-                username=self.username_raw,
-                user_agent=self.user_agent,
-        )
+        self._reddit = reddit.Reddit(cfg)
+
+        # initialize stuff that require correct credentials
+        self._formatter = replies.Formatter(self._reddit.username_raw)
 
     def __str__(self):
-        return self.username_raw
+        return self._reddit.username_raw
 
     def graceful_exit(self, signum=None, frame=None):
         """
         """
-        pass # TODO
+        # https://stackoverflow.com/a/2549950
+        signames = {
+                num: name for name, num in
+                reversed(sorted(signal.__dict__.iteritems()))
+                if name.startswith('SIG') and not name.startswith('SIG_')
+        }
 
-    def try_set_username(self):
-        """
-        Asks the user to enter the bot account username if not defined in
-        praw.ini
-        """
-        if isinstance(self._reddit.config.username, praw.config._NotSet):
-            self._reddit.config.username = raw_input('bot account username: ')
-            self.warn_if_wrong_praw_version()
-            self._reddit._prepare_prawcore()
+        msg = []
+        if signum:
+            msg.append('Caught {name} ({num})!')
+        msg.append('Shutting down ...')
 
-    def try_set_password(self):
-        """
-        Asks the user to enter the bot account password if it was not defined
-        in praw.ini
-        """
-        while isinstance(self._reddit.config.password, praw.config._NotSet):
-            first = getpass('{0} password: '.format(self.username))
-            second = getpass('Re-enter password: ')
-            if first == second:
-                self._reddit.config.password = first
-
-                # https://github.com/praw-dev/praw/blob/master/praw/reddit.py
-                # XXX: praw's Config.password is just a member variable; setting
-                # it does not actually allow authentication if the password
-                # is set after Reddit.__init__
-                self.warn_if_wrong_praw_version()
-                # the following call works as of praw 5.1 (may break in later
-                # versions)
-                self._reddit._prepare_prawcore()
-            else:
-                logger.prepend_id(logger.warn, self,
-                        'Passwords do not match! Please try again.',
-                )
-
-    def warn_if_wrong_praw_version(self):
-        major, minor, revision = praw.__version__.split('.')
         try:
-            major = int(major)
-            minor = int(minor)
-            revision = int(revision)
-        except ValueError as e:
-            # something went horribly wrong
-            logger.prepend_id(logger.error, self,
-                    'Failed to determine praw version!', e, True,
+            logger.prepend_id(logger.debug, self,
+                    ' '.join(msg),
+                    name=signames[signum] if signum is not None else '???',
+                    num=signum,
             )
-        else:
-            if not (major == 5 and minor == 1 and revision == 0):
-                logger.prepend_id(logger.warn, self,
-                        'praw version != 5.1.0 (version={ver});'
-                        ' authentication may fail!',
-                        ver=praw.__version__,
-                )
-
-    @property
-    def username_raw(self):
-        return self._reddit.config.username
-
-    @property
-    def username(self):
-        return reddit.prefix_user(self.username_raw)
-
-    @property
-    def user_agent(self):
-        """
-        Memoized user agent string
-        """
-        try:
-            user_agent = self.__user_agent
-        except AttributeError:
-            version = '0.1' # TODO: read from file
-            self.__user_agent = (
-                    '{platform}:{appname}:{version} (by {prefix}{author})'
-            ).format(
-                    platform=sys.platform,
-                    appname=self.cfg.app_name,
-                    version=version,
-                    prefix=PREFIX_USER,
-                    author=AUTHOR,
+        except KeyError as e:
+            # signum doesn't match a signal specified in the signal module ...?
+            # this is probably not possible
+            logger.prepend_id(logger.debug, self,
+                    ' '.join(msg),
+                    name='???',
+                    num=signum,
             )
-            user_agent = self.__user_agent
-        return user_agent
+
+        # TODO: kill (+join) subprocesses
+
+        # XXX: kill the main process last so that daemon processes aren't
+        # killed at inconvenient times
+        self._killed = True
 
     def reply(self, comment, ig_list, callback_depth=0):
         """
@@ -187,7 +110,13 @@ class IgHighlightsBot(object):
         highlights
         """
         logger.prepend_id(logger.debug, self,
-                '',
+                '{depth}Replying to {color_comment}: {unpack_color}',
+                depth=(
+                    '[#{0}] '.format(callback_depth)
+                    if callback_depth > 0
+                ),
+                color_comment=reddit.display_id(comment),
+                unpack_color=ig_list,
         )
 
         reply_text_list = self._formatter.format(
@@ -197,7 +126,7 @@ class IgHighlightsBot(object):
             logger.prepend_id(logger.debug, self,
                     '{color_comment} ({color_author}) almost made me reply'
                     ' #{num} times: skipping.',
-                    color_comment=comments.display_id(comment),
+                    color_comment=reddit.display_id(comment),
                     color_author=(
                         comments.author.name.lower()
                         if comments.author
@@ -207,101 +136,24 @@ class IgHighlightsBot(object):
                     num=len(reply_text_list),
             )
             # TODO? temporarily blacklist (O(days)) user? could be trying to
-            # break the bot
+            # break the bot. or could just be a comment with a lot of instagram
+            # profile links.
             return
 
-        logger.prepend_id(logger.debug, self,
-                'Replying to {color_comment}:\n{reply}',
-                color_comment=comments.display_id(comment),
-                reply='\n\n'.join(reply_text_list),
-        )
-
-        try:
-            # TODO: comment.reply(...)
-            pass
-
-        except Forbidden as e:
-            logger.prepend_id(logger.error, self,
-                    'Failed to reply to comment {color_comment}!', e, True,
-                    color_comment=comments.display_id(comment),
-            )
-
-        except praw.exceptions.APIException as e:
-            # TODO: map APIException handlers to their corresponding error_type
-            #   - ratelimit
-            #   - too_old
-            #   - no_text
-            #   - no_links
-            self._handle_rate_limit(
-                    err=e,
-                    depth=callback_depth,
-                    callback=self.reply,
-                    callback_kwargs={
-                        'comment': comment,
-                        'ig_list': ig_list,
-                        'callback_depth': callback_depth+1,
-                    },
-            )
-
-        else:
-            self.reply_history.insert(comment, ig_list)
-
-    def _handle_rate_limit(self, err, depth, callback, callback_args=(),
-            callback_kwargs={},
-    ):
-        """
-        """
-        if depth > 10:
-            # (N+1)-th try in chain.. something is wrong
-            raise
-
-        if (
-                hasattr(err, 'error_type')
-                and isinstance(err.error_type, basestring)
-                and err.error_type.lower() == 'ratelimit'
-        ):
-            delay = 10 * 60
-
-            logger.prepend_id(logger.debug, self,
-                    '{error_type}: trying to find proper delay ...',
-                    error_type=err.error_type,
-            )
-            try:
-                delay = config.parse_time(err.message)
-
-            except config.InvalidTime:
-                logger.prepend_id(logger.debug, self,
-                        'Failed to set appropriate delay;'
-                        ' using default ({time})',
-                        time=delay,
-                )
-
-            else:
-                logger.prepend_id(logger.debug, self,
-                        'Found rate-limit delay: {time}',
-                        time=parsed_delay,
-                )
-
-            logger.prepend_id(logger.error, self,
-                    'Rate limited! Retrying \'{callback}\' in {time} ...', err,
-                    callback=callback.__name__,
-                    time=delay,
-            )
-            time.sleep(delay)
-            callback(*callback_args, **callback_kwargs)
-
-        else:
-            raise
+        for body, ig_users in reply_text_list:
+            if reddit.do_reply(comment, body):
+                self.reply_history.insert(comment, ig_users)
 
     def by_me(self, comment):
         """
         Returns True if the comment was posted by the bot
         """
-        return (
-                # in case of deleted/removed
-                bool(comment.author)
-                and comment.author.name.lower() == self.username_raw.lower()
-        )
+        result = False
+        # author may be None if deleted/removed
+        if bool(comment.author):
+            author = comment.author.name.lower()
+            result = author == self._reddit.username_raw.lower()
+        return result
 
     def can_reply(self, comment):
         """
@@ -323,7 +175,7 @@ class IgHighlightsBot(object):
         if already_replied:
             logger.prepend_id(logger.debug, self,
                     'I already replied to {color_comment}: skipping.',
-                    color_comment=comments.display_id(comment),
+                    color_comment=reddit.display_id(comment),
             )
             return False
 
@@ -335,7 +187,7 @@ class IgHighlightsBot(object):
                     'I\'ve made too many replies (#{num}) to {color_post}:'
                     ' skipping.',
                     num=self.cfg.max_replies_per_post,
-                    color_post=comments.display_id(comment.submission),
+                    color_post=reddit.display_id(comment.submission),
             )
             return False
 
@@ -343,14 +195,14 @@ class IgHighlightsBot(object):
         if comment.archived:
             logger.prepend_id(logger.debug, self,
                     '{color_comment} is too old: skipping.',
-                    color_comment=comments.display_id(comment),
+                    color_comment=reddit.display_id(comment),
             )
 
         by_me = self.by_me(comment)
         if by_me:
             logger.prepend_id(logger.debug, self,
                     'I posted {color_comment}: skipping.',
-                    color_comment=comments.display_id(comment),
+                    color_comment=reddit.display_id(comment),
             )
             return False
 
@@ -379,7 +231,7 @@ class IgHighlightsBot(object):
                     ' '.join(msg),
                     color_name=prefixed_name,
                     time=time_left,
-                    color_comment=comments.display_id(comment),
+                    color_comment=reddit.display_id(comment),
             )
             return False
         return True
@@ -432,22 +284,21 @@ class IgHighlightsBot(object):
 
         logger.prepend_id(logger.debug, self,
                 '{color_comment} ancestor authors: [#{num}] {unpack_color}',
-                color_comment=comments.display_id(comment),
+                color_comment=reddit.display_id(comment),
                 num=len(result),
                 unpack_color=result,
         )
         return result
 
-    def process_submission_queue(self, num=1):
+    def process_submission_queue(self, num=5):
         """
         Tries to process num elements in the submission_queue
 
         num (int, optional) - number of elements to process (halts if the queue
-                                is empty regardless of number of elements
-                                processed).
+                is empty regardless of number of elements processed).
         """
         if not isinstance(num, int) or num < 0:
-            num = 1
+            num = 5
 
         try:
             for i in xrange(num):
@@ -484,20 +335,20 @@ class IgHighlightsBot(object):
                             logger.prepend_id(logger.debug, self,
                                     '{color_comment} author tree:'
                                     ' [#{num}] {unpack_color}',
-                                    color_comment=comments.display_id(comment),
+                                    color_comment=reddit.display_id(comment),
                                     num=len(author_tree),
                                     unpack_color=author_tree,
                             )
 
                             num_comments_by_me = author_tree.count(
-                                    self.username_raw.lower()
+                                    self._reddit.username_raw.lower()
                             )
                             max_by_me = self.cfg.max_replies_in_comment_thread
                             if num_comments_by_me > max_by_me:
                                 logger.prepend_id(logger.debug, self,
                                         'I\'ve made too many replies in'
                                         ' {color_comment}\'s thread: skipping.',
-                                        color_comment=comments.display_id(
+                                        color_comment=reddit.display_id(
                                             comment
                                         ),
                                 )
@@ -527,13 +378,18 @@ class IgHighlightsBot(object):
         # TODO: start inbox message parsing process
         # TODO: start mentions parser process
         subs = self._reddit.subreddit(self.subs)
+        comment_stream = subs.stream.comments(pause_after=0)
         try:
-            for comment in subs.stream.comments(pause_after=0):
-                # process a single submission from a producer process
-                # (eg. summoned through user mention)
-                self.process_submission_queue()
+            while not self._killed:
+                # TODO: can GETs cause praw to throw a ratelimit exception?
+                for comment in comment_stream:
+                    # TODO: self._consider_reply(comment) .. maybe name
+                    # something better
 
-                # TODO: self._consider_reply(comment) .. maybe name something better
+                    if not comment:
+                        break
+
+                self.process_submission_queue()
 
         except Redirect as e:
             if re.search(r'/subreddits/search', e.message):
@@ -542,6 +398,11 @@ class IgHighlightsBot(object):
                         ' {unpack_color}', e, True,
                         unpack_color=subs.split('+'),
                 )
+
+        finally:
+            logger.prepend_id(logger.info, self,
+                    'Exiting ...',
+            )
 
 
 __all__ = [

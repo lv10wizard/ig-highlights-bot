@@ -33,11 +33,15 @@ BLACKLIST_DEFAULTS_PATH = os.path.join(ROOT_DIR, 'BLACKLIST')
 
 AUTHOR = 'lv10wizard'
 COMPOSE_MESSAGE_BASE_URL = 'https://www.reddit.com/message/compose/'
+CONTACT_SUBJECT_SKELETON = 'Instagram highlights bot'
 CONTACT_URL_FMT = (
         COMPOSE_MESSAGE_BASE_URL
         + '?to='
         + AUTHOR
         + '&subject={subject}'
+)
+CONTACT_URL = CONTACT_URL_FMT.format(
+        subject=urllib.quote(CONTACT_SUBJECT_SKELETON),
 )
 BLACKLIST_SUBJECT = 'BLACKLIST ME'
 REMOVE_BLACKLIST_SUBJECT = 'UNBLACKLIST ME'

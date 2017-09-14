@@ -7,14 +7,9 @@ from bs4 import (
 )
 from utillib import logger
 
+from src import reddit
 from src.instagram import Instagram
 
-
-def display_id(thing):
-    if hasattr(thing, 'subreddit_name_prefixed') and hasattr(thing, 'id'):
-        return '/'.join([thing.subreddit_name_prefixed, thing.id])
-    else:
-        return thing
 
 class Parser(object):
     """
@@ -46,7 +41,7 @@ class Parser(object):
     def __str__(self):
         if not self.comment:
             return '<invalid comment>'
-        return display_id(self.comment)
+        return reddit.display_id(self.comment)
 
     @property
     def ig_links(self):
@@ -108,7 +103,6 @@ class Parser(object):
 
 
 __all__ = [
-        'display_id',
         'Parser',
 ]
 
