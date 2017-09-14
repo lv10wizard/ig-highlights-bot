@@ -56,7 +56,3 @@ HELP_URL = '' # TODO
 PREFIX_SUBREDDIT = 'r/'
 PREFIX_USER = 'u/'
 
-KEY_BLACKLIST_NAME = 'blacklist_name'
-KEY_BLACKLIST_ADD = 'blacklist_add'
-KEY_BLACKLIST_REMOVE = 'blacklist_remove'
-

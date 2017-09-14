@@ -1,6 +1,5 @@
 import inspect
 import os
-import multiprocessing
 import re
 import time
 
@@ -12,12 +11,8 @@ from praw.models import (
 from utillib import logger
 
 from constants import (
-        AUTHOR,
         BLACKLIST_SUBJECT,
         REMOVE_BLACKLIST_SUBJECT,
-        KEY_BLACKLIST_NAME,
-        KEY_BLACKLIST_ADD,
-        KEY_BLACKLIST_REMOVE,
 )
 from src import (
         base,

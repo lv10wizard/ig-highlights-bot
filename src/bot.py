@@ -1,13 +1,7 @@
-from getpass import getpass
 import multiprocessing
-import os
-import pprint
 import Queue
 import re
 import signal
-import sys
-import time
-from urlparse import urlparse
 
 import praw
 from praw.models import Comment
@@ -18,14 +12,6 @@ from prawcore.exceptions import (
 )
 from utillib import logger
 
-from constants import (
-        AUTHOR,
-        KEY_BLACKLIST_NAME,
-        KEY_BLACKLIST_ADD,
-        KEY_BLACKLIST_REMOVE,
-        PREFIX_SUBREDDIT,
-        PREFIX_USER,
-)
 from src import (
         blacklist,
         comments,
