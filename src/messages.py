@@ -198,7 +198,7 @@ class Messages(base.ProcessBase):
                         logger.prepend_id(logger.debug, self,
                                 'I\'ve already read {color_message}!'
                                 ' (\'{subject}\' from {color_from})',
-                                color_message=message.fullname,
+                                color_message=reddit.display_fullname(message),
                                 subject=message.subject,
                                 color_from=(
                                     message.author.name
@@ -212,7 +212,7 @@ class Messages(base.ProcessBase):
                         logger.prepend_id(logger.debug, self, 'Killed!')
                         break
 
-                    elif messages is None:
+                    elif message is None:
                         break
 
                     # blindly mark messages as seen even if processing fails.
@@ -298,7 +298,7 @@ class Messages(base.ProcessBase):
         except Exception as e:
             # TODO? only catch praw errors
             logger.prepend_id(logger.error, self,
-                    'Something went wrong! Message processing terminated.',
+                    'Something went wrong! Message processing terminated.', e,
             )
 
 

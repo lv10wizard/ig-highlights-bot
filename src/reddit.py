@@ -102,6 +102,9 @@ class Reddit(praw.Reddit):
         manual_login = False
         # prevent other processes logging while trying to get user input
         with logger.get()._lock:
+            logger.prepend_id(logger.debug, self,
+                    'Looking up login credentials ...',
+            )
             manual_username = self.__try_set_username()
             manual_password = self.__try_set_password()
         manual_login = manual_username or manual_password

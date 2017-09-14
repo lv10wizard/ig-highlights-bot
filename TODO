@@ -25,23 +25,36 @@ O. add config options:
 4? move messages.py reply methods to replies.py .. maybe
     I don't think anything else should need those specific methods
     (but the same can probably said of the methods in replies.py)
-5. mentions parsing
-    - queue.put( thing.submission )
-    ? gate by time -- don't parse through the same submission within
+O. mentions parsing
+    O. queue.put( thing.submission )
+    O. gate by time -- don't parse through the same submission within
         T time
         - but there could be new comments with usable links
         - someone could spam mentions in a single submission
             eg. hitting enter a bunch of times because of lag
-        > maybe keep a database of (username, submission) & only
+        O. maybe keep a database of (username, submission) & only
             queue.put if the specific combination has not been seen
             (prevents the same user summoning multiple times)
-6. instagram stuff
+5.1? refactor messages, mentions stream parsing to mixin/base class
+6. implement bot.subs
+    - read subreddits from database / json
+    - join subreddits with '+'
+    ? update from database whenever the file mtime changes
+        (this is required for mentions-added subreddits to work without
+         bot restart)
+7. instagram stuff
     - fetching & caching (+config option to expire cache)
         - parse data into usable format
         - caching = save data to file .. maybe a database? json?
     - bad links db for temp bans (404s only?)
         => if #bad_links > THRESHOLD: temp ban user!
-7. refactor logging
+    - if ig fetch was triggered by mentions (submission_queue)
+        and ig fetch was successful (fetch ok or cached)
+        then add subreddit to to-add db:
+            if subreddit reaches a threshold of successful mention summons
+            then add subreddit to subreddit.comment stream parsing (bot.py)
+8. refactor logging
+    - add pid (+ option to disable)
 
 N. testing!
 

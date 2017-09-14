@@ -31,6 +31,7 @@ BLACKLIST_DB_PATH             = 'blacklist_db_path'
 BLACKLIST_TEMP_BAN_TIME       = 'blacklist_temp_ban_time'
 
 MESSAGES_DB_PATH              = 'messages_db_path'
+MENTIONS_DB_PATH              = 'mentions_db_path'
 
 LOGGING_PATH                  = 'logging_path'
 
@@ -165,6 +166,9 @@ class Config(object):
 
                 # path to the database file storing processed messages
                 MESSAGES_DB_PATH: os.path.join(DATA_ROOT_DIR, 'messages.db'),
+
+                # path to the database file storing processed mentions
+                MENTIONS_DB_PATH: os.path.join(DATA_ROOT_DIR, 'mentions.db'),
 
                 # the path where log files are stored
                 LOGGING_PATH: os.path.join(DATA_ROOT_DIR, 'logs'),
@@ -316,6 +320,14 @@ class Config(object):
     @property
     def messages_db_path_raw(self):
         return self.__get(MESSAGES_DB_PATH)
+
+    @property
+    def mentions_db_path(self):
+        return resolve_path(self.__get(MENTIONS_DB_PATH))
+
+    @property
+    def mentions_db_path_raw(self):
+        return self.__get(MENTIONS_DB_PATH)
 
     @property
     def logging_path(self):
