@@ -20,67 +20,22 @@ from constants import (
         KEY_BLACKLIST_REMOVE,
 )
 from src import (
+        base,
         database,
         reddit,
 )
 
 
-class Messages(object):
+class Messages(base.ProcessBase):
     """
     Inbox message parser
     """
 
     def __init__(self, cfg, blacklist):
+        base.ProcessBase.__init__(self)
+
         self.cfg = cfg
         self.blacklist = blacklist
-
-        self.__proc = multiprocessing.Process(target=self.run_forever)
-        self.__proc.daemon = True
-
-    def __str__(self):
-        result = filter(None, [
-                self.__class__.__name__,
-                self.__proc.pid,
-        ])
-
-        return ':'.join(result)
-
-    @property
-    def is_alive(self):
-        return self.__proc.is_alive()
-
-    def kill(self, block=True):
-        """
-        Sets the kill flag for the messages process. Will wait for the process
-        to finish if block == True
-        """
-        if hasattr(self, '_killed') and hasattr(self._killed, 'set'):
-            logger.prepend_id(logger.debug, self, 'Setting kill flag ...')
-            self._killed.set()
-            if block:
-                self.__proc.join()
-
-        else:
-            logger.prepend_id(logger.debug, self,
-                    'Failed to set kill flag (is alive? {status})',
-                    status=('yes' if self.is_alive else 'no'),
-            )
-
-    def start(self):
-        logger.prepend_id(logger.debug, self, 'Starting process ...')
-        if not hasattr(self, '_killed'):
-            self._killed = multiprocessing.Event()
-        try:
-            self.__proc.start()
-
-        except AssertionError:
-            if not hasattr(self, '_multi_start_count'):
-                self._multi_start_count = 1 # start at 2
-            self._multi_start_count += 1
-            logger.prepend_id(logger.debug, self,
-                    'Attempted to start process again (#{num})!',
-                    num=self._multi_start_count,
-            )
 
     def _get_prefix_name(self, message):
         """
@@ -221,7 +176,7 @@ class Messages(object):
     def _is_remove(self, subject):
         return REMOVE_BLACKLIST_SUBJECT in subject
 
-    def run_forever(self):
+    def _run_forever(self):
         reddit_obj = reddit.Reddit(self.cfg)
         blacklist_re = re.compile(r'^({0}|{1})$'.format(
             BLACKLIST_SUBJECT,
@@ -349,11 +304,6 @@ class Messages(object):
             # TODO? only catch praw errors
             logger.prepend_id(logger.error, self,
                     'Something went wrong! Message processing terminated.',
-            )
-
-        finally:
-            logger.prepend_id(logger.info, self,
-                    'Exiting ...',
             )
 
 
