@@ -219,7 +219,8 @@ class Messages(base.ProcessBase):
                     # this prevents random / spam messages from being processed
                     # every time; however, it also prevents failed messages from
                     # being retried.
-                    messages_db.insert(message)
+                    with messages_db:
+                        messages_db.insert(message)
 
                     # ignore comments, though I don't think it is possible that
                     # any message in the messages() inbox can be a comment.

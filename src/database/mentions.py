@@ -17,13 +17,12 @@ class MentionsDatabase(Database):
         )
 
     def _insert(self, mention):
-        with self._db as connection:
-            connection.execute(
-                    'INSERT INTO mentions(submission_fullname, comment_author)'
-                    ' VALUES(?, ?)',
-                    # assumption: mention cannot itself be a submission
-                    (mention.submission.fullname, mention.author.name),
-            )
+        connection.execute(
+                'INSERT INTO mentions(submission_fullname, comment_author)'
+                ' VALUES(?, ?)',
+                # assumption: mention cannot itself be a submission
+                (mention.submission.fullname, mention.author.name),
+        )
 
     def has_seen(self, mention):
         """

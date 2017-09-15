@@ -8,6 +8,7 @@ from constants import (
         BLACKLIST_DEFAULTS_PATH,
         PREFIX_USER,
 )
+from src import reddit
 
 
 class BlacklistDatabase(Database):
@@ -94,12 +95,13 @@ class BlacklistDatabase(Database):
                     for sub in subreddits
                     if bool(sub.strip())
                 ]
-                with db:
-                    db.executemany(
-                            'INSERT INTO blacklist(name, type, start)'
-                            ' VALUES(?, ?, ?)',
-                            subreddits,
-                    )
+                if subreddits:
+                    with db:
+                        db.executemany(
+                                'INSERT INTO blacklist(name, type, start)'
+                                ' VALUES(?, ?, ?)',
+                                subreddits,
+                        )
 
     def __sanitize(self, name, name_type):
         # coerce user profile "subreddits" to their display name
@@ -117,38 +119,34 @@ class BlacklistDatabase(Database):
         """
         now = time.time() if is_tmp else BlacklistDatabase.PERMANENT
         name = self.__sanitize(name, name_type)
-        with self._db as connection:
-            connection.execute(
-                    'INSERT INTO blacklist(name, type, start) VALUES(?, ?, ?)',
-                    (name, name_type, now),
-            )
+        connection.execute(
+                'INSERT INTO blacklist(name, type, start) VALUES(?, ?, ?)',
+                (name, name_type, now),
+        )
 
     def _delete(self, name, name_type):
         name = self.__sanitize(name, name_type)
-        with self._db as connection:
-            connection.execute(
-                    'DELETE FROM blacklist WHERE name = ? AND type = ?',
-                    (name, name_type),
-            )
+        connection.execute(
+                'DELETE FROM blacklist WHERE name = ? AND type = ?',
+                (name, name_type),
+        )
 
     def set_make_permanent(self, name, name_type, value=True):
         flag = 1 if value else 0
-        with self._db as connection:
-            connection.execute(
-                    'UPDATE blacklist'
-                    ' SET make_permanent = ?'
-                    ' WHERE name = ? AND type = ?',
-                    (flag, name, name_type),
-            )
+        connection.execute(
+                'UPDATE blacklist'
+                ' SET make_permanent = ?'
+                ' WHERE name = ? AND type = ?',
+                (flag, name, name_type),
+        )
 
     def clear_make_permanent(self, name, name_type):
-        with self._db as connection:
-            connection.execute(
-                    'UPDATE blacklist'
-                    ' SET make_permanent = ?'
-                    ' WHERE name = ? AND type = ?',
-                    (0, name, name_type),
-            )
+        connection.execute(
+                'UPDATE blacklist'
+                ' SET make_permanent = ?'
+                ' WHERE name = ? AND type = ?',
+                (0, name, name_type),
+        )
 
     def is_blacklisted(self, name, name_type):
         """
@@ -245,10 +243,9 @@ class BlacklistDatabase(Database):
                 action = 'lifting blacklist'
 
             logger.prepend_id(logger.debug, self,
-                    '{prefix}{user} temp blacklist expired {time} ago:'
+                    '{user} temp blacklist expired {time} ago:'
                     ' {action} ...',
-                    prefix=PREFIX_USER,
-                    user=name,
+                    user=reddit.prefix_user(name),
                     time=remaining,
                     action=action,
             )

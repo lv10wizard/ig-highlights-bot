@@ -4,6 +4,7 @@ from utillib import logger
 from src import (
         base,
         config,
+        database,
         reddit,
 )
 
@@ -52,7 +53,8 @@ class Mentions(base.ProcessBase):
                     elif mention is None:
                         break
 
-                    mentions_db.insert(mention)
+                    with mentions_db:
+                        mentions_db.insert(mention)
                     self.submission_queue.put(mention.submission)
 
                 if not self._killed.is_set():

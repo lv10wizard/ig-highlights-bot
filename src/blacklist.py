@@ -125,6 +125,9 @@ class Blacklist(object):
                             color_name=name_raw,
                     )
 
+                if success:
+                    self.__database.commit()
+
         return success
 
     def remove(self, name, prefix=None):
@@ -177,6 +180,9 @@ class Blacklist(object):
                     )
                     self.__database.clear_make_permanent(name_raw, name_type)
                     success = True
+
+                if success:
+                    self.__database.commit()
 
         return success
 

@@ -77,6 +77,20 @@ class Database(object):
     def __str__(self):
         return self._basename
 
+    def __enter__(self):
+        return self._db
+
+    def __exit__(self, exc_type, exc_value, traceback):
+        if exc_type is None and exc_value is None and traceback is None:
+            self._db.commit()
+        else:
+            logger.prepend_id(logger.error, self,
+                    'An error occurred! Rolling back changes ...', exc_value,
+            )
+            self._db.rollback()
+            # TODO? suppress error ?
+            # return True
+
     @property
     def _db(self):
         """
@@ -170,6 +184,12 @@ class Database(object):
                 # https://docs.python.org/2/library/sqlite3.html#row-objects
                 db.row_factory = sqlite3.Row
         return db
+
+    def commit(self):
+        self._db.commit()
+
+    def rollback(self):
+        self._db.rollback()
 
     def insert(self, *args, **kwargs):
         """

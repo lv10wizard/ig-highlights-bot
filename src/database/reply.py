@@ -37,12 +37,11 @@ class ReplyDatabase(Database):
                     )
             ]
 
-        with self._db as connection:
-            connection.executemany(
-                    'INSERT INTO comments('
-                    '   comment_fullname, submission_fullname, ig_user'
-                    ') VALUES(?, ?, ?)', values,
-            )
+        connection.executemany(
+                'INSERT INTO comments('
+                '   comment_fullname, submission_fullname, ig_user'
+                ') VALUES(?, ?, ?)', values,
+        )
 
     def replied_comments_for_submission(self, submission):
         """

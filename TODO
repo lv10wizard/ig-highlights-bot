@@ -43,7 +43,7 @@ O. implement bot.subs
     O. update from database whenever the file mtime changes
         (this is required for mentions-added subreddits to work without
          bot restart)
-6.1 refactor database to use context-management (with statements) & commit/rollback
+O. refactor database to use context-management (with statements) & commit/rollback
 7. instagram stuff
     - fetching & caching (+config option to expire cache)
         - parse data into usable format

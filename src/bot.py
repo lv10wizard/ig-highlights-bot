@@ -135,9 +135,13 @@ class IgHighlightsBot(object):
             # profile links.
             return
 
+        did_insert = False
         for body, ig_users in reply_text_list:
             if reddit.do_reply(comment, body):
                 self.reply_history.insert(comment, ig_users)
+                did_insert = True
+        if did_insert:
+            self.reply_history.commit()
 
     def by_me(self, comment):
         """

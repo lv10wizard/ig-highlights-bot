@@ -18,11 +18,10 @@ class MessagesDatabase(Database):
         )
 
     def _insert(self, message):
-        with self._db as connection:
-            connection.execute(
-                    'INSERT INTO messages(message_fullname) VALUES(?)',
-                    (message.fullname,),
-            )
+        connection.execute(
+                'INSERT INTO messages(message_fullname) VALUES(?)',
+                (message.fullname,),
+        )
 
     def has_seen(self, message):
         cursor = self._db.execute(
