@@ -150,7 +150,7 @@ class Config(object):
                 MAX_REPLIES_PER_COMMENT: '1',
 
                 # max number of total replies that can be made to the same post
-                MAX_REPLIES_PER_POST: '5',
+                MAX_REPLIES_PER_POST: '10',
 
                 # max number of replies in the same comment thread
                 # (in the event that a user replies to a child of a bot's reply
