@@ -29,23 +29,26 @@ O. mentions parsing
     O. queue.put( thing.submission )
     O. gate by time -- don't parse through the same submission within
         T time
-        - but there could be new comments with usable links
-        - someone could spam mentions in a single submission
+          but there could be new comments with usable links
+          someone could spam mentions in a single submission
             eg. hitting enter a bunch of times because of lag
         O. maybe keep a database of (username, submission) & only
             queue.put if the specific combination has not been seen
             (prevents the same user summoning multiple times)
 5.1? refactor messages, mentions stream parsing to mixin/base class
-6. implement bot.subs
-    - read subreddits from database / json
-    - join subreddits with '+'
-    ? update from database whenever the file mtime changes
+    - change ProcessBase -> ProcessMixin
+O. implement bot.subs
+    O. read subreddits from database / json
+    O. join subreddits with '+'
+    O. update from database whenever the file mtime changes
         (this is required for mentions-added subreddits to work without
          bot restart)
+6.1 refactor database to use context-management (with statements) & commit/rollback
 7. instagram stuff
     - fetching & caching (+config option to expire cache)
         - parse data into usable format
         - caching = save data to file .. maybe a database? json?
+            - sqlite3 caching = check against file mtime
     - bad links db for temp bans (404s only?)
         => if #bad_links > THRESHOLD: temp ban user!
     - if ig fetch was triggered by mentions (submission_queue)
@@ -53,7 +56,22 @@ O. mentions parsing
         then add subreddit to to-add db:
             if subreddit reaches a threshold of successful mention summons
             then add subreddit to subreddit.comment stream parsing (bot.py)
-8. refactor logging
+8? catch-up (parse through old (all?) messages maybe comments/mentions)
+    in case the bot is offline for a while, this would catch messages to be
+    processed
+    - refactor messages to fetch until first not-seen message
+        (I think stream_generator only fetches the first 100 then continually
+         tries to fetch the newest)
+    ? refactor mentions/comments similarly
+        this behavior may not be desirable; could end up responding to weeks-old
+        comments to be seen by no one
+9. commandline arguments
+    . --config-path
+    . --add-subreddit
+    . --rm-subreddit
+    . --add-blacklist
+    . --rm-blacklist
+N-1. refactor logging
     - add pid (+ option to disable)
 
 N. testing!

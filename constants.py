@@ -30,6 +30,7 @@ DATA_ROOT_DIR = os.path.join(HOME, DEFAULT_APP_NAME)
 
 ROOT_DIR = os.path.dirname( os.path.realpath(os.path.abspath(__file__)) )
 BLACKLIST_DEFAULTS_PATH = os.path.join(ROOT_DIR, 'BLACKLIST')
+SUBREDDITS_DEFAULTS_PATH = os.path.join(ROOT_DIR, 'SUBREDDITS')
 
 AUTHOR = 'lv10wizard'
 COMPOSE_MESSAGE_BASE_URL = 'https://www.reddit.com/message/compose/'

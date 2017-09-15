@@ -1,4 +1,5 @@
 import multiprocessing
+import os
 import Queue
 import re
 import signal
@@ -12,6 +13,7 @@ from prawcore.exceptions import (
 )
 from utillib import logger
 
+from constants import SUBREDDITS_DEFAULTS_PATH
 from src import (
         blacklist,
         comments,
@@ -22,7 +24,10 @@ from src import (
         reddit,
         replies,
 )
-from src.database import ReplyDatabase
+from src.database import (
+        ReplyDatabase,
+        SubredditsDatabase,
+)
 
 
 class IgHighlightsBot(object):
@@ -36,6 +41,10 @@ class IgHighlightsBot(object):
         self._killed = False
         self.cfg = cfg
         self.reply_history = ReplyDatabase(self.cfg.replies_db_path)
+        self.subreddits = SubredditsDatabase(
+                path=self.cfg.subreddits_db_path,
+                do_seed=(not os.path.exists(SUBREDDITS_DEFAULTS_PATH)),
+        )
         self.blacklist = blacklist.Blacklist(self.cfg)
         self.messages = messages.Messages(
                 cfg=cfg,
@@ -44,7 +53,7 @@ class IgHighlightsBot(object):
         # queue of submissions to be processed (produced through separate
         # processes -- eg. summoned to post through user mention)
         self.submission_queue = multiprocessing.JoinableQueue()
-        # self.mentions = mentions.Mentions(self.submission_queue)
+        self.mentions = mentions.Mentions(self.submission_queue)
 
         self._reddit = reddit.Reddit(cfg)
 
@@ -286,13 +295,22 @@ class IgHighlightsBot(object):
         if not isinstance(num, int) or num < 0:
             num = 5
 
+        def get_padding(num):
+            padding = 0
+            while num > 0:
+                padding += 1
+                num /= 10
+            return padding if padding > 0 else 1
+
         try:
             for i in xrange(num):
                 submission = self.submission_queue.get_nowait()
+
                 logger.prepend_id(logger.debug, self,
-                        '[{i}/{num}] Processing submission {color_submission}'
-                        ' (#{qnum} remaining) ...',
+                        '[{i:>{padding}}/{num}] Processing submission'
+                        ' {color_submission} (#{qnum} remaining) ...',
                         i=i+1,
+                        padding=get_padding(num),
                         num=num,
                         color_submission=submission,
                         qnum=self.submission_queue.qsize(),
@@ -358,23 +376,61 @@ class IgHighlightsBot(object):
         except Queue.Empty:
             pass
 
+    @property
+    def __comment_stream(self):
+        """
+        Cached subreddits.comments stream. This will update the stream generator
+        if the subreddits database has been modified.
+
+        Note: renewing the stream will cause some comments to be re-parsed.
+        """
+        try:
+            comment_stream = self.__cached_comment_stream
+
+        except AttributeError:
+            comment_stream = None
+
+        if comment_stream is None or self.subreddits.is_dirty:
+            with self.subreddits.updating():
+                try:
+                    current_subreddits = self.__current_subreddits
+
+                except AttributeError:
+                    current_subreddits = set()
+
+                subs_from_db = self.subreddits.get_all_subreddits()
+                # verify that the set of subreddits actually changed
+                # (the database file could have been modified with nothing)
+                has_changed = bool(
+                        subs_from_db.symmetric_difference(current_subreddits)
+                )
+
+                if has_changed:
+                    subreddits_str = reddit.pack_subreddits(subs_from_db)
+                    comment_subreddits = self._reddit.subreddit(subreddits_str)
+                    comment_stream = comment_subreddits.stream.comments(
+                            pause_after=0
+                    )
+                    self.__cached_comment_stream = comment_stream
+                    self.__current_subreddits = subs_from_db
+        return comment_stream
+
     def run_forever(self):
         """
         """
         # TODO: start inbox message parsing process
         # TODO: start mentions parser process
-        subs = self._reddit.subreddit(self.subs)
-        comment_stream = subs.stream.comments(pause_after=0)
         try:
             while not self._killed:
                 # TODO: can GETs cause praw to throw a ratelimit exception?
-                for comment in comment_stream:
+                for comment in self.__comment_stream:
                     # TODO: self._consider_reply(comment) .. maybe name
                     # something better
 
                     if not comment:
                         break
 
+                # should usually be empty
                 self.process_submission_queue()
 
         except Redirect as e:

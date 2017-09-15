@@ -18,7 +18,7 @@ class Blacklist(object):
         self.__database = BlacklistDatabase(
                 path=cfg.blacklist_db_path,
                 cfg=cfg,
-                do_seed=os.path.exists(cfg.blacklist_db_path),
+                do_seed=(not os.path.exists(cfg.blacklist_db_path)),
         )
         self.__lock = multiprocessing.RLock()
 

@@ -78,6 +78,25 @@ def prefix(name, prefix):
         return name
     return '{0}{1}'.format(prefix, name)
 
+def pack_subreddits(iterable):
+    """
+    Returns the multiple subreddit string
+    eg. ['AskReddit', 'test', 'help']
+     -> 'AskReddit+test+help'
+
+    See:
+    https://praw.readthedocs.io/en/latest/code_overview/models/subreddit.html
+    """
+    return '+'.join(str(i) for i in iterable)
+
+def unpack_subreddits(subreddits_str):
+    """
+    Returns a set containing each subreddit defined in subreddits_str
+    eg. 'AskReddit+test+help'
+     -> set(['AskReddit', 'test', 'help'])
+    """
+    return set(subreddits_str.split('+'))
+
 # ######################################################################
 
 class Reddit(praw.Reddit):
@@ -417,6 +436,8 @@ __all__ = [
         'prefix_subreddit',
         'prefix_user',
         'prefix',
+        'pack_subreddits',
+        'unpack_subreddits',
         'Reddit',
 ]
 

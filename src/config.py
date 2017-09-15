@@ -27,6 +27,8 @@ MAX_REPLIES_PER_COMMENT       = 'max_replies_per_comment'
 MAX_REPLIES_PER_POST          = 'max_replies_per_post'
 MAX_REPLIES_IN_COMMENT_THREAD = 'max_replies_in_comment_thread'
 
+SUBREDDITS_DB_PATH            = 'subreddits_db_path'
+
 BLACKLIST_DB_PATH             = 'blacklist_db_path'
 BLACKLIST_TEMP_BAN_TIME       = 'blacklist_temp_ban_time'
 
@@ -157,6 +159,12 @@ class Config(object):
                 #  with reply-spawning text)
                 # -- this is to prevent an infinite bot reply loop
                 MAX_REPLIES_IN_COMMENT_THREAD: '3',
+
+                # path to the subreddits database file
+                SUBREDDITS_DB_PATH: os.path.join(
+                    DATA_ROOT_DIR,
+                    'subreddits.db'
+                ),
 
                 # path to the blacklist database file
                 BLACKLIST_DB_PATH: os.path.join(DATA_ROOT_DIR, 'blacklist.db'),
@@ -300,6 +308,14 @@ class Config(object):
     @property
     def max_replies_in_comment_thread(self):
         return self.__get(MAX_REPLIES_IN_COMMENT_THREAD, 'getint')
+
+    @property
+    def subreddits_db_path(self):
+        return resolve_path(self.__get(SUBREDDITS_DB_PATH))
+
+    @property
+    def subreddits_db_path_raw(self):
+        return self.__get(SUBREDDITS_DB_PATH)
 
     @property
     def blacklist_db_path(self):
