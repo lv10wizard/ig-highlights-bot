@@ -11,7 +11,7 @@ from utillib import logger
 
 from constants import (
         AUTHOR,
-        PREFIX_SUBREDDIT
+        PREFIX_SUBREDDIT,
         PREFIX_USER,
 )
 from src import (
@@ -149,7 +149,7 @@ class Reddit(praw.Reddit):
                 msg.append('you entered the correct username/password')
 
             logger.prepend_id(logger.error, self,
-                    ' '.join(msg), e, True
+                    ' '.join(msg), e, True,
                     username=self.username_raw or '<Not Set>',
                     section=cfg.praw_sitename,
             )
@@ -340,7 +340,7 @@ class Reddit(praw.Reddit):
             except praw.exceptions.APIException as e:
                 if e.error_type.lower() in ['no_user', 'user_doesnt_exist']:
                     # deleted, banned, or otherwise doesn't exist
-                    # (is AUTHOR is spelled correctly?)
+                    # (is AUTHOR spelled correctly?)
                     logger.prepend_id(logger.debug, self,
                             'Could not send debug pm to \'{name}\':'
                             ' does not exist.',
