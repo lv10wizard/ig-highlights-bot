@@ -1,6 +1,7 @@
 import abc
 import os
 import pprint
+import re
 import sqlite3
 
 from utillib import logger
@@ -8,7 +9,13 @@ from utillib import logger
 from src import config
 
 
-class FailedInit(Exception):
+class BaseDatabaseException(Exception): pass
+
+class UniqueConstraintFailed(BaseDatabaseException): pass
+class NotNullConstraintFailed(BaseDatabaseException): pass
+class CheckConstraintFailed(BaseDatabaseException): pass
+
+class FailedInit(BaseDatabaseException):
     def __init__(self, error, *args, **kwargs):
         Exception.__init__(self, *args, **kwargs)
         self.error = error
@@ -66,6 +73,21 @@ class Database(object):
         if path == ':memory:':
             return path
         return config.resolve_path(path)
+
+    @staticmethod
+    def reraise_integrity_error(err):
+        RE_FMT = r'^{0} constraint failed:'
+        if re.search(RE_FMT.format('UNIQUE'), err.message):
+            raise UniqueConstraintFailed(err.message)
+
+        elif re.search(RE_FMT.format('NOT NULL'), err.message):
+            raise NotNullConstraintFailed(err.message)
+
+        elif re.search(RE_FMT.format('CHECK'), err.message):
+            raise CheckConstraintFailed(err.message)
+
+        # passed a random error ...?
+        raise
 
     def __init__(self, path):
         self.path = path
@@ -198,6 +220,9 @@ class Database(object):
         try:
             self._insert(*args, **kwargs)
 
+        except sqlite3.IntegrityError as e:
+            Database.reraise_integrity_error(e)
+
         except Exception as e:
             # probably UNIQUE or CHECK constraint failed
             # or could be something more nefarious...
@@ -216,6 +241,9 @@ class Database(object):
         try:
             self._delete(*args, **kwargs)
 
+        except sqlite3.IntegrityError as e:
+            Database.reraise_integrity_error(e)
+
         except Exception as e:
             logger.prepend_id(logger.error, self,
                     'DELETE Failed!'
@@ -231,6 +259,9 @@ class Database(object):
         """
         try:
             self._update(*args, **kwargs)
+
+        except sqlite3.IntegrityError as e:
+            Database.reraise_integrity_error(e)
 
         except Exception as e:
             logger.prepend_id(logger.error, self,
@@ -263,6 +294,10 @@ class Database(object):
 
 
 __all__ = [
+        'BaseDatabaseException',
+        'UniqueConstraintFailed',
+        'NotNullConstraintFailed',
+        'CheckConstraintFailed',
         'FailedInit',
         'Database',
 ]

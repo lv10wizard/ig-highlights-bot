@@ -35,8 +35,9 @@ O. mentions parsing
         O. maybe keep a database of (username, submission) & only
             queue.put if the specific combination has not been seen
             (prevents the same user summoning multiple times)
-5.1? refactor messages, mentions stream parsing to mixin/base class
+5.1 refactor messages, mentions stream parsing to mixin/base class
     - change ProcessBase -> ProcessMixin
+    - handle prawcore.exceptions.RequestException (internet hiccup, etc)
 O. implement bot.subs
     O. read subreddits from database / json
     O. join subreddits with '+'
@@ -45,17 +46,35 @@ O. implement bot.subs
          bot restart)
 O. refactor database to use context-management (with statements) & commit/rollback
 7. instagram stuff
-    - fetching & caching (+config option to expire cache)
-        - parse data into usable format
-        - caching = save data to file .. maybe a database? json?
-            - sqlite3 caching = check against file mtime
-    - bad links db for temp bans (404s only?)
+    O. fetching & caching (+config option to expire cache)
+        O. parse data into usable format
+        O. caching = save data to file .. maybe a database? json?
+            O. sqlite3 caching = check against file mtime
+    O. bad links db for temp bans (404s only?)
         => if #bad_links > THRESHOLD: temp ban user!
-    - if ig fetch was triggered by mentions (submission_queue)
+    O. if ig fetch was triggered by mentions (submission_queue)
         and ig fetch was successful (fetch ok or cached)
         then add subreddit to to-add db:
             if subreddit reaches a threshold of successful mention summons
             then add subreddit to subreddit.comment stream parsing (bot.py)
+7.1 instagram rate-limit queue
+    O. needs database (ig_user, comment.fullname, last_id*, timestamp**)
+      *last_id may be null if rate-limited before any fetches were made
+        otherwise this should be the last fetched id (data['items'][-1]['id'])
+      **timestamp could also just be an INTEGER AUTOINCREMENT
+        O. how to treat table as queue?
+            > SELECT ... FROM ... ORDER BY timestamp ASC;
+    O. instagram inserts on rate-limit + other?
+    - bot processes every so often? alternatively, instagram processes queue
+      whenever under rate-limit (needs a way to call appropriate bot reply
+      func tho... or could instantiate a Reddit instance i guess..)
+        - refactor instagram.__*rate_limit* methods to public staticmethods
+          so that bot.py can see them & use them to process queue
+        - whatever handles consuming queue needs to handle that ig_user hitting
+          rate-limit again:
+            > UPDATE ... (last_id)
+        - on successful fetch:
+            > DELETE ...
 8? catch-up (parse through old (all?) messages maybe comments/mentions)
     in case the bot is offline for a while, this would catch messages to be
     processed
@@ -71,6 +90,12 @@ O. refactor database to use context-management (with statements) & commit/rollba
     . --rm-subreddit
     . --add-blacklist
     . --rm-blacklist
+    . --lookup-*
+        database lookups; not sure which atm .. maybe all?
+10? delay comment replies with persistent queue
+    it seems like some people dislike bots because they reply with information
+    that is useless to them. delaying the reply could potentially mitigate some
+    hate.
 N-1. refactor logging
     - add pid (+ option to disable)
 

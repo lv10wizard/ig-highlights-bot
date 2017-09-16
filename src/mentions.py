@@ -55,7 +55,9 @@ class Mentions(base.ProcessBase):
 
                     with mentions_db:
                         mentions_db.insert(mention)
-                    self.submission_queue.put(mention.submission)
+
+                    data = (mention.submission, mention)
+                    self.submission_queue.put(data)
 
                 if not self._killed.is_set():
                     logger.prepend_id(logger.debug, self,

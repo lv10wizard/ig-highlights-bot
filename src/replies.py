@@ -42,7 +42,7 @@ class Formatter(object):
     def __str__(self):
         return self.__class__.__name__
 
-    def format(ig_list, num_highlights):
+    def format(ig_list):
         """
         Formats the data into one or more reddit comment reply strings
 
@@ -58,10 +58,10 @@ class Formatter(object):
         for ig in ig_list:
             header = Formatter.HEADER_FMT.format(user=ig.user, link=ig.url)
             highlights = []
-            for i in xrange(num_highlights):
+            for media_link in ig.top_media:
                 highlights.append(Formatter.HIGHLIGHT_FMT.format(
                     i=i, # could do i+1 to start at 1 but whatever
-                    link=ig.links_by_likes[i],
+                    link=media_link,
                 ))
 
             current_reply.append(header)

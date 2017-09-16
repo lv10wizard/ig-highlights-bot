@@ -16,28 +16,36 @@ from constants import (
 # ######################################################################
 # key constants
 
-APP_NAME                      = 'app_name'
-PRAW_SITENAME                 = 'praw_sitename'
+APP_NAME                        = 'app_name'
+PRAW_SITENAME                   = 'praw_sitename'
 
-SEND_DEBUG_PM                 = 'send_debug_pm'
+SEND_DEBUG_PM                   = 'send_debug_pm'
 
-REPLIES_DB_PATH               = 'replies_db_path'
-NUM_HIGHLIGHTS_PER_IG_USER    = 'num_highlights_per_ig_user'
-MAX_REPLIES_PER_COMMENT       = 'max_replies_per_comment'
-MAX_REPLIES_PER_POST          = 'max_replies_per_post'
-MAX_REPLIES_IN_COMMENT_THREAD = 'max_replies_in_comment_thread'
+REPLIES_DB_PATH                 = 'replies_db_path'
+NUM_HIGHLIGHTS_PER_IG_USER      = 'num_highlights_per_ig_user'
+MAX_REPLIES_PER_COMMENT         = 'max_replies_per_comment'
+MAX_REPLIES_PER_POST            = 'max_replies_per_post'
+MAX_REPLIES_IN_COMMENT_THREAD   = 'max_replies_in_comment_thread'
 
-SUBREDDITS_DB_PATH            = 'subreddits_db_path'
+SUBREDDITS_DB_PATH              = 'subreddits_db_path'
+POTENTIAL_SUBREDDITS_DB_PATH    = 'potential_subreddits_db_path'
+ADD_SUBREDDIT_THRESHOLD         = 'add_subreddit_threshold'
 
-BLACKLIST_DB_PATH             = 'blacklist_db_path'
-BLACKLIST_TEMP_BAN_TIME       = 'blacklist_temp_ban_time'
+BLACKLIST_DB_PATH               = 'blacklist_db_path'
+BLACKLIST_TEMP_BAN_TIME         = 'blacklist_temp_ban_time'
+BAD_ACTORS_DB_PATH              = 'bad_actors_db_path'
+BAD_ACTOR_EXPIRE_TIME           = 'bad_actor_expire_time'
+BAD_ACTOR_THRESHOLD             = 'bad_actor_threshold'
 
-MESSAGES_DB_PATH              = 'messages_db_path'
-MENTIONS_DB_PATH              = 'mentions_db_path'
+MESSAGES_DB_PATH                = 'messages_db_path'
+MENTIONS_DB_PATH                = 'mentions_db_path'
 
-LOGGING_PATH                  = 'logging_path'
+LOGGING_PATH                    = 'logging_path'
 
-INSTAGRAM_DB_PATH             = 'instagram_db_path'
+INSTAGRAM_DB_PATH               = 'instagram_db_path'
+INSTAGRAM_RATE_LIMIT_DB_PATH    = 'instagram_rate_limit_db_path'
+INSTAGRAM_RATE_LIMIT_QUEUE_PATH = 'instagram_rate_limit_queue_path'
+INSTAGRAM_CACHE_EXPIRE_TIME     = 'instagram_cache_expire_time'
 
 # ######################################################################
 
@@ -163,14 +171,41 @@ class Config(object):
                 # path to the subreddits database file
                 SUBREDDITS_DB_PATH: os.path.join(
                     DATA_ROOT_DIR,
-                    'subreddits.db'
+                    'subreddits.db',
                 ),
+
+                # path to the database containing subreddits that may be added
+                # to the main comment parsing stream
+                # (so that the bot does not need to be explicitly summoned)
+                POTENTIAL_SUBREDDITS_DB_PATH: os.path.join(
+                    DATA_ROOT_DIR,
+                    'to-add-subreddits.db',
+                ),
+
+                # the threshold required for potential subreddits to be added
+                # permanently
+                ADD_SUBREDDIT_THRESHOLD: '10',
 
                 # path to the blacklist database file
                 BLACKLIST_DB_PATH: os.path.join(DATA_ROOT_DIR, 'blacklist.db'),
 
                 # the amount of time temp bans last (see parse_time)
                 BLACKLIST_TEMP_BAN_TIME: '3d',
+
+                # path to database file storing time-based bad actor data
+                # eg. users linking to 404 instagram user pages
+                # this is used to temporarily blacklist users that exhibit
+                # bad behavior (potentially trying to break bot)
+                BAD_ACTORS_DB_PATH: os.path.join(
+                    DATA_ROOT_DIR,
+                    'badactors.db',
+                ),
+
+                # a rolling time frame where bad behavior results in a temp ban
+                BAD_ACTOR_EXPIRE_TIME: '1d',
+
+                # the threshold to temporarily ban users for bad behavior
+                BAD_ACTOR_THRESHOLD: '3',
 
                 # path to the database file storing processed messages
                 MESSAGES_DB_PATH: os.path.join(DATA_ROOT_DIR, 'messages.db'),
@@ -181,8 +216,25 @@ class Config(object):
                 # the path where log files are stored
                 LOGGING_PATH: os.path.join(DATA_ROOT_DIR, 'logs'),
 
-                # path to the instagram database file
-                INSTAGRAM_DB_PATH: os.path.join(DATA_ROOT_DIR, 'instagram.db'),
+                # path to instagram databases
+                INSTAGRAM_DB_PATH: os.path.join(DATA_ROOT_DIR, 'instagram'),
+
+                # path to instagram rate-limit database file
+                INSTAGRAM_RATE_LIMIT_DB_PATH: os.path.join(
+                        DATA_ROOT_DIR,
+                        'ig-ratelimit.db',
+                ),
+
+                # path to the persistent instagram rate-limited queue
+                # (queue of to-fetch users)
+                INSTAGRAM_RATE_LIMIT_QUEUE_PATH: os.path.join(
+                        DATA_ROOT_DIR,
+                        'ig-queue.db',
+                ),
+
+                # the minimum amount of time required for cached instagram data
+                # to be re-fetched
+                INSTAGRAM_CACHE_EXPIRE_TIME: '7d',
         }
 
     def __init__(self):
@@ -318,6 +370,18 @@ class Config(object):
         return self.__get(SUBREDDITS_DB_PATH)
 
     @property
+    def potential_subreddits_db_path(self):
+        return resolve_path(self.__get(POTENTIAL_SUBREDDITS_DB_PATH))
+
+    @property
+    def potential_subreddits_db_path_raw(self):
+        return self.__get(POTENTIAL_SUBREDDITS_DB_PATH)
+
+    @property
+    def add_subreddit_threshold(self):
+        return self.__get(ADD_SUBREDDIT_THRESHOLD, 'getint')
+
+    @property
     def blacklist_db_path(self):
         return resolve_path(self.__get(BLACKLIST_DB_PATH))
 
@@ -328,6 +392,22 @@ class Config(object):
     @property
     def blacklist_temp_ban_time(self):
         return self.__get_time(BLACKLIST_TEMP_BAN_TIME)
+
+    @property
+    def bad_actors_db_path(self):
+        return resolve_path(self.__get(BAD_ACTORS_DB_PATH))
+
+    @property
+    def bad_actors_db_path_raw(self):
+        return self.__get(BAD_ACTORS_DB_PATH)
+
+    @property
+    def bad_actor_expire_time(self):
+        return self.__get_time(BAD_ACTOR_EXPIRE_TIME)
+
+    @property
+    def bad_actor_threshold(self):
+        return self.__get(BAD_ACTOR_THRESHOLD, 'getint')
 
     @property
     def messages_db_path(self):
@@ -360,6 +440,26 @@ class Config(object):
     @property
     def instagram_db_path_raw(self):
         return self.__get(INSTAGRAM_DB_PATH)
+
+    @property
+    def instagram_rate_limit_db_path(self):
+        return resolve_path(self.__get(INSTAGRAM_RATE_LIMIT_DB_PATH))
+
+    @property
+    def instagram_rate_limit_db_path_raw(self):
+        return self.__get(INSTAGRAM_RATE_LIMIT_DB_PATH)
+
+    @property
+    def instagram_rate_limit_queue_path(self):
+        return resolve_path(self.__get(INSTAGRAM_RATE_LIMIT_QUEUE_PATH))
+
+    @property
+    def instagram_rate_limit_queue_path_raw(self):
+        return self.__get(INSTAGRAM_RATE_LIMIT_QUEUE_PATH)
+
+    @property
+    def instagram_cache_expire_time(self):
+        return self.__get_time(INSTAGRAM_CACHE_EXPIRE_TIME)
 
 
 __all__ = [

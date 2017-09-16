@@ -40,12 +40,20 @@ class IgHighlightsBot(object):
 
         self._killed = False
         self.cfg = cfg
-        self.reply_history = ReplyDatabase(self.cfg.replies_db_path)
+        self.reply_history = ReplyDatabase(cfg.replies_db_path)
         self.subreddits = SubredditsDatabase(
-                path=self.cfg.subreddits_db_path,
+                path=cfg.subreddits_db_path,
                 do_seed=(not os.path.exists(SUBREDDITS_DEFAULTS_PATH)),
         )
-        self.blacklist = blacklist.Blacklist(self.cfg)
+        self.potential_subreddits = PotentialSubredditsDatabase(
+                path=cfg.potential_subreddits_db_path,
+        )
+        self.bad_actors = BadActorsDatabase(cfg.bad_actors_db_path, cfg)
+        self.blacklist = blacklist.Blacklist(cfg)
+        self.ig_queue = InstagramQueueDatabase(
+                cfg.instagram_rate_limit_queue_path,
+        )
+
         self.messages = messages.Messages(
                 cfg=cfg,
                 blacklist=self.blacklist,
@@ -54,6 +62,10 @@ class IgHighlightsBot(object):
         # processes -- eg. summoned to post through user mention)
         self.submission_queue = multiprocessing.JoinableQueue()
         self.mentions = mentions.Mentions(self.submission_queue)
+
+        # pass some static variables needed for Instagram handling
+        instagram.Instagram.cfg = cfg
+        instagram.Instagram.rate_limit_queue = self.ig_queue
 
         self._reddit = reddit.Reddit(cfg)
 
@@ -99,32 +111,34 @@ class IgHighlightsBot(object):
         # killed at inconvenient times
         self._killed = True
 
-    def reply(self, comment, ig_list, callback_depth=0):
+    def _reply(self, comment, ig_list, callback_depth=0):
         """
         Reply to a single comment with (potentially) multiple instagram user
         highlights
+
+        Returns True if successfully replied one or more times
         """
+        success = False
+
         logger.prepend_id(logger.debug, self,
                 '{depth}Replying to {color_comment}: {unpack_color}',
                 depth=(
                     '[#{0}] '.format(callback_depth)
-                    if callback_depth > 0
+                    if callback_depth > 0 else ''
                 ),
                 color_comment=reddit.display_id(comment),
                 unpack_color=ig_list,
         )
 
-        reply_text_list = self._formatter.format(
-                ig_list, self.cfg.num_highlights_per_ig_user
-        )
+        reply_text_list = self._formatter.format(ig_list)
         if len(reply_text_list) > self.cfg.max_replies_per_comment:
             logger.prepend_id(logger.debug, self,
                     '{color_comment} ({color_author}) almost made me reply'
                     ' #{num} times: skipping.',
                     color_comment=reddit.display_id(comment),
                     color_author=(
-                        comments.author.name.lower()
-                        if comments.author
+                        comment.author.name.lower()
+                        if comment.author
                         # can this happen? (no author but has body text)
                         else '[deleted/removed]'
                     ),
@@ -133,6 +147,9 @@ class IgHighlightsBot(object):
             # TODO? temporarily blacklist (O(days)) user? could be trying to
             # break the bot. or could just be a comment with a lot of instagram
             # profile links.
+            #   - store comment.permalink()
+            #       ie, self.bad_actors.insert(comment, comment.permalink())
+            #       (.permalink() may be a network hit)
             return
 
         did_insert = False
@@ -142,6 +159,97 @@ class IgHighlightsBot(object):
                 did_insert = True
         if did_insert:
             self.reply_history.commit()
+            # XXX: only one required to succeed for method to be considered
+            # success
+            success = True
+
+        return success
+
+    def reply(self, comment):
+        """
+        Attempts to reply to a comment with instagram user highlights.
+        This will only reply if enough conditions are met (eg. hasn't replied to
+        the specific post too many times, isn't in a blacklisted subreddit or
+        comment not made by a blacklisted user, etc)
+
+        Returns (reply_attempted, did_reply), a tuple of bools
+                reply_attempted = lenient "success" flag; this indicates that
+                        the reply did not explicitly fail
+                did_reply = explicit success flag (a reply was made)
+        """
+
+        reply_attempted = True
+        did_reply = False
+        if comment and self.can_reply(comment):
+            parsed_comment = comments.Parser(comment)
+            ig_usernames = self.prune_already_posted_users(
+                    comment.submission,
+                    parsed_comment.ig_usernames,
+            )
+            if ig_usernames:
+                ancestor_tree = self.get_ancestor_tree(comment)
+                author_tree = [
+                        c.author.name.lower()
+                        # XXX: specifically insert None for comments
+                        # missing authors (deleted/removed)
+                        if bool(c.author) else None
+                        for c in ancestor_tree
+                ]
+
+                logger.prepend_id(logger.debug, self,
+                        '{color_comment} author tree:'
+                        ' [#{num}] {unpack_color}',
+                        color_comment=reddit.display_id(comment),
+                        num=len(author_tree),
+                        unpack_color=author_tree,
+                )
+
+                num_comments_by_me = author_tree.count(
+                        self._reddit.username_raw.lower()
+                )
+                if num_comments_by_me > self.cfg.max_replies_in_comment_thread:
+                    logger.prepend_id(logger.debug, self,
+                            'I\'ve made too many replies in'
+                            ' {color_comment}\'s thread: skipping.',
+                            color_comment=reddit.display_id(comment),
+                    )
+
+                else:
+                    ig_list = []
+                    for ig_user in ig_usernames:
+                        ig = instagram.Instagram(ig_user, comment)
+                        if ig.valid:
+                            ig_list.append(ig)
+
+                    if len(ig_list) != len(ig_usernames):
+                        # at least one failed username link
+                        # -- flag that this reddit user may be malicious
+                        # (probably just 1+ typos)
+                        logger.prepend_id(logger.debug, self,
+                                'Incrementing {color_author}\'s bad actor'
+                                ' count',
+                                color_author=comment.author.name,
+                        )
+                        with self.bad_actors:
+                            self.bad_actors.insert(comment, comment.permalink())
+
+                    if ig_list:
+                        did_reply = self._reply(comment, ig_list)
+
+                    else:
+                        reply_attempted = False
+                        logger.prepend_id(logger.debug, self,
+                                'Skipping reply to {color_comment}:'
+                                ' #{num_users} found but none valid.'
+                                '\npermalink: {permalink}'
+                                '\nusers: {unpack_color}',
+                                color_comment=reddit.display_id(comment),
+                                num_users=len(ig_usernames),
+                                permalink=comment.permalink(),
+                                unpack_color=ig_usernames,
+                        )
+
+        return reply_attempted, did_reply
 
     def by_me(self, comment):
         """
@@ -308,7 +416,7 @@ class IgHighlightsBot(object):
 
         try:
             for i in xrange(num):
-                submission = self.submission_queue.get_nowait()
+                submission, mention = self.submission_queue.get_nowait()
 
                 logger.prepend_id(logger.debug, self,
                         '[{i:>{padding}}/{num}] Processing submission'
@@ -320,65 +428,63 @@ class IgHighlightsBot(object):
                         qnum=self.submission_queue.qsize(),
                 )
 
+                reply_attempted = True
+                did_reply = False
                 for comment in submission.comments.list():
+                    comment_reply_attempted, comment_did_reply = \
+                            self.reply(comment)
 
-                    # -----
-                    # TODO: move to function so that run_forever can reuse
-                    if comment and self.can_reply(comment):
-                        parsed_comment = comments.Parser(comment)
-                        ig_usernames = self.prune_already_posted_users(
-                                comment.submission,
-                                parsed_comment.ig_usernames,
+                    # AND because we want to know if the post had no replyable
+                    # comments
+                    reply_attempted = (
+                            comment_reply_attempted and reply_attempted
+                    )
+
+                    # OR because we want to know if the bot replied at all over
+                    # the entire post
+                    did_reply = comment_did_reply or did_reply
+
+                if not reply_attempted:
+                    self.bad_actors.insert(mention, submission.permalink)
+
+                if did_reply and submission not in self.subreddits:
+                    to_add_count = self.potential_subreddits.count(submission)
+                    prefixed_subreddit = reddit.prefix_subreddit(
+                            submission.subreddit.display_name
+                    )
+                    if to_add_count + 1 > self.cfg.add_subreddit_threshold:
+                        logger.prepend_id(logger.debug, self,
+                                'Adding {color_subreddit} to permanent'
+                                ' subreddits',
+                                color_subreddit=prefixed_subreddit,
                         )
-                        if ig_usernames:
-                            ancestor_tree = self.get_ancestor_tree(comment)
-                            author_tree = [
-                                    c.author.name.lower()
-                                    # XXX: specifically insert None for comments
-                                    # missing authors (deleted/removed)
-                                    if bool(c.author) else None
-                                    for c in ancestor_tree
-                            ]
 
-                            logger.prepend_id(logger.debug, self,
-                                    '{color_comment} author tree:'
-                                    ' [#{num}] {unpack_color}',
-                                    color_comment=reddit.display_id(comment),
-                                    num=len(author_tree),
-                                    unpack_color=author_tree,
-                            )
+                        # add the subreddit to the permanent set of comment
+                        # stream subreddits
+                        with self.subreddits:
+                            self.subreddits.insert(submission)
+                        with self.potential_subreddits:
+                            self.potential_subreddits.delete(submission)
 
-                            num_comments_by_me = author_tree.count(
-                                    self._reddit.username_raw.lower()
-                            )
-                            max_by_me = self.cfg.max_replies_in_comment_thread
-                            if num_comments_by_me > max_by_me:
-                                logger.prepend_id(logger.debug, self,
-                                        'I\'ve made too many replies in'
-                                        ' {color_comment}\'s thread: skipping.',
-                                        color_comment=reddit.display_id(
-                                            comment
-                                        ),
-                                )
-                                continue # TODO: change to 'return'
-
-                            ig_list = [
-                                    instagram.Instagram(ig_user)
-                                    for ig_user in ig_usernames
-                            ]
-                            # TODO: examine if any 404 or otherwise invalid
-                            # & increment comment.author.name.lower()'s
-                            # to_blacklist count
-                            #   if count > threshold => add to temporary blacklist
-                            #       ( temporary as in O(days) )
-                            # >>> store to_blacklist in memory?
-                            self.reply(comment, ig_list)
-                    # -----
+                    else:
+                        logger.prepend_id(logger.debug, self,
+                                '{color_subreddit} to-add count: {num}',
+                                color_subreddit=prefixed_subreddit,
+                                num=to_add_count+1,
+                        )
+                        # increment the to-add count for this subreddit
+                        with self.potential_subreddits:
+                            self.potential_subreddits.insert(submission)
 
                 self.submission_queue.task_done()
 
         except Queue.Empty:
             pass
+
+    def process_instagram_queue(self, num=5):
+        """
+        """
+        pass
 
     @property
     def __comment_stream(self):
@@ -405,11 +511,14 @@ class IgHighlightsBot(object):
                 subs_from_db = self.subreddits.get_all_subreddits()
                 # verify that the set of subreddits actually changed
                 # (the database file could have been modified with nothing)
-                has_changed = bool(
-                        subs_from_db.symmetric_difference(current_subreddits)
-                )
+                diff = subs_from_db.symmetric_difference(current_subreddits)
 
-                if has_changed:
+                if bool(diff):
+                    logger.prepend_id(logger.debug, self,
+                            'New/missing subreddits: {unpack_color}',
+                            unpack_color=diff,
+                    )
+
                     subreddits_str = reddit.pack_subreddits(subs_from_db)
                     comment_subreddits = self._reddit.subreddit(subreddits_str)
                     comment_stream = comment_subreddits.stream.comments(
@@ -436,6 +545,8 @@ class IgHighlightsBot(object):
 
                 # should usually be empty
                 self.process_submission_queue()
+
+                self.process_instagram_queue()
 
         except Redirect as e:
             if re.search(r'/subreddits/search', e.message):
