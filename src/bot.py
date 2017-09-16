@@ -447,7 +447,11 @@ class IgHighlightsBot(object):
                 if not reply_attempted:
                     self.bad_actors.insert(mention, submission.permalink)
 
-                if did_reply and submission not in self.subreddits:
+                if (
+                        self.cfg.add_subreddit_threshold >= 0
+                        and did_reply
+                        and submission not in self.subreddits
+                ):
                     to_add_count = self.potential_subreddits.count(submission)
                     prefixed_subreddit = reddit.prefix_subreddit(
                             submission.subreddit.display_name
