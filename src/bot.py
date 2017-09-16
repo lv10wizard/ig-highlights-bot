@@ -520,12 +520,15 @@ class IgHighlightsBot(object):
                     )
 
                     subreddits_str = reddit.pack_subreddits(subs_from_db)
-                    comment_subreddits = self._reddit.subreddit(subreddits_str)
-                    comment_stream = comment_subreddits.stream.comments(
-                            pause_after=0
-                    )
-                    self.__cached_comment_stream = comment_stream
-                    self.__current_subreddits = subs_from_db
+                    if subreddits_str:
+                        comment_subreddits = self._reddit.subreddit(
+                                subreddits_str
+                        )
+                        comment_stream = comment_subreddits.stream.comments(
+                                pause_after=0
+                        )
+                        self.__cached_comment_stream = comment_stream
+                        self.__current_subreddits = subs_from_db
         return comment_stream
 
     def run_forever(self):
@@ -535,13 +538,13 @@ class IgHighlightsBot(object):
         # TODO: start mentions parser process
         try:
             while not self._killed:
-                # TODO: can GETs cause praw to throw a ratelimit exception?
-                for comment in self.__comment_stream:
-                    # TODO: self._consider_reply(comment) .. maybe name
-                    # something better
+                if self.__comment_stream:
+                    # TODO: can GETs cause praw to throw a ratelimit exception?
+                    for comment in self.__comment_stream:
+                        if not comment:
+                            break
 
-                    if not comment:
-                        break
+                        self.reply(comment)
 
                 # should usually be empty
                 self.process_submission_queue()
