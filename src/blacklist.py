@@ -48,18 +48,18 @@ class Blacklist(object):
 
         return name_type
 
-    def add(self, name, prefix=None, is_tmp=False):
+    def add(self, name, prefix=None, tmp=False):
         """
         Adds the name to the blacklist database.
         If the name is temporarily blacklisted, it is flagged to be made
-        permanent (so long as is_tmp != True).
+        permanent (so long as tmp != True).
 
         name (str) - prefixed or raw (no prefix) name string
             eg. 'u/foobar' or 'AskReddit'
         prefix (str, optional) - either PREFIX_SUBREDDIT or PREFIX_USER
             if name is not prefixed and no prefix is specified, then add will
             fail.
-        is_tmp (bool, optional) - whether the ban is temporary
+        tmp (bool, optional) - whether the ban is temporary
 
         Returns True if name was successfully added to the database
         """
@@ -85,7 +85,7 @@ class Blacklist(object):
                 temporary = self.__database.is_blacklisted_temporarily(name_raw)
 
                 if is_blacklisted and temporary:
-                    if is_tmp:
+                    if tmp:
                         # tried to ban temporarily but was already temporarily
                         # banned
                         logger.prepend_id(logger.debug, self,
@@ -112,9 +112,9 @@ class Blacklist(object):
                     logger.prepend_id(logger.debug, self,
                             'Adding {color_name} {tmp}to blacklist'
                             color_name=name_raw,
-                            tmp=('temporarily ' if is_tmp else ''),
+                            tmp=('temporarily ' if tmp else ''),
                     )
-                    self.__database.insert(name_raw, name_type, is_tmp)
+                    self.__database.insert(name_raw, name_type, tmp)
                     # XXX: assumes insert was successful
                     success = True
 
