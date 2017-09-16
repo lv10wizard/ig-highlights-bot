@@ -400,13 +400,29 @@ class Instagram(object):
                     with self.__cache:
                         self.__cache.delete(missing)
 
-        else:
+        elif not data['items']:
             logger.prepend_id(logger.debug, self,
                     'No data. halting ...'
                     '\nstatus = \'{status}\'\titems = {items}',
                     status=data['status'],
                     items=data['items'],
             )
+
+            if os.path.exists(self.__db_path):
+                # user changed profile to private?
+                logger.prepend_id(logger.debug, self,
+                        'Removing \'{path}\' ...',
+                        path=self.__db_path,
+                )
+
+                try:
+                    os.remove(self.__db_path)
+
+                except OSError as e:
+                    logger.prepend_id(logger.error, self,
+                            'Could not remove \'{path}\'!', e,
+                            path=self.__db_path,
+                    )
 
         return last_id
 
