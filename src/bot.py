@@ -206,7 +206,7 @@ class IgHighlightsBot(object):
                     parsed_comment.ig_usernames,
             )
             if ig_usernames:
-                ancestor_tree = self.get_ancestor_tree(comment)
+                ancestor_tree = reddit.get_ancestor_tree(comment)
                 author_tree = [
                         c.author.name.lower()
                         # XXX: specifically insert None for comments
@@ -421,42 +421,6 @@ class IgHighlightsBot(object):
                     unpack_color_users=ig_usernames,
             )
         return ig_usernames
-
-    def get_ancestor_tree(self, comment, to_lower=True):
-        """
-        Returns a list of comments starting with the parent of the given
-        comment, traversing up until the root comment is hit. That is, the list
-        is ordered from parent [0] -> root [N-1]. In other words, a reversed
-        comment tree.
-
-        comment (praw.models.Comment) - the comment to get the ancestors of
-        to_lower (bool, optional) - whether the list results should be lower-
-                                    cased
-        """
-        # TODO: move to reddit.py
-
-        # TODO? cache results for each comment-id hit to potentially lower
-        # number of requests made (in the unlikely event that we need the
-        # ancestors of a sibling this comment)
-
-        # https://praw.readthedocs.io/en/latest/code_overview/models/comment.html#praw.models.Comment.parent
-        result = []
-        ancestor = comment
-        refresh_counter = 0
-        while not ancestor.is_root:
-            ancestor = ancestor.parent()
-            result.append(ancestor)
-            if refresh_counter % 9 == 0:
-                ancestor.refresh()
-            refresh_counter += 1
-
-        logger.prepend_id(logger.debug, self,
-                '{color_comment} ancestor authors: [#{num}] {unpack_color}',
-                color_comment=reddit.display_id(comment),
-                num=len(result),
-                unpack_color=result,
-        )
-        return result
 
     @staticmethod
     def get_padding(num):

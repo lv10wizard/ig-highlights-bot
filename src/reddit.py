@@ -115,6 +115,32 @@ def display_fullname(thing):
         return '{0} ({1})'.format(thing.fullname, thing_type)
     return thing
 
+def get_ancestor_tree(comment, to_lower=True):
+    """
+    Returns a list of comments starting with the parent of the given
+    comment, traversing up until the root comment is hit. That is, the list
+    is ordered from parent [0] -> root [N-1]. In other words, a reversed
+    comment tree.
+
+    comment (praw.models.Comment) - the comment to get the ancestors of
+    to_lower (bool, optional) - whether the list results should be lower-cased
+    """
+    # TODO? cache results for each comment-id hit to potentially lower
+    # number of requests made (in the unlikely event that we need the
+    # ancestors of a sibling this comment)
+
+    # https://praw.readthedocs.io/en/latest/code_overview/models/comment.html#praw.models.Comment.parent
+    result = []
+    ancestor = comment
+    refresh_counter = 0
+    while not ancestor.is_root:
+        ancestor = ancestor.parent()
+        result.append(ancestor)
+        if refresh_counter % 9 == 0:
+            ancestor.refresh()
+        refresh_counter += 1
+    return result
+
 # ######################################################################
 
 class Reddit(praw.Reddit):
@@ -439,6 +465,7 @@ __all__ = [
         'unpack_subreddits',
         'display_id',
         'display_fullname',
+        'get_ancestor_tree',
         'Reddit',
 ]
 
