@@ -192,9 +192,7 @@ class Database(object):
                     # probably attempted a duplicate INSERT (UNIQUE
                     # constraint)
                     # => tables were already initialized
-                    logger.prepend_id(logger.error, self,
-                            'Failed to initialize tables!', e,
-                    )
+                    pass
 
                 db.commit()
 

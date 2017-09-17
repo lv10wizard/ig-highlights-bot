@@ -13,7 +13,8 @@ class BadActorsDatabase(Database):
 
     def _create_table_data(self):
         columns = [
-                'created_utc REAL PRIMARY KEY NOT NULL',
+                'thing_fullname TEXT PRIMARY KEY NOT NULL',
+                'created_utc REAL NOT NULL',
                 'author_name TEXT NOT NULL COLLATE NOCASE',
                 'data TEXT',
         ]
@@ -32,9 +33,15 @@ class BadActorsDatabase(Database):
         self.__prune(thing)
         if thing.author:
             self._db.execute(
-                    'INSERT INTO active(created_utc, author_name, data)'
-                    ' VALUES(?, ?, ?)',
-                    (thing.created_utc, thing.author.name, data),
+                    'INSERT INTO'
+                    ' active(thing_fullname, created_utc, author_name, data)'
+                    ' VALUES(?, ?, ?, ?)',
+                    (
+                        thing.fullname,
+                        thing.created_utc,
+                        thing.author.name,
+                        data,
+                    ),
             )
 
     def __prune(self, thing):
@@ -65,22 +72,25 @@ class BadActorsDatabase(Database):
             pruned = []
             for row in cursor:
                 self._db.execute(
-                        'DELETE FROM active WHERE'
-                        ' created_utc = ?'
-                        ' author_name = ?'
-                        ' data = ?',
+                        'DELETE FROM active'
+                        ' WHERE thing_fullname = ?'
+                        ' AND created_utc = ?'
+                        ' AND author_name = ?'
+                        ' AND data = ?',
                         row,
                 )
                 self._db.execute(
-                        'INSERT INTO inactive(created_utc, author_name, data)'
-                        ' VALUES(?, ?, ?)',
+                        'INSERT INTO inactive'
+                        '(thing_fullname, created_utc, author_name, data)'
+                        ' VALUES(?, ?, ?, ?)',
                         row,
                 )
                 pruned.append(row)
 
             if pruned:
                 debug_rows = [
-                        '{0}, {1}, {2}'.format(
+                        '{0}, {1}, {2}, {3}'.format(
+                            row['thing_fullname'],
                             row['created_utc'],
                             row['author_name'],
                             row['data'],

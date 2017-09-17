@@ -27,6 +27,7 @@ from src import (
 from src.database import (
         ReplyDatabase,
         SubredditsDatabase,
+        UniqueConstraintFailed,
 )
 
 
@@ -65,7 +66,6 @@ class IgHighlightsBot(object):
 
         # pass some static variables needed for Instagram handling
         instagram.Instagram.cfg = cfg
-        instagram.Instagram.rate_limit_queue = self.ig_queue
 
         self._reddit = reddit.Reddit(cfg)
 
@@ -110,6 +110,25 @@ class IgHighlightsBot(object):
         # XXX: kill the main process last so that daemon processes aren't
         # killed at inconvenient times
         self._killed = True
+
+    def _increment_bad_actor(self, thing, data):
+        if thing.author:
+            logger.prepend_id(logger.debug, self,
+                    'Incrementing {color_author}\'s bad actor count',
+                    color_author=thing.author.name,
+            )
+
+            try:
+                with self.bad_actors:
+                    self.bad_actors.insert(thing, data)
+
+            except UniqueConstraintFailed:
+                logger.prepend_id(logger.debug, self,
+                        '{color_author} already flagged as a bad actor for'
+                        '{color_thing}!',
+                        color_author=thing.author.name,
+                        color_thing=reddit.display_id(thing),
+                )
 
     def _reply(self, comment, ig_list, callback_depth=0):
         """
@@ -216,37 +235,78 @@ class IgHighlightsBot(object):
 
                 else:
                     ig_list = []
+                    queued_ig_data = self.ig_queue.get_ig_data_for(comment)
                     for ig_user in ig_usernames:
-                        ig = instagram.Instagram(ig_user, comment)
+                        if instagram.Instagram.is_rate_limited():
+                            # drop the ig_list so that no reply attempt is made
+                            ig_list = []
+                            break
+
+                        if ig_user in queued_ig_data:
+                            last_id = queued_ig_data[ig_user]
+                        ig = instagram.Instagram(ig_user, last_id)
                         if ig.valid:
                             ig_list.append(ig)
 
-                    if len(ig_list) != len(ig_usernames):
-                        # at least one failed username link
-                        # -- flag that this reddit user may be malicious
-                        # (probably just 1+ typos)
-                        logger.prepend_id(logger.debug, self,
-                                'Incrementing {color_author}\'s bad actor'
-                                ' count',
-                                color_author=comment.author.name,
-                        )
-                        with self.bad_actors:
-                            self.bad_actors.insert(comment, comment.permalink())
+                        if (
+                                ig.do_enqueue
+                                # don't try to requeue a duplicate entry
+                                and not self.ig_queue.is_queued(
+                                    ig_user, comment
+                                )
+                        ):
+                            msg = ['Queueing \'{user}\'']
+                            if ig.last_id:
+                                msg.append('(@ {last_id})')
+                            msg.append('from {color_comment}')
+                            logger.prepend_id(logger.debug, self,
+                                    ' '.join(msg),
+                                    user=ig_user,
+                                    last_id=ig.last_id,
+                                    color_comment=reddit.display_id(comment),
+                            )
 
-                    if ig_list:
+                            with self.ig_queue:
+                                self.ig_queue.insert(
+                                        ig_user, comment, ig.last_id,
+                                )
+
+                        # the comment's author may be trying to troll the bot
+                        if 404 in ig.status_codes:
+                            self._increment_bad_actor(
+                                    comment,
+                                    comment.permalink(),
+                            )
+
+                    comment_queued = comment in self.ig_queue
+                    # don't reply if any ig user was queued to be fetched
+                    # (ie, don't reply with partial highlights)
+                    if not comment_queued and len(ig_list) == len(ig_usernames):
                         did_reply = self._reply(comment, ig_list)
 
                     else:
                         reply_attempted = False
                         logger.prepend_id(logger.debug, self,
                                 'Skipping reply to {color_comment}:'
-                                ' #{num_users} found but none valid.'
+                                '\nis queued? {queued};'
+                                ' rate-limit? {ratelimit};'
+                                ' server err? {servererr}'
                                 '\npermalink: {permalink}'
-                                '\nusers: {unpack_color}',
+                                '\nusers: {unpack_color}'
+                                '\n#ig_list: {num}',
                                 color_comment=reddit.display_id(comment),
-                                num_users=len(ig_usernames),
+                                queued=('yes' if comment_queued else 'no'),
+                                ratelimit=('yes'
+                                    if instagram.Instagram.is_rate_limited()
+                                    else 'no'
+                                ),
+                                servererr=('yes'
+                                    if instagram.Instagram.has_server_error()
+                                    else 'no'
+                                ),
                                 permalink=comment.permalink(),
                                 unpack_color=ig_usernames,
+                                num=len(ig_list),
                         )
 
         return reply_attempted, did_reply
@@ -373,6 +433,7 @@ class IgHighlightsBot(object):
         to_lower (bool, optional) - whether the list results should be lower-
                                     cased
         """
+        # TODO: move to reddit.py
 
         # TODO? cache results for each comment-id hit to potentially lower
         # number of requests made (in the unlikely event that we need the
@@ -397,6 +458,15 @@ class IgHighlightsBot(object):
         )
         return result
 
+    @staticmethod
+    def get_padding(num):
+        # TODO: move to util or something
+        padding = 0
+        while num > 0:
+            padding += 1
+            num /= 10
+        return padding if padding > 0 else 1
+
     def process_submission_queue(self, num=5):
         """
         Tries to process num elements in the submission_queue
@@ -407,13 +477,6 @@ class IgHighlightsBot(object):
         if not isinstance(num, int) or num < 0:
             num = 5
 
-        def get_padding(num):
-            padding = 0
-            while num > 0:
-                padding += 1
-                num /= 10
-            return padding if padding > 0 else 1
-
         try:
             for i in xrange(num):
                 submission, mention = self.submission_queue.get_nowait()
@@ -422,7 +485,7 @@ class IgHighlightsBot(object):
                         '[{i:>{padding}}/{num}] Processing submission'
                         ' {color_submission} (#{qnum} remaining) ...',
                         i=i+1,
-                        padding=get_padding(num),
+                        padding=IgHighlightsBot.get_padding(num),
                         num=num,
                         color_submission=submission,
                         qnum=self.submission_queue.qsize(),
@@ -445,7 +508,7 @@ class IgHighlightsBot(object):
                     did_reply = comment_did_reply or did_reply
 
                 if not reply_attempted:
-                    self.bad_actors.insert(mention, submission.permalink)
+                    self._increment_bad_actor(mention, submission.permalink)
 
                 if (
                         self.cfg.add_subreddit_threshold >= 0
@@ -487,8 +550,46 @@ class IgHighlightsBot(object):
 
     def process_instagram_queue(self, num=5):
         """
+        Tries to process num elements from the instagram queue (does nothing
+        if instagram rate-limited).
         """
-        pass
+        if instagram.Instagram.is_rate_limited():
+            return
+
+        if not isinstance(num, int) or num < 0:
+            num = 5
+
+        for i in xrange(num):
+            comment_id = self.ig_queue.get()
+            if not comment_id:
+                # queue empty
+                break
+
+            logger.prepend_id(logger.debug, self,
+                    '[{i:>{padding}}/{num}] Processing ig queue:'
+                    ' {color_comment} (#{qsize} remaining) ...',
+                    i=i,
+                    padding=IgHighlightsBot.get_padding(num),
+                    num=num,
+                    color_comment=comment_id,
+                    # -1 because get() doesn't remove the element
+                    qsize=self.ig_queue.size()-1,
+            )
+
+            comment = self._reddit.comment(comment_id)
+            reply_attempted, did_reply = self.reply(comment)
+
+            if not reply_attempted:
+                # reply was skipped, probably rate-limited again
+                break
+
+            elif did_reply:
+                logger.prepend_id(logger.debug, self,
+                        'Removing {color_comment} from queue ...',
+                        color_comment=reddit.display_id(comment),
+                )
+                with self.ig_queue:
+                    self.ig_queue.delete(comment)
 
     @property
     def __comment_stream(self):
@@ -552,7 +653,6 @@ class IgHighlightsBot(object):
 
                 # should usually be empty
                 self.process_submission_queue()
-
                 self.process_instagram_queue()
 
         except Redirect as e:

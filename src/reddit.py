@@ -97,6 +97,24 @@ def unpack_subreddits(subreddits_str):
     """
     return set(subreddits_str.split('+'))
 
+def display_id(thing):
+    if hasattr(thing, 'id'):
+        if hasattr(thing, 'subreddit_name_prefixed'):
+            return '/'.join([thing.subreddit_name_prefixed, thing.id])
+        else:
+            return thing.id
+    return thing
+
+def display_fullname(thing):
+    if hasattr(thing, 'fullname'):
+        try:
+            thing_type = Reddit._kinds[thing.fullname.split('_', 1)[0]]
+        except KeyError:
+            thing_type = '???'
+
+        return '{0} ({1})'.format(thing.fullname, thing_type)
+    return thing
+
 # ######################################################################
 
 class Reddit(praw.Reddit):
@@ -107,6 +125,8 @@ class Reddit(praw.Reddit):
     NOTSET_TYPE = praw.config._NotSet
     LINE_SEP = '=' * 72
 
+    _kinds = {}
+
     def __init__(self, cfg, *args, **kwargs):
         self.__cfg = cfg
         self.__error_handler = error_handling.ErrorHandler()
@@ -116,6 +136,13 @@ class Reddit(praw.Reddit):
                 user_agent=self.user_agent,
                 *args, **kwargs
         )
+
+        if not Reddit._kinds:
+            Reddit._kinds = {
+                    type_prefix: thing_name
+                    for thing_name, type_prefix in
+                    self.config.kinds.iteritems()
+            }
 
         praw_ini_login = True
         manual_login = False
@@ -264,34 +291,6 @@ class Reddit(praw.Reddit):
                         ver=praw.__version__,
                 )
 
-    def display_id(self, thing):
-        if hasattr(thing, 'id'):
-            if hasattr(thing, 'subreddit_name_prefixed'):
-                return '/'.join([thing.subreddit_name_prefixed, thing.id])
-            else:
-                return thing.id
-        return thing
-
-    def display_fullname(self, thing):
-        if hasattr(thing, 'fullname'):
-            try:
-                kinds = self.__kinds
-            except AttributeError:
-                kinds = {
-                        type_prefix: thing_name
-                        for thing_name, type_prefix in
-                        self.config.kinds.iteritems()
-                }
-                self.__kinds = kinds
-
-            try:
-                thing_type = kinds[thing.fullname.split('_', 1)[0]]
-            except KeyError:
-                thing_type = '???'
-
-            return '{0} ({1})'.format(thing.fullname, thing_type)
-        return thing
-
     def send_debug_pm(self, subject, body, callback_depth=0):
         """
         Sends a pm to the AUTHOR reddit account
@@ -438,6 +437,8 @@ __all__ = [
         'prefix',
         'pack_subreddits',
         'unpack_subreddits',
+        'display_id',
+        'display_fullname',
         'Reddit',
 ]
 

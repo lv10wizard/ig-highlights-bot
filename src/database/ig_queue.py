@@ -1,5 +1,8 @@
 import time
 
+# XXX: requests is already a dependency so may as well reuse this
+from requests.structures import CaseInsensitiveDict
+
 from _database import Database
 
 
@@ -11,16 +14,23 @@ class InstagramQueueDatabase(Database):
 
     def __init__(self, *args, **kwargs):
         Database.__init__(self, *args, **kwargs)
-        # alias database methods so they look more like queue methods
-        self.put = self.insert
+
+    def __contains__(self, comment):
+        cursor = self._db.execute(
+                'SELECT FROM queue WHERE comment_id = ?',
+                (comment.id,),
+        )
+        return bool(cursor.fetchone())
 
     def _create_table_data(self):
         return (
                 'queue('
-                '   comment_id TEXT PRIMARY KEY NOT NULL,'
+                '   uid INTEGER PRIMARY KEY NOT NULL,'
+                '   comment_id TEXT NOT NULL,'
                 '   ig_user TEXT NOT NULL COLLATE NOCASE,'
                 '   last_id TEXT,'
-                '   timestamp REAL NOT NULL'
+                '   timestamp REAL NOT NULL,'
+                '   UNIQUE(comment_id, ig_user)'
                 ')'
         )
 
@@ -37,29 +47,63 @@ class InstagramQueueDatabase(Database):
                 (comment.id,),
         )
 
-    def get(self):
+    def _update(self, comment):
         """
-        Gets the first element in the queue (ie, the oldest record)
-
-        Returns (comment_id, ig_user, last_id)
-                (None, None, None) if the queue is empty
+        Updates the timestamp for a given comment effectively moving it to the
+        back of the queue
         """
-        cursor = self._db.execute(
-                'SELECT comment_id, ig_user, last_id'
-                ' FROM queue'
-                ' ORDER BY timestamp ASC',
+        self._db.execute(
+                'UPDATE queue SET timestamp = ? WHERE comment_id = ?',
+                (time.time(), comment.id),
         )
 
-        comment_id = None
-        ig_user = None
-        last_id = None
+    def size(self):
+        """
+        Returns the current number of elements in the database
+        """
+        cursor = self._db.execute('SELECT comment_id FROM queue')
+        # the database treats each unique comment as a queue element
+        return len(set(row['comment_id'] for row in cursor))
+
+    def get(self):
+        """
+        Gets the first queued comment_id
+
+        Returns comment_id of the oldest record in the database
+                or None if the queue is empty
+        """
+        cursor = self._db.execute(
+                'SELECT comment_id FROM queue ORDER BY timestamp ASC'
+        )
         row = cursor.fetchone()
         if row:
-            comment_id = row['comment_id']
-            ig_user = row['ig_user']
-            last_id = row['last_id']
+            return row['comment_id']
+        return None
 
-        return comment_id, ig_user, last_id
+    def get_ig_data_for(self, comment):
+        """
+        Returns a case-insensitive dictionary {ig_user: last_id}
+
+                or an empty ditionary if the comment is not queued
+        """
+        cursor = self._db.execute(
+                'SELECT ig_user, last_id FROM queue WHERE comment_id = ?',
+                (comment.id,)
+        )
+        return CaseInsensitiveDict(
+                {row['ig_user']: row['last_id'] for row in cursor}
+        )
+
+    def is_queued(self, ig_user, comment):
+        """
+        Returns whether the (ig_user, comment) pair is in the queue
+        """
+        cursor = self._db.execute(
+                'SELECT comment_id FROM queue'
+                ' WHERE ig_user = ? AND comment_id = ?',
+                (ig_user, comment.id),
+        )
+        return bool(cursor.fetchone())
 
 
 __all__ = [

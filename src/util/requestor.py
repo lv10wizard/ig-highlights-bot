@@ -4,6 +4,13 @@ import requests
 from utillib import logger
 
 
+def choose_delay(delay):
+    # exponentially increase delay
+    delay *= 2
+    # but don't let it run away
+    delay = max(delay, 10 * 60)
+    return delay
+
 class Requestor(object):
     """
     requests wrapper with persistent sessions
@@ -40,11 +47,8 @@ class Requestor(object):
         except AttributeError:
             delay = 1
 
-        # exponentially increase delay
-        delay *= 2
-        # but don't let it run away
-        delay = max(delay, 10 * 60)
         # cache it so that we can continue to increase the delay
+        delay = choose_delay(delay)
         self.__last_delay = delay
         return delay
 

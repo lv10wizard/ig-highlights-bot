@@ -57,7 +57,6 @@ class Instagram(object):
     """
 
     cfg = None
-    rate_limit_queue = None
     _rate_limit = None
     # the max number of requests that can be made before rate-limiting is
     # imposed (this is a rolling limit per max_age, eg. 3000 / hr)
@@ -66,6 +65,8 @@ class Instagram(object):
     RATE_LIMIT_THRESHOLD = 3000
 
     _requestor = None
+    _server_error_timestamp = 0
+    _server_error_delay = 0
 
     BASE_URLS = [
             'instagram.com',
@@ -98,10 +99,45 @@ class Instagram(object):
             ),
     )
 
-    def __init__(self, user, comment):
+    @staticmethod
+    def has_server_error():
+        """
+        Returns whether instagram is experiencing server issues
+        """
+        return (
+                Instagram._server_error_timestamp != 0
+                and Instagram._server_error_delay != 0
+        )
+
+    @staticmethod
+    def is_rate_limited():
+        """
+        Returns whether we have hit/exceeded the rate-limit
+        """
+        return Instagram.rate_limit_num_remaining() <= 0
+
+    @staticmethod
+    def rate_limit_num_remaining():
+        """
+        Returns the number requests remaining for the current period
+        """
+        if Instagram._rate_limit:
+            return RATE_LIMIT_THRESHOLD - Instagram._rate_limit.num_used()
+        return -1
+
+    @staticmethod
+    def rate_limit_reset_time():
+        """
+        Returns the time remaining in seconds until new requests can be made
+        """
+        if Instagram._rate_limit:
+            return Instagram._rate_limit.time_left()
+        return -1
+
+    def __init__(self, user, last_id=None):
         # self.history = database.Database()
         self.user = user
-        self.comment = comment
+        self.initial_last_id = last_id
 
         if not Instagram.cfg:
             logger.prepend_id(logger.debug, self,
@@ -109,15 +145,6 @@ class Instagram(object):
                     ' cfg not set!',
             )
             raise MissingVariable('Please set the Instagram.cfg variable!')
-
-        if not Instagram.rate_limit_queue:
-            logger.prepend_id(logger.debug, self,
-                    'I can\'t handle enqueing rate-limited data:'
-                    ' rate_limit_queue not set!',
-            )
-            raise MissingVariable(
-                    'Please set the Instagram.rate_limit_queue variable!'
-            )
 
         if not Instagram._rate_limit:
             Instagram._rate_limit = database.InstagramRateLimitDatabase(
@@ -151,6 +178,27 @@ class Instagram(object):
     @property
     def valid(self):
         return bool(self.user) and bool(self.top_media)
+
+    @property
+    def status_codes(self):
+        try:
+            return list(self.__status_codes)
+        except AttributeError:
+            return []
+
+    @property
+    def do_enqueue(self):
+        try:
+            return self.__do_enqueue
+        except AttributeError:
+            return False
+
+    @property
+    def last_id(self):
+        try:
+            return self.__last_id
+        except AttributeError:
+            return None
 
     @property
     def top_media(self):
@@ -223,50 +271,56 @@ class Instagram(object):
 
         return expired
 
-    @property
-    def __is_rate_limited(self):
-        """
-        Returns whether we have hit/exceeded the rate-limit
-        """
-        return self.__rate_limit_num_remaining <= 0
-
-    @property
-    def __rate_limit_num_remaining(self):
-        """
-        Returns the number requests remaining for the current period
-        """
-        return RATE_LIMIT_THRESHOLD - Instagram._rate_limit.num_used()
-
-    @property
-    def __rate_limit_reset_time(self):
-        """
-        Returns the time remaining in seconds until new requests can be made
-        """
-        return Instagram._rate_limit.time_left()
+    def __handle_rate_limit(self):
+        is_rate_limited = Instagram.is_rate_limited()
+        if is_rate_limited:
+            logger.prepend_id(logger.debug, self,
+                    'Rate-limited! (~{time} left)',
+                    time=Instagram.rate_limit_reset_time(),
+            )
+            self.__do_enqueue = True
+        return is_rate_limited
 
     def __fetch_data(self):
         """
         Fetches user data from instagram
         """
-        if self.__is_rate_limited:
-            logger.prepend_id(logger.debug, self,
-                    'Rate-limited! (~{time} left)',
-                    time=self.__rate_limit_reset_time,
-            )
-            Instagram.rate_limit_queue.put(self.user, self.comment)
-
-        else:
+        if not self.__handle_rate_limit():
             data = None
-            last_id = None
+            last_id = self.initial_last_id
             fatal_msg = [
                     'Failed to fetch \'{user}\' media!'
                     ' Response structure changed.'.format(user=self.user)
             ]
 
-            logger.prepend_id(logger.debug, self, 'Fetching data ...')
+            msg = ['Fetching data']
+            if last_id:
+                msg.append('(starting @ {last_id})')
+            msg.append('...')
+            logger.prepend_id(logger.debug, self,
+                    ' '.join(msg),
+                    last_id=last_id,
+            )
+
+            self.__status_codes = []
 
             try:
                 while not data or data['more_available']:
+                    if self.__handle_rate_limit():
+                        break
+
+                    delayed_time = (
+                            Instagram._server_error_timestamp
+                            + Instagram._server_error_delay
+                    )
+                    if time.time() < delayed_time:
+                        # still delayed
+                        logger.prepend_id(logger.debug, self,
+                                'Fetch delayed for another {time} ...',
+                                time=delayed_time - time.time(),
+                        )
+                        break
+
                     response = Instagram._requestor.request(
                             Instagram.MEDIA_ENDPOINT.format(self.user),
                             params={
@@ -274,13 +328,24 @@ class Instagram(object):
                             },
                     )
                     if response is None:
+                        # TODO? enqueue ?
                         break
 
+                    self.__status_codes.append(response.status_code)
                     # count the network hit against the ratelimit regardless of
                     # status code
                     self._rate_limit.insert(response.url)
 
                     if response.status_code == 200:
+                        if Instagram.has_server_error():
+                            logger.prepend_id(logger.debug, self,
+                                    'Resetting Instagram delay'
+                                    ' (t={timestamp}) ...',
+                                    timestamp=time.time(),
+                            )
+                            Instagram._server_error_timestamp = 0
+                            Instagram._server_error_delay = 0
+
                         data = response.json()
                         last_id = self.__parse_data(data)
                         if not last_id:
@@ -302,14 +367,24 @@ class Instagram(object):
 
                     elif response.status_code / 100 == 5:
                         # server error
+                        Instagram._server_error_timestamp = time.time()
+                        Instagram._server_error_delay = requestor.choose_delay(
+                                Instagram._server_error_delay or 1
+                        )
                         logger.prepend_id(logger.debug, self,
-                                'Instagram server error:'
-                                ' queueing \'{user}\' fetch ...',
-                                user=self.user,
+                                'Setting Instagram delay = {delay}'
+                                ' (t={timestamp})',
+                                delay=Instagram._server_error_delay,
+                                timestamp=Instagram._server_error_timestamp,
                         )
-                        Instagram.rate_limit_queue.put(
-                                self.user, self.comment, last_id
-                        )
+
+                        self.__do_enqueue = True
+                        # store the last_id so that we can properly enqueue
+                        # the request for later
+                        self.__last_id = last_id
+                        # no reason in trying any more, need to wait until
+                        # instagram comes back up
+                        break
 
             except KeyError as e:
                 # json structure changed

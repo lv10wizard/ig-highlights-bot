@@ -45,7 +45,7 @@ O. implement bot.subs
         (this is required for mentions-added subreddits to work without
          bot restart)
 O. refactor database to use context-management (with statements) & commit/rollback
-7. instagram stuff
+O. instagram stuff
     O. fetching & caching (+config option to expire cache)
         O. parse data into usable format
         O. caching = save data to file .. maybe a database? json?
@@ -57,7 +57,7 @@ O. refactor database to use context-management (with statements) & commit/rollba
         then add subreddit to to-add db:
             if subreddit reaches a threshold of successful mention summons
             then add subreddit to subreddit.comment stream parsing (bot.py)
-7.1 instagram rate-limit queue
+O. instagram rate-limit queue
     O. needs database (ig_user, comment.fullname, last_id*, timestamp**)
       *last_id may be null if rate-limited before any fetches were made
         otherwise this should be the last fetched id (data['items'][-1]['id'])
@@ -65,15 +65,15 @@ O. refactor database to use context-management (with statements) & commit/rollba
         O. how to treat table as queue?
             > SELECT ... FROM ... ORDER BY timestamp ASC;
     O. instagram inserts on rate-limit + other?
-    - bot processes every so often? alternatively, instagram processes queue
+    O. bot processes every so often? alternatively, instagram processes queue
       whenever under rate-limit (needs a way to call appropriate bot reply
       func tho... or could instantiate a Reddit instance i guess..)
-        - refactor instagram.__*rate_limit* methods to public staticmethods
+        O. refactor instagram.__*rate_limit* methods to public staticmethods
           so that bot.py can see them & use them to process queue
-        - whatever handles consuming queue needs to handle that ig_user hitting
+        O. whatever handles consuming queue needs to handle that ig_user hitting
           rate-limit again:
             > UPDATE ... (last_id)
-        - on successful fetch:
+        O. on successful fetch:
             > DELETE ...
 8? catch-up (parse through old (all?) messages maybe comments/mentions)
     in case the bot is offline for a while, this would catch messages to be
