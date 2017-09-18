@@ -281,10 +281,18 @@ class Database(object):
         pass
 
     @abc.abstractproperty
-    def _create_table_data(self): pass
+    def _create_table_data(self):
+        """
+        Table definition string(s) used in __init_db.
+        This should return either a string or list of strings which define the
+        tables in the database.
+        """
 
     @abc.abstractmethod
-    def _insert(self, *args, **kwargs): pass
+    def _insert(self, *args, **kwargs):
+        """
+        INSERT functionality
+        """
 
     def _delete(self, *args, **kwargs): pass
 
