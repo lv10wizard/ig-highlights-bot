@@ -5,11 +5,17 @@ user's top liked media.
 
 #### Dependencies
 
+python2.7
+
 - praw >= 5.1 (> 4.0 may work; untested)
 
-- python-instagram
-
 - utillib
+
+*For testing*:
+
+- mock
+
+- pytest
 
 ##### praw.ini:
 
