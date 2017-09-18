@@ -426,8 +426,9 @@ class Reddit(praw.Reddit):
                 )
 
             except Forbidden as e:
-                # TODO? blacklist subreddit instead
-                # -> probably means bot was banned from subreddit
+                # TODO? blacklist subreddit / user instead (base off thing type)
+                # - probably means bot was banned from subreddit
+                #   or blocked by user
                 # (could also mean auth failed, maybe something else?)
                 logger.prepend_id(logger.error, self,
                         'Failed to reply to {color_thing}!', e, True,
