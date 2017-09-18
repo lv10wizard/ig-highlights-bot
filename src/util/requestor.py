@@ -5,6 +5,7 @@ from utillib import logger
 
 
 def choose_delay(delay):
+    delay = max(1, delay)
     # exponentially increase delay
     delay *= 2
     # but don't let it run away
