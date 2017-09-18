@@ -1,12 +1,16 @@
+import abc
 import multiprocessing
 
 from utillib import logger
 
 
-class ProcessBase(object):
+class ProcessMixin(object):
     """
-    Base process component class
+    Provides multiprocessing functionality through the abstract method
+    _run_forever
     """
+
+    __metaclass__ = abc.ABCMeta
 
     def __init__(self, daemon=True):
         self.__proc = multiprocessing.Process(target=self.run_forever)
@@ -18,6 +22,10 @@ class ProcessBase(object):
             self.__proc.pid,
         ])
         return ':'.join(result)
+
+    @abc.abstractmethod
+    def _run_forever(self):
+        pass
 
     @property
     def is_alive(self):
@@ -74,12 +82,8 @@ class ProcessBase(object):
                     'Exiting ...',
             )
 
-    @abc.abstractmethod
-    def _run_forever(self):
-        pass
-
 
 __all__ = [
-        'ProcessBase',
+        'ProcessMixin',
 ]
 

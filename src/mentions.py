@@ -1,38 +1,39 @@
-from praw.models import util as praw_util
 from utillib import logger
 
 from src import (
-        base,
         config,
         database,
         reddit,
 )
+from src.mixins import (
+        ProcessMixin,
+        StreamMixin,
+)
 
 
-class Mentions(base.ProcessBase):
+class Mentions(ProcessMixin, StreamMixin):
     """
     Username mentions (in comments) parser
     """
 
     def __init__(self, cfg, submission_queue):
-        base.ProcessBase.__init__(self)
+        ProcessMixin.__init__(self)
+        StreamMixin.__init__(self, cfg)
 
-        self.cfg = cfg
         self.submission_queue = submission_queue
 
+    @property
+    def _stream_method(self):
+        self._reddit.inbox.mentions
+
     def _run_forever(self):
-        reddit_obj = reddit.Reddit(self.cfg)
         mentions_db = database.MentionsDatabase(self.cfg.mentions_db_path)
-        mentions_stream = praw_util.stream_generator(
-                reddit_obj.inbox.mentions,
-                pause_after=0,
-        )
         delay = 5 * 60
 
         try:
             while not self._killed.is_set():
                 logger.prepend_id(logger.debug, self, 'Processing mentions ...')
-                for mention in mentions_stream:
+                for mention in self.stream:
                     if mentions_db.has_seen(mention):
                         # assumption: inbox.mentions fetches newest -> oldest
                         logger.prepend_id(logger.debug, self,

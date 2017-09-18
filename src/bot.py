@@ -4,20 +4,13 @@ import Queue
 import re
 import signal
 
-import praw
-from praw.models import Comment
-from prawcore.exceptions import (
-        Forbidden,
-        OAuthException,
-        Redirect,
-)
+from prawcore.exceptions import Redirect
 from utillib import logger
 
 from constants import SUBREDDITS_DEFAULTS_PATH
 from src import (
         blacklist,
         comments,
-        config,
         instagram,
         mentions,
         messages,
@@ -29,9 +22,10 @@ from src.database import (
         SubredditsDatabase,
         UniqueConstraintFailed,
 )
+from src.mixins import StreamMixin
 
 
-class IgHighlightsBot(object):
+class IgHighlightsBot(StreamMixin):
     """
     """
 
@@ -39,8 +33,9 @@ class IgHighlightsBot(object):
         signal.signal(signal.SIGINT, self.graceful_exit)
         signal.signal(signal.SIGTERM, self.graceful_exit)
 
+        StreamMixin.__init__(self, cfg)
+
         self._killed = False
-        self.cfg = cfg
         self.reply_history = ReplyDatabase(cfg.replies_db_path)
         self.subreddits = SubredditsDatabase(
                 path=cfg.subreddits_db_path,
@@ -55,19 +50,14 @@ class IgHighlightsBot(object):
                 cfg.instagram_rate_limit_queue_path,
         )
 
-        self.messages = messages.Messages(
-                cfg=cfg,
-                blacklist=self.blacklist,
-        )
+        self.messages = messages.Messages(cfg, self.blacklist)
         # queue of submissions to be processed (produced through separate
         # processes -- eg. summoned to post through user mention)
         self.submission_queue = multiprocessing.JoinableQueue()
-        self.mentions = mentions.Mentions(self.submission_queue)
+        self.mentions = mentions.Mentions(cfg, self.submission_queue)
 
         # pass some static variables needed for Instagram handling
         instagram.Instagram.cfg = cfg
-
-        self._reddit = reddit.Reddit(cfg)
 
         # initialize stuff that require correct credentials
         self._formatter = replies.Formatter(self._reddit.username_raw)
@@ -556,7 +546,7 @@ class IgHighlightsBot(object):
                     self.ig_queue.delete(comment)
 
     @property
-    def __comment_stream(self):
+    def _stream(self):
         """
         Cached subreddits.comments stream. This will update the stream generator
         if the subreddits database has been modified.
@@ -602,14 +592,16 @@ class IgHighlightsBot(object):
 
     def run_forever(self):
         """
+        Bot comment stream parsing
         """
-        # TODO: start inbox message parsing process
-        # TODO: start mentions parser process
+        self.messages.start()
+        self.mentions.start()
+
         try:
             while not self._killed:
-                if self.__comment_stream:
+                if self.stream:
                     # TODO: can GETs cause praw to throw a ratelimit exception?
-                    for comment in self.__comment_stream:
+                    for comment in self.stream:
                         if not comment:
                             break
 
@@ -621,10 +613,19 @@ class IgHighlightsBot(object):
 
         except Redirect as e:
             if re.search(r'/subreddits/search', e.message):
+                try:
+                    subs = self.__current_subreddits
+                except AttributeError:
+                    # this shouldn't happen
+                    logger.prepend_id(logger.debug, self,
+                            'No current subreddits ...?',
+                    )
+                    subs = set()
+
                 logger.prepend_id(logger.error, self,
                         'One or more non-existent subreddits:'
                         ' {unpack_color}', e, True,
-                        unpack_color=subs.split('+'),
+                        unpack_color=subs,
                 )
 
         finally:

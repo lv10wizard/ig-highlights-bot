@@ -35,9 +35,9 @@ O. mentions parsing
         O. maybe keep a database of (username, submission) & only
             queue.put if the specific combination has not been seen
             (prevents the same user summoning multiple times)
-5.1 refactor messages, mentions stream parsing to mixin/base class
-    - change ProcessBase -> ProcessMixin
-    - handle prawcore.exceptions.RequestException (internet hiccup, etc)
+O. refactor messages, mentions stream parsing to mixin/base class
+    O. change ProcessBase -> ProcessMixin
+    O. handle prawcore.exceptions.RequestException (internet hiccup, etc)
 O. implement bot.subs
     O. read subreddits from database / json
     O. join subreddits with '+'
@@ -96,6 +96,9 @@ O. instagram rate-limit queue
     it seems like some people dislike bots because they reply with information
     that is useless to them. delaying the reply could potentially mitigate some
     hate.
+11. don't dynamically add subreddits if they are blacklisted
+12. instagram requests user-agent
+13. versioning
 N-1. refactor logging
     - add pid (+ option to disable)
 

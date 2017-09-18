@@ -6,7 +6,6 @@ import time
 from praw.models import (
         Message,
         SubredditMessage,
-        util as praw_util,
 )
 from utillib import logger
 
@@ -15,21 +14,24 @@ from constants import (
         REMOVE_BLACKLIST_SUBJECT,
 )
 from src import (
-        base,
         database,
         reddit,
 )
+from src.mixins import (
+        ProcessMixin,
+        StreamMixin,
+)
 
 
-class Messages(base.ProcessBase):
+class Messages(ProcessMixin, StreamMixin):
     """
     Inbox message parser
     """
 
     def __init__(self, cfg, blacklist):
-        base.ProcessBase.__init__(self)
+        ProcessMixin.__init__(self)
+        StreamMixin.__init__(self, cfg)
 
-        self.cfg = cfg
         self.blacklist = blacklist
 
     def _get_prefix_name(self, message):
@@ -171,17 +173,16 @@ class Messages(base.ProcessBase):
     def _is_remove(self, subject):
         return REMOVE_BLACKLIST_SUBJECT in subject
 
+    @property
+    def _stream_method(self):
+        return self._reddit.inbox.messages
+
     def _run_forever(self):
-        reddit_obj = reddit.Reddit(self.cfg)
         blacklist_re = re.compile(r'^({0}|{1})$'.format(
             BLACKLIST_SUBJECT,
             REMOVE_BLACKLIST_SUBJECT,
         ))
         messages_db = database.MessagesDatabase(self.cfg.messages_db_path)
-        messages_stream = praw_util.stream_generator(
-                reddit_obj.inbox.messages,
-                pause_after=0,
-        )
         # XXX: a manual delay is used instead of relying on praw's stream
         # delay so that external shutdown events can be received in a timely
         # fashion.
@@ -190,7 +191,7 @@ class Messages(base.ProcessBase):
         try:
             while not self._killed.is_set():
                 logger.prepend_id(logger.debug, self, 'Processing messages ...')
-                for message in messages_stream:
+                for message in self.stream:
                     # don't rely on read/unread flag in case someone logs in
                     # to the bot account and reads all the messages
                     # assumption: inbox.messages() fetches newest -> oldest
