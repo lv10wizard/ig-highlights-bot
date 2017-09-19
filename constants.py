@@ -7,6 +7,18 @@ ROOT_DIR = os.path.dirname( os.path.realpath(os.path.abspath(__file__)) )
 # hard-coded debug flag to switch some more spammy debug logging
 __DEBUG__ = os.path.exists(os.path.join(ROOT_DIR, '__DEBUG__'))
 
+class NoEmailSpecified(Exception): pass
+
+EMAIL_PATH = os.path.join(ROOT_DIR, 'EMAIL')
+try:
+    with open(EMAIL_PATH, 'rb') as fd:
+        EMAIL = fd.read().strip()
+except (IOError, OSError):
+    raise NoEmailSpecified(
+            'Please specify the maintainer\'s email in the file'
+            ' \'{0}\''.format(EMAIL_PATH)
+    )
+
 HOME = None
 if sys.platform == 'win32':
     # windows

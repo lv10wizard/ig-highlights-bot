@@ -17,6 +17,16 @@ python2.7
 
 - pytest
 
+##### Running the bot
+
+1. Define praw.ini (see: https://praw.readthedocs.io/en/latest/getting_started/configuration/prawini.html)
+
+2. Enter your email in '<project root>/EMAIL'
+
+3. `chmod +x main.py`
+
+4. `./main.py`
+
 ##### praw.ini:
 
     [ig-highlights-bot]

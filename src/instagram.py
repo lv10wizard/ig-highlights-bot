@@ -9,7 +9,7 @@ from src import (
         config,
         database,
 )
-from util import requestor
+from src.util import requestor
 
 
 # https://stackoverflow.com/a/33783840
@@ -57,6 +57,7 @@ class Instagram(object):
     """
 
     cfg = None
+    user_agent = None
     _rate_limit = None
     # the max number of requests that can be made before rate-limiting is
     # imposed (this is a rolling limit per max_age, eg. 3000 / hr)
@@ -146,6 +147,14 @@ class Instagram(object):
             )
             raise MissingVariable('Please set the Instagram.cfg variable!')
 
+        if not Instagram.user_agent:
+            logger.prepend_id(logger.debug, self,
+                    'I cannot fetch data from instagram: no user-agent!',
+            )
+            raise MissingVariable(
+                    'Please set the Instagram.user_agent variable!'
+            )
+
         if not Instagram._rate_limit:
             Instagram._rate_limit = database.InstagramRateLimitDatabase(
                     Instagram.cfg.instagram_rate_limit_db_path,
@@ -155,7 +164,7 @@ class Instagram(object):
         if not Instagram._requestor:
             Instagram._requestor = requestor.Requestor(
                     headers={
-                        'User-Agent': '', # TODO
+                        'User-Agent': Instagram.user_agent,
                     },
             )
 

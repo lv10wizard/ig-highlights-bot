@@ -96,9 +96,11 @@ O. commandline arguments
     it seems like some people dislike bots because they reply with information
     that is useless to them. delaying the reply could potentially mitigate some
     hate.
-11. don't dynamically add subreddits if they are blacklisted
-12. instagram requests user-agent
-13. versioning
+X. don't dynamically add subreddits if they are blacklisted
+    >>> this cannot happen (reply must occur in order for a subreddit to be
+            added)
+O. instagram requests user-agent
+O. versioning
 N-1. refactor logging
     - add pid (+ option to disable)
 

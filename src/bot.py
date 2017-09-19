@@ -8,7 +8,10 @@ import time
 from prawcore.exceptions import Redirect
 from utillib import logger
 
-from constants import SUBREDDITS_DEFAULTS_PATH
+from constants import (
+        EMAIL,
+        SUBREDDITS_DEFAULTS_PATH,
+)
 from src import (
         blacklist,
         comments,
@@ -24,6 +27,7 @@ from src.database import (
         UniqueConstraintFailed,
 )
 from src.mixins import StreamMixin
+from src.util.version import get_version
 
 
 class IgHighlightsBot(StreamMixin):
@@ -57,6 +61,13 @@ class IgHighlightsBot(StreamMixin):
 
         # pass some static variables needed for Instagram handling
         instagram.Instagram.cfg = cfg
+        instagram.Instagram.user_agent = (
+                '{name} reddit bot {version} ({email})'.format(
+                    name=self._reddit.username,
+                    version=get_version(),
+                    email=EMAIL,
+                )
+        )
 
         # initialize stuff that require correct credentials
         self._formatter = replies.Formatter(self._reddit.username_raw)

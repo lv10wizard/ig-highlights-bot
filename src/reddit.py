@@ -18,6 +18,7 @@ from src import (
         config,
         error_handling,
 )
+from src.util.version import get_version
 
 
 def split_prefixed_name(name):
@@ -247,7 +248,7 @@ class Reddit(praw.Reddit):
         try:
             user_agent = self.__user_agent
         except AttributeError:
-            version = '0.1' # TODO: read from file
+            version = get_version()
             self.__user_agent = (
                     '{platform}:{appname}:{version} (by {author})'
             ).format(

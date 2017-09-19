@@ -2,3 +2,4 @@
 *.api
 praw.ini
 __DEBUG__
+EMAIL
