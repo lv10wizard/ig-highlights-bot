@@ -43,11 +43,12 @@ from glob import glob
 import os
 from pprint import pformat
 
+from constants import __DEBUG__
+
 
 # hard-coded debug flag (changed to True to turn on debugging print statements)
-__DEBUG = True
 def _debug(*msg, **kwargs):
-    if __DEBUG:
+    if __DEBUG__:
         print(*msg, **kwargs)
 
 def get_all_modules(path):

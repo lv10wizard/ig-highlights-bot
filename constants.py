@@ -3,6 +3,10 @@ import sys
 import urllib
 
 
+ROOT_DIR = os.path.dirname( os.path.realpath(os.path.abspath(__file__)) )
+# hard-coded debug flag to switch some more spammy debug logging
+__DEBUG__ = os.path.exists(os.path.join(ROOT_DIR, '__DEBUG__'))
+
 HOME = None
 if sys.platform == 'win32':
     # windows
@@ -28,7 +32,6 @@ DEFAULT_APP_NAME = 'ig-highlights-bot'
 CONFIG_ROOT_DIR = os.path.join(CONFIG_ROOT_DIR, DEFAULT_APP_NAME)
 DATA_ROOT_DIR = os.path.join(HOME, DEFAULT_APP_NAME)
 
-ROOT_DIR = os.path.dirname( os.path.realpath(os.path.abspath(__file__)) )
 BLACKLIST_DEFAULTS_PATH = os.path.join(ROOT_DIR, 'BLACKLIST')
 SUBREDDITS_DEFAULTS_PATH = os.path.join(ROOT_DIR, 'SUBREDDITS')
 
