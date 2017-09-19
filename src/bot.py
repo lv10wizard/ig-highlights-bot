@@ -240,7 +240,8 @@ class IgHighlightsBot(StreamMixin):
                     ig_list = []
                     queued_ig_data = self.ig_queue.get_ig_data_for(comment)
                     for ig_user in ig_usernames:
-                        if instagram.Instagram.is_rate_limited():
+                        is_rate_limited = instagram.Instagram.is_rate_limited()
+                        if is_rate_limited:
                             # drop the ig_list so that no reply attempt is made
                             ig_list = []
                             break
@@ -284,33 +285,35 @@ class IgHighlightsBot(StreamMixin):
                     comment_queued = comment in self.ig_queue
                     # don't reply if any ig user was queued to be fetched
                     # (ie, don't reply with partial highlights)
-                    if not comment_queued and len(ig_list) == len(ig_usernames):
-                        did_reply = self._reply(comment, ig_list)
+                    if not comment_queued:
+                        if len(ig_list) == len(ig_usernames):
+                            did_reply = self._reply(comment, ig_list)
 
-                    else:
-                        reply_attempted = False
-                        logger.prepend_id(logger.debug, self,
-                                'Skipping reply to {color_comment}:'
-                                '\nis queued? {queued};'
-                                ' rate-limit? {ratelimit};'
-                                ' server err? {servererr}'
-                                '\npermalink: {permalink}'
-                                '\nusers: {unpack_color}'
-                                '\n#ig_list: {num}',
-                                color_comment=reddit.display_id(comment),
-                                queued=('yes' if comment_queued else 'no'),
-                                ratelimit=('yes'
-                                    if instagram.Instagram.is_rate_limited()
-                                    else 'no'
-                                ),
-                                servererr=('yes'
-                                    if instagram.Instagram.has_server_error()
-                                    else 'no'
-                                ),
-                                permalink=comment.permalink(),
-                                unpack_color=ig_usernames,
-                                num=len(ig_list),
-                        )
+                        # don't count the reply as not attempted if we ran into
+                        # either the rate-limit or server issues
+                        elif not is_rate_limited:
+                            reply_attempted = False
+                            servererr = instagram.Instagram.has_server_error()
+                            logger.prepend_id(logger.debug, self,
+                                    'Skipping reply to {color_comment}:'
+                                    '\nis queued? {queued};'
+                                    ' rate-limit? {ratelimit};'
+                                    ' server err? {servererr}'
+                                    '\npermalink: {permalink}'
+                                    '\nusers #{num_users}: {unpack_color}'
+                                    '\n#ig_list: {num_list}',
+                                    color_comment=reddit.display_id(comment),
+                                    queued=('yes' if comment_queued else 'no'),
+                                    ratelimit=('yes'
+                                        if is_rate_limited
+                                        else 'no'
+                                    ),
+                                    servererr=('yes' if servererr else 'no'),
+                                    permalink=comment.permalink(),
+                                    num_users=len(ig_usernames),
+                                    unpack_color=ig_usernames,
+                                    num_list=len(ig_list),
+                            )
 
         return reply_attempted, did_reply
 
@@ -546,8 +549,8 @@ class IgHighlightsBot(StreamMixin):
             comment = self._reddit.comment(comment_id)
             reply_attempted, did_reply = self.reply(comment)
 
-            if not reply_attempted:
-                # reply was skipped, probably rate-limited again
+            if instagram.Instagram.is_rate_limited():
+                # no point in continuing if we're rate-limited
                 break
 
             elif did_reply:
@@ -620,7 +623,9 @@ class IgHighlightsBot(StreamMixin):
 
                         self.reply(comment)
 
-                # should usually be empty
+                # these should usually be empty but may cause comments to be
+                # missed if they take a long time or stream contains a lot of
+                # active subreddits
                 self.process_submission_queue()
                 self.process_instagram_queue()
                 time.sleep(1)
