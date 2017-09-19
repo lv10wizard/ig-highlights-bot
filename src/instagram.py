@@ -5,11 +5,13 @@ import time
 
 from utillib import logger
 
+from constants import EMAIL
 from src import (
         config,
         database,
 )
 from src.util import requestor
+from src.util.version import get_version
 
 
 # https://stackoverflow.com/a/33783840
@@ -135,6 +137,24 @@ class Instagram(object):
             return Instagram._rate_limit.time_left()
         return -1
 
+    @staticmethod
+    def initialize(cfg, bot_username):
+        if not Instagram.cfg:
+            Instagram.cfg = cfg
+        if not Instagram.user_agent:
+            Instagram.user_agent = (
+                    '{name} reddit bot {version} ({email})'.format(
+                        name=bot_username,
+                        version=get_version(),
+                        email=EMAIL,
+                    )
+            )
+        if not Instagram._rate_limit:
+            Instagram._rate_limit = database.InstagramRateLimitDatabase(
+                    Instagram.cfg.instagram_rate_limit_db_path,
+                    max_age=config.parse_time('1h'),
+            )
+
     def __init__(self, user, last_id=None):
         # self.history = database.Database()
         self.user = user
@@ -153,12 +173,6 @@ class Instagram(object):
             )
             raise MissingVariable(
                     'Please set the Instagram.user_agent variable!'
-            )
-
-        if not Instagram._rate_limit:
-            Instagram._rate_limit = database.InstagramRateLimitDatabase(
-                    Instagram.cfg.instagram_rate_limit_db_path,
-                    max_age=config.parse_time('1h'),
             )
 
         if not Instagram._requestor:
