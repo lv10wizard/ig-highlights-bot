@@ -3,6 +3,7 @@ import os
 import Queue
 import re
 import signal
+import time
 
 from prawcore.exceptions import Redirect
 from utillib import logger
@@ -610,6 +611,7 @@ class IgHighlightsBot(StreamMixin):
                 # should usually be empty
                 self.process_submission_queue()
                 self.process_instagram_queue()
+                time.sleep(1)
 
         except Redirect as e:
             if re.search(r'/subreddits/search', e.message):
