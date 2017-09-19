@@ -40,7 +40,7 @@ else:
 if not HOME:
     HOME = '~'
 
-DEFAULT_APP_NAME = 'ig-highlights-bot'
+DEFAULT_APP_NAME = 'igHighlightsBot'
 CONFIG_ROOT_DIR = os.path.join(CONFIG_ROOT_DIR, DEFAULT_APP_NAME)
 DATA_ROOT_DIR = os.path.join(HOME, DEFAULT_APP_NAME)
 
