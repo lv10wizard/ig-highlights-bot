@@ -96,7 +96,10 @@ class IgHighlightsBot(StreamMixin):
                     num=signum,
             )
 
-        # TODO: kill (+join) subprocesses
+        self.messages.kill()
+        self.mentions.kill()
+        self.messages.join()
+        self.mentions.join()
 
         # XXX: kill the main process last so that daemon processes aren't
         # killed at inconvenient times
