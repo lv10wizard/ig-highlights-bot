@@ -44,7 +44,7 @@ LOGGING_PATH                    = 'logging_path'
 
 INSTAGRAM_DB_PATH               = 'instagram_db_path'
 INSTAGRAM_RATE_LIMIT_DB_PATH    = 'instagram_rate_limit_db_path'
-INSTAGRAM_RATE_LIMIT_QUEUE_PATH = 'instagram_rate_limit_queue_path'
+INSTAGRAM_QUEUE_DB_PATH         = 'instagram_queue_db_path'
 INSTAGRAM_CACHE_EXPIRE_TIME     = 'instagram_cache_expire_time'
 
 # ######################################################################
@@ -227,7 +227,7 @@ class Config(object):
 
                 # path to the persistent instagram rate-limited queue
                 # (queue of to-fetch users)
-                INSTAGRAM_RATE_LIMIT_QUEUE_PATH: os.path.join(
+                INSTAGRAM_QUEUE_DB_PATH: os.path.join(
                         DATA_ROOT_DIR,
                         'ig-queue.db',
                 ),
@@ -237,19 +237,20 @@ class Config(object):
                 INSTAGRAM_CACHE_EXPIRE_TIME: '7d',
         }
 
-    def __init__(self):
+    def __init__(self, path=None):
         self.__parser = configparser.SafeConfigParser(self.__defaults)
+        self.path = path or Config.PATH
         self._load()
 
     def __str__(self):
-        return os.path.basename(Config.PATH)
+        return os.path.basename(self.path)
 
     def _load(self):
         """
         Attempts to load the config file. Creates the default config file if
         it does not exist.
         """
-        resolved_path = resolve_path(Config.PATH)
+        resolved_path = resolve_path(self.path)
         if not os.path.exists(resolved_path):
             logger.prepend_id(logger.debug, self,
                     'Creating directories in \'{path}\'',
@@ -264,7 +265,7 @@ class Config(object):
 
             logger.prepend_id(logger.info, self,
                     'Writing default config to \'{path}\'',
-                    path=Config.PATH,
+                    path=self.path,
             )
             # just let any errors through -- no config file should be fatal
             # (maybe)
@@ -273,7 +274,7 @@ class Config(object):
         else:
             logger.prepend_id(logger.info, self,
                     'Loading config from \'{path}\'',
-                    path=Config.PATH,
+                    path=self.path,
             )
             with open(resolved_path, 'rb') as fd:
                 self.__parser.readfp(fd)
@@ -283,7 +284,7 @@ class Config(object):
             self.__write()
 
     def __write(self):
-        resolved_path = resolve_path(Config.PATH)
+        resolved_path = resolve_path(self.path)
         with open(resolved_path, 'wb') as fd:
             self.__parser.write(fd)
 
@@ -450,12 +451,12 @@ class Config(object):
         return self.__get(INSTAGRAM_RATE_LIMIT_DB_PATH)
 
     @property
-    def instagram_rate_limit_queue_path(self):
-        return resolve_path(self.__get(INSTAGRAM_RATE_LIMIT_QUEUE_PATH))
+    def instagram_queue_db_path(self):
+        return resolve_path(self.__get(INSTAGRAM_QUEUE_DB_PATH))
 
     @property
-    def instagram_rate_limit_queue_path_raw(self):
-        return self.__get(INSTAGRAM_RATE_LIMIT_QUEUE_PATH)
+    def instagram_queue_db_path_raw(self):
+        return self.__get(INSTAGRAM_QUEUE_DB_PATH)
 
     @property
     def instagram_cache_expire_time(self):

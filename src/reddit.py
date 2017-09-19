@@ -28,11 +28,12 @@ def split_prefixed_name(name):
     Returns tuple (prefix, name) if successful
             tuple ('', name) if no prefix was found
     """
-    REGEX = r'^({0}|{1})([\-\w]+)$'.format(PREFIX_USER, PREFIX_SUBREDDIT)
-    #         |\_______/\_______/|
-    #         |    |        |   don't include partial matches
-    #         |    |     capture username characters
-    #         |  capture prefix
+    REGEX = r'^/?({0}|{1})([\-\w]*)$'.format(PREFIX_USER, PREFIX_SUBREDDIT)
+    #         | |\_______/\_______/|
+    #         | |    |        |   don't include partial matches
+    #         | |    |     capture user/subreddit name characters
+    #         |  \  capture prefix
+    #         | optionally match a leading '/' (eg. /r/test)
     #       don't include partial matches
     result = re.search(REGEX, name)
     if result:

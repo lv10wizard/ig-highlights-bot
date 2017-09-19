@@ -22,7 +22,7 @@ O. add config options:
             -- needs to instantiate its own Reddit instance (to get the
             redditor object)
         ? add more debug pms
-4? move messages.py reply methods to replies.py .. maybe
+X. move messages.py reply methods to replies.py .. maybe
     I don't think anything else should need those specific methods
     (but the same can probably said of the methods in replies.py)
 O. mentions parsing
@@ -75,7 +75,7 @@ O. instagram rate-limit queue
             > UPDATE ... (last_id)
         O. on successful fetch:
             > DELETE ...
-8? catch-up (parse through old (all?) messages maybe comments/mentions)
+X. catch-up (parse through old (all?) messages maybe comments/mentions)
     in case the bot is offline for a while, this would catch messages to be
     processed
     - refactor messages to fetch until first not-seen message
@@ -84,7 +84,7 @@ O. instagram rate-limit queue
     ? refactor mentions/comments similarly
         this behavior may not be desirable; could end up responding to weeks-old
         comments to be seen by no one
-9. commandline arguments
+O. commandline arguments
     . --config-path
     . --add-subreddit
     . --rm-subreddit

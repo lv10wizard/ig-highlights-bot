@@ -47,9 +47,7 @@ class IgHighlightsBot(StreamMixin):
         )
         self.bad_actors = BadActorsDatabase(cfg.bad_actors_db_path, cfg)
         self.blacklist = blacklist.Blacklist(cfg)
-        self.ig_queue = InstagramQueueDatabase(
-                cfg.instagram_rate_limit_queue_path,
-        )
+        self.ig_queue = InstagramQueueDatabase(cfg.instagram_queue_db_path)
 
         self.messages = messages.Messages(cfg, self.blacklist)
         # queue of submissions to be processed (produced through separate

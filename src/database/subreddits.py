@@ -99,15 +99,31 @@ class SubredditsDatabase(Database):
         if not name:
             logger.prepend_id(logger.debug, self,
                     'Cannot add \'{thing}\' to subreddits database:'
-                    ' no \'subreddit\' member!',
+                    ' unhandled type=\'{type}\'',
                     thing=thing,
+                    type=type(thing),
             )
             return
 
-        connection.execute(
+        self._db.execute(
                 'INSERT INTO subreddits(subreddit_name, added_utc)'
                 ' VALUES(?, ?)',
                 (name, time.time()),
+        )
+
+    def _delete(self, thing):
+        name = SubredditsDatabase.get_subreddit_name(thing)
+        if not name:
+            logger.prepend_id(logger.debug, self,
+                    'Cannot remove \'{thing}\' from subreddits database:'
+                    ' unhandled type=\'{type}\'',
+                    thing=thing,
+                    type=type(thing),
+            )
+
+        self._db.execute(
+                'DELETE FROM subreddits WHERE subreddit_name = ?',
+                (name,)
         )
 
     @property

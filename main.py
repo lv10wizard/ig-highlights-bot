@@ -1,24 +1,22 @@
 #!/usr/bin/env python2
 
-import argparse
+import args
+from src import config
 
-from utillib import logger
-
-from src import (
-        bot,
-        config,
-)
-
-
-def parse_args():
-    parser = argparse.ArgumentParser(
-            description=''
-    )
-    return vars(parser.parse_args())
 
 if __name__ == '__main__':
-    cfg = config.Config()
-    ig_highlights_bot = bot.IgHighlightsBot(cfg)
+    options = args.parse()
+
+    import sys
+    sys.exit(0)
+
+    cfg = config.Config(options['config'])
+    if args.handle(cfg, options):
+        import sys
+        sys.exit(0)
+
+    from src.bot import IgHighlightsBot
+    ig_highlights_bot = IgHighlightsBot(cfg)
     try:
         ig_highlights_bot.run_forever()
 
