@@ -110,7 +110,7 @@ class Blacklist(object):
 
                 elif not is_blacklisted:
                     logger.prepend_id(logger.debug, self,
-                            'Adding {color_name} {tmp}to blacklist'
+                            'Adding {color_name} {tmp}to blacklist',
                             color_name=name_raw,
                             tmp=('temporarily ' if tmp else ''),
                     )
