@@ -105,7 +105,10 @@ def expose_modules(path, prefix, locals, all_array=[]):
             #   ['Database', 'FailedInit', ...]
             for attr in dir(imported_module):
                 _debug('\t\t', attr)
-                if attr in imported_module.__all__:
+                if (
+                        hasattr(imported_module, '__all__')
+                        and attr in imported_module.__all__
+                ):
                     _debug('\t\t\texposing ...')
                     attr_obj = getattr(imported_module, attr)
                     locals[attr_obj.__name__] = attr_obj

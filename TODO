@@ -101,8 +101,18 @@ X. don't dynamically add subreddits if they are blacklisted
             added)
 O. instagram requests user-agent
 O. versioning
-N-1. refactor logging
-    - add pid (+ option to disable)
+O. refactor logging
+    O. add pid
+    - option to disable
+        - pid
+        - module-level logging
+        - all logging
+        ? formatting?
+    ? special config handling required?
+    - bare-bones formatter
+        need to refactor handle_special_keyword so that Formatter child classes
+        can extend/override
+    - actually refactor logger calls in app
 
 N. testing!
 
