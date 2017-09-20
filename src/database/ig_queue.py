@@ -3,7 +3,7 @@ import time
 # XXX: requests is already a dependency so may as well reuse this
 from requests.structures import CaseInsensitiveDict
 
-from _database import Database
+from ._database import Database
 
 
 class InstagramQueueDatabase(Database):

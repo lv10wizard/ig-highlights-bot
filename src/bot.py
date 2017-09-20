@@ -1,9 +1,14 @@
 import multiprocessing
 import os
-import Queue
 import re
 import signal
+import sys
 import time
+
+if sys.version_info.major < 3:
+    import Queue as queue
+else:
+    import queue
 
 from prawcore.exceptions import Redirect
 
@@ -502,7 +507,7 @@ class IgHighlightsBot(StreamMixin):
 
                 self.submission_queue.task_done()
 
-        except Queue.Empty:
+        except queue.Empty:
             pass
 
     def process_instagram_queue(self, num=5):

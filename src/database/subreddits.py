@@ -2,7 +2,7 @@ from contextlib import contextmanager
 import os
 import time
 
-from _database import Database
+from ._database import Database
 from constants import SUBREDDITS_DEFAULTS_PATH
 from src.util import logger
 

@@ -1,4 +1,4 @@
-from _database import Database
+from ._database import Database
 
 
 class BadActorsDatabase(Database):

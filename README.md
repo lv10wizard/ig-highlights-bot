@@ -5,9 +5,13 @@ user's top liked media.
 
 #### Dependencies
 
-python2.7
+python 2.7+ or 3.5+
 
 - praw >= 5.1 (> 4.0 may work; untested)
+
+- requests
+
+- bs4
 
 *For testing*:
 

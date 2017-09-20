@@ -1,6 +1,6 @@
 import time
 
-from _database import Database
+from ._database import Database
 from src.util import logger
 
 

@@ -1,8 +1,12 @@
-import ConfigParser as configparser
 import errno
 import os
 import re
 import sys
+
+if sys.version_info.major < 3:
+    import ConfigParser as configparser
+else:
+    import configparser
 
 from constants import (
         CONFIG_ROOT_DIR,

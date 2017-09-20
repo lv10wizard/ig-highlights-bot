@@ -1,7 +1,7 @@
 import re
 import time
 
-from _database import Database
+from ._database import Database
 from constants import (
         BLACKLIST_DEFAULTS_PATH,
         PREFIX_USER,
