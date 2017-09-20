@@ -1,13 +1,10 @@
-import urllib
-
-from utillib import logger
-
 from constants import (
         BLACKLIST_URL_FMT,
         CONTACT_URL,
         HELP_URL,
         REPO_URL,
 )
+from src.util import logger
 
 
 class Formatter(object):
