@@ -15,7 +15,8 @@ def lock():
     """
     Exposes the internal lock mechanism for use in 'with' statements
     """
-    yield _lock
+    with _lock:
+        yield
 
 __all__ = expose_modules(__file__, __name__, locals())
 
