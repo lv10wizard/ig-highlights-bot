@@ -105,14 +105,15 @@ class Formatter(logging.Formatter):
         # XXX: handle color last because it alters the text
         handle_special_keyword('color', Formatter.get_fg_color_msg)
 
+        msg = Formatter.__stringify(record.msg)
         try:
-            record.msg = record.msg.format(*record.args, **record.kwargs)
+            record.msg = msg.format(*record.args, **record.kwargs)
         except (IndexError, KeyError, ValueError):
             # missing string.format arguments:
             # could be a typo or the msg could just contain '{}'
             # or mixing '{0} {}' formatting
             escaped_msg = Formatter.__handle_bad_msg(
-                    record.msg, record.args, record.kwargs,
+                    msg, record.args, record.kwargs,
             )
             try:
                 record.msg = escaped_msg.format(*record.args, **record.kwargs)
