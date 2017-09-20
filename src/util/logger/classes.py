@@ -3,6 +3,11 @@ import logging
 import multiprocessing
 import sys
 
+if sys.version_info.major < 3:
+    from sys import maxint as maxint
+else:
+    from sys import maxsize as maxint
+
 
 __DEBUG__ = False
 
@@ -71,7 +76,7 @@ class LevelFilter(logging.Filter):
 
     https://stackoverflow.com/a/1383365
     """
-    def __init__(self, min_level, max_level=sys.maxint):
+    def __init__(self, min_level, max_level=maxint):
         self.min_level = min_level
         self.max_level = max_level
 

@@ -5,6 +5,10 @@ import logging
 import re
 import sys
 
+if sys.version_info.major >= 3:
+    basestring = str
+    unicode = str
+
 
 __DEBUG__ = False
 
@@ -22,8 +26,12 @@ class Formatter(logging.Formatter):
     ID_KEY = '__Formatter_ident__'
 
     # assumes 256 colors
-    # EXCLUDE_COLORS = [0, 256] + range(16, 22) + range(232, 245)
-    VALID_FG_COLORS = range(1, 15+1) + range(22, 231+1) + range(245, 256+1)
+    # EXCLUDE_COLORS = [0, 256] + list(range(16, 22)) + listrange((232, 245))
+    VALID_FG_COLORS = (
+            list(range(1, 15+1))
+            + list(range(22, 231+1))
+            + list(range(245, 256+1))
+    )
     __LEVEL_COLORS = {
             logging.DEBUG: (15, 8),
             logging.INFO: (15, None),
@@ -314,14 +322,18 @@ class Formatter(logging.Formatter):
 
     @staticmethod
     def __encode(msg, encoding=ENCODING):
-        if isinstance(msg, unicode):
-            return msg.encode(encoding, 'replace')
+        if sys.version_info.major < 3:
+            if isinstance(msg, unicode):
+                return msg.encode(encoding, 'replace')
         return msg
 
     @staticmethod
     def __decode(msg, encoding=ENCODING):
-        if isinstance(msg, str):
-            return msg.decode(encoding, 'replace')
+        try:
+            if isinstance(msg, str):
+                return msg.decode(encoding, 'replace')
+        except AttributeError:
+            pass
         return msg
 
     @staticmethod
@@ -398,7 +410,7 @@ class Formatter(logging.Formatter):
         Unpacks the {seq}, applying {func} on each element. If {seq} is a dict,
         this will only unpack the keys.
         """
-        if hasattr(seq, '__iter__'):
+        if hasattr(seq, '__iter__') and not isinstance(seq, basestring):
             return ', '.join([
                     func(element, *func_args, **func_kwargs)
                     for element in seq

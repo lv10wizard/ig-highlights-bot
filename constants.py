@@ -1,6 +1,10 @@
 import os
 import sys
-import urllib
+
+if sys.version_info.major < 3:
+    import urllib
+else:
+    import urllib.parse as urllib
 
 
 ROOT_DIR = os.path.dirname( os.path.realpath(os.path.abspath(__file__)) )
