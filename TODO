@@ -103,11 +103,6 @@ O. instagram requests user-agent
 O. versioning
 O. refactor logging
     O. add pid
-    - option to disable
-        - pid
-        - module-level logging
-        - all logging
-        ? formatting?
     ? special config handling required?
     - bare-bones formatter
         need to refactor handle_special_keyword so that Formatter child classes

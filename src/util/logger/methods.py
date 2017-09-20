@@ -105,6 +105,63 @@ def id(logger_func, __id__=None, msg=None, *args, **kwargs):
 
     logger_func(msg, *args, **kwargs)
 
+# ######################################################################
+
+DEBUG    = logging.DEBUG
+INFO     = logging.INFO
+WARNING  = logging.WARNING
+ERROR    = logging.ERROR
+CRITICAL = logging.CRITICAL
+
+def set_level(level, root=True):
+    """
+    Sets the level for either the root logger or the calling module's logger
+    """
+    name = None if root else _module_name()
+    _get(name).setLevel(level)
+
+def get_level():
+    """
+    Gets the effective level for the calling module's logger
+    """
+    _get(_module_name()).getEffectiveLevel()
+
+def is_enabled_for(level):
+    """
+    Returns the current module's effective logger threshold. See:
+    https://docs.python.org/2/library/logging.html#logging.Logger.isEnabledFor
+    """
+    return _get(_module_name()).isEnabledFor(level)
+
+def add_filter(filt, root=True):
+    """
+    Adds filter {filt} to either the root logger or the current module's logger
+    """
+    name = None if root else _module_name()
+    _get(name).addFilter(filt)
+
+def remove_filter(filt, root=True):
+    """
+    Removes filter {filt} to either the root logger or the current module's
+    logger
+    """
+    name = None if root else _module_name()
+    _get(name).removeFilter(filt)
+
+def add_handler(handler, root=True):
+    """
+    Adds {handler} to either the root logger or current module's logger
+    """
+    name = None if root else _module_name()
+    _get(name).addHandler(handler)
+
+def remove_handler(handler, root=True):
+    """
+    Remove {handler} to either the root logger or current module's logger
+    """
+    name = None if root else _module_name()
+    _get(name).removeHandler(handler)
+
 
 __all__ = [
         'debug',
@@ -114,5 +171,18 @@ __all__ = [
         'critical',
         'exception',
         'id',
+
+        'DEBUG',
+        'INFO',
+        'WARNING',
+        'ERROR',
+        'CRITICAL',
+        'set_level',
+        'get_level',
+        'is_enabled_for',
+        'add_filter',
+        'remove_filter',
+        'add_handler',
+        'remove_handler',
 ]
 

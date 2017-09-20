@@ -111,8 +111,12 @@ def expose_modules(path, prefix, locals, all_array=[]):
                 ):
                     _debug('\t\t\texposing ...')
                     attr_obj = getattr(imported_module, attr)
-                    locals[attr_obj.__name__] = attr_obj
-                    all_array.append(attr_obj.__name__)
+                    try:
+                        attr_name = attr_obj.__name__
+                    except AttributeError:
+                        attr_name = attr
+                    locals[attr_name] = attr_obj
+                    all_array.append(attr_name)
 
     return all_array
 

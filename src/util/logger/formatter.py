@@ -479,3 +479,7 @@ class Formatter(logging.Formatter):
         return pprint.pformat(thing)
 
 
+__all__ = [
+        'Formatter',
+]
+
