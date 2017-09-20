@@ -5,10 +5,10 @@ from bs4 import (
         BeautifulSoup,
         FeatureNotFound,
 )
-from utillib import logger
 
 from src import reddit
 from src.instagram import Instagram
+from src.util import logger
 
 
 class Parser(object):
@@ -36,7 +36,7 @@ class Parser(object):
                 self.__ig_links = set()
 
             else:
-                logger.prepend_id(logger.spam2, self, 'Parsing comment ...')
+                logger.id(logger.spam2, self, 'Parsing comment ...')
 
                 try:
                     soup = BeautifulSoup(comment.body_html, 'lxml')
@@ -49,10 +49,10 @@ class Parser(object):
                 )
                 links = self.__ig_links
                 if links:
-                    logger.prepend_id(logger.debug, self,
-                            'Found #{num} links: {unpack_color}',
+                    logger.id(logger.debug, self,
+                            'Found #{num} links: {color}',
                             num=len(links),
-                            unpack_color=links,
+                            color=links,
                     )
 
         return links.copy()
@@ -73,10 +73,10 @@ class Parser(object):
                     self.__ig_usernames.add(match.group(2))
             usernames = self.__ig_usernames
             if usernames:
-                logger.prepend_id(logger.debug, self,
-                        'Found #{num} usernames: {unpack_color}',
+                logger.id(logger.debug, self,
+                        'Found #{num} usernames: {color}',
                         num=len(usernames),
-                        unpack_color=usernames,
+                        color=usernames,
                 )
 
         return usernames.copy()

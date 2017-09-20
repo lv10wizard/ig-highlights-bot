@@ -96,7 +96,7 @@ class BadActorsDatabase(Database):
                             row['data'],
                         ) for row in pruned
                 ]
-                logger.prepend_id(logger.debug, self,
+                logger.id(logger.debug, self,
                         'Pruned #{num} (created: {created} by {author}):'
                         '\n{rows}',
                         num=len(pruned),

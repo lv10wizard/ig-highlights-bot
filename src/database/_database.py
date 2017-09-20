@@ -4,9 +4,8 @@ import pprint
 import re
 import sqlite3
 
-from utillib import logger
-
 from src import config
+from src.util import logger
 
 
 class BaseDatabaseException(Exception): pass
@@ -44,7 +43,7 @@ class _SqliteConnectionWrapper(object):
         return msg
 
     def execute(self, sql, *args, **kwargs):
-        logger.prepend_id(logger.debug, self,
+        logger.id(logger.debug, self,
                 '\n\t'.join(self.__construct_msg(*args, **kwargs)),
                 sql=sql,
                 args=args,
@@ -53,7 +52,7 @@ class _SqliteConnectionWrapper(object):
         return self.connection.execute(sql, *args, **kwargs)
 
     def executemany(self, sql, *args, **kwargs):
-        logger.prepend_id(logger.debug, self,
+        logger.id(logger.debug, self,
                 '\n\t'.join(self.__construct_msg(*args, **kwargs)),
                 sql=sql,
                 args=args,
@@ -106,8 +105,9 @@ class Database(object):
         if exc_type is None and exc_value is None and traceback is None:
             self._db.commit()
         else:
-            logger.prepend_id(logger.error, self,
-                    'An error occurred! Rolling back changes ...', exc_value,
+            logger.id(logger.exception, self,
+                    'An error occurred! Rolling back changes ...',
+                    exc_info=exc_value,
             )
             self._db.rollback()
             # TODO? suppress error ?
@@ -138,7 +138,7 @@ class Database(object):
                 self._resolved_dirname
                 and not os.path.exists(self._resolved_dirname)
         ):
-            logger.prepend_id(logger.debug, self,
+            logger.id(logger.debug, self,
                     'Creating directories \'{dirname}\' ...',
                     dirname=self._dirname,
             )
@@ -147,7 +147,7 @@ class Database(object):
             except OSError as e:
                 raise FailedInit(e, e.message)
 
-        logger.prepend_id(logger.debug, self,
+        logger.id(logger.debug, self,
                 'Opening connection to \'{path}\' ...',
                 path=self.path,
         )
@@ -224,12 +224,13 @@ class Database(object):
         except Exception as e:
             # probably UNIQUE or CHECK constraint failed
             # or could be something more nefarious...
-            logger.prepend_id(logger.error, self,
+            logger.id(logger.exception, self,
                     'INSERT Failed!'
                     '\n\targs={args}'
-                    '\n\tkwargs={kwargs}', e,
+                    '\n\tkwargs={kwargs}',
                     args=args,
                     kwargs=kwargs,
+                    exc_info=e,
             )
 
     def delete(self, *args, **kwargs):
@@ -243,12 +244,13 @@ class Database(object):
             Database.reraise_integrity_error(e)
 
         except Exception as e:
-            logger.prepend_id(logger.error, self,
+            logger.id(logger.exception, self,
                     'DELETE Failed!'
                     '\n\targs={args}'
-                    '\n\tkwargs={kwargs}', e,
+                    '\n\tkwargs={kwargs}',
                     args=args,
                     kwargs=kwargs,
+                    exc_info=e,
             )
 
     def update(self, *args, **kwargs):
@@ -262,12 +264,13 @@ class Database(object):
             Database.reraise_integrity_error(e)
 
         except Exception as e:
-            logger.prepend_id(logger.error, self,
+            logger.id(logger.exception, self,
                     'UPDATE Failed!'
                     '\n\targs={args}'
-                    '\n\tkwargs={kwargs}', e,
+                    '\n\tkwargs={kwargs}',
                     args=args,
                     kwargs=kwargs,
+                    exc_info=e,
             )
 
     def _initialize_tables(self, db):

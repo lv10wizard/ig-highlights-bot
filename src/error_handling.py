@@ -2,7 +2,8 @@ import multiprocessing
 import time
 
 import praw
-from utillib import logger
+
+from src.util import logger
 
 
 class ErrorHandler(object):
@@ -66,16 +67,17 @@ class ErrorHandler(object):
             handler_func = handlers[err.error_type.lower()]
 
         except (AttributeError, KeyError) as e:
-            logger.prepend_id(logger.error, self,
-                    'Failed to handle {color_errclass} (\'{err_msg}\')!', e,
+            logger.id(logger.exception, self,
+                    'Failed to handle {color_errclass} (\'{err_msg}\')!',
                     color_errclass='.'.join(
                         [err.__module__, err.__class__.__name__]
                     ),
                     err_msg=err.message,
+                    exc_info=e,
             )
 
         else:
-            logger.prepend_id(logger.debug, self,
+            logger.id(logger.debug, self,
                     'Handling {color_errtype}: \'{msg}\' ...',
                     color_errtype=err.error_type,
                     msg=err.message,
@@ -89,14 +91,14 @@ class ErrorHandler(object):
             )
 
     def __dummy_handler(self, err_type, err, *args, **kwargs):
-        logger.prepend_id(logger.debug, self,
+        logger.id(logger.debug, self,
                 '{color_errtype}: Ignoring ...',
                 color_errtype=err_type,
         )
 
     def wait_for_rate_limit(self):
         if ErrorHandler._rate_limited.is_set():
-            logger.prepend_id(logger.debug, self,
+            logger.id(logger.debug, self,
                     'Waiting on rate limit ...',
             )
         ErrorHandler._rate_limited.wait()
@@ -111,7 +113,7 @@ class ErrorHandler(object):
         #   procB: tries a rate-limited call, receives rate-limit error; also
         #           starts handling
         if ErrorHandler._rate_limited.is_set():
-            logger.prepend_id(logger.debug, self,
+            logger.id(logger.debug, self,
                     '{color_errtype}: duplicate rate-limit detected!',
                     color_errtype=err_type,
             )
@@ -123,7 +125,7 @@ class ErrorHandler(object):
             ErrorHandler._rate_limited.set()
 
             delay = 10 * 60 # default delay
-            logger.prepend_id(logger.debug, self,
+            logger.id(logger.debug, self,
                     '{color_errtype}: determining delay ...',
                     color_errtype=err_type,
             )
@@ -131,7 +133,7 @@ class ErrorHandler(object):
                 delay = config.parse_time(err.message)
 
             except config.InvalidTime:
-                logger.prepend_id(logger.debug, self,
+                logger.id(logger.debug, self,
                         'Could not determine delay from error message;'
                         ' using {time} (message: \'{msg}\')',
                         time=delay,
@@ -139,13 +141,13 @@ class ErrorHandler(object):
                 )
 
             else:
-                logger.prepend_id(logger.debug, self,
+                logger.id(logger.debug, self,
                         'Found delay: {time} (message: \'{msg}\')',
                         time=delay,
                         msg=err.message,
                 )
 
-            logger.prepend_id(logger.info, self,
+            logger.id(logger.info, self,
                     'Rate limited! Retrying \'{callback}\' in {time} ...',
                     callback=callback.__name__,
                     time=delay,
@@ -154,7 +156,7 @@ class ErrorHandler(object):
 
             Error._rate_limited.clear()
 
-        logger.prepend_id(logger.debug, self,
+        logger.id(logger.debug, self,
                 'Issuing callback ...',
         )
         return callback(*callback_args, **callback_kwargs)

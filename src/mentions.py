@@ -1,5 +1,3 @@
-from utillib import logger
-
 from src import (
         config,
         database,
@@ -9,6 +7,7 @@ from src.mixins import (
         ProcessMixin,
         StreamMixin,
 )
+from src.util import logger
 
 
 class Mentions(ProcessMixin, StreamMixin):
@@ -32,11 +31,11 @@ class Mentions(ProcessMixin, StreamMixin):
 
         try:
             while not self._killed.is_set():
-                logger.prepend_id(logger.debug, self, 'Processing mentions ...')
+                logger.id(logger.debug, self, 'Processing mentions ...')
                 for mention in self.stream:
                     if mentions_db.has_seen(mention):
                         # assumption: inbox.mentions fetches newest -> oldest
-                        logger.prepend_id(logger.debug, self,
+                        logger.id(logger.debug, self,
                                 'I\'ve already processed {color_post} from'
                                 ' {color_from}!',
                                 color_post=reddit.display_fullname(mention),
@@ -49,7 +48,7 @@ class Mentions(ProcessMixin, StreamMixin):
                         break
 
                     elif self._killed.is_set():
-                        logger.prepend_id(logger.debug, self, 'Killed!')
+                        logger.id(logger.debug, self, 'Killed!')
 
                     elif mention is None:
                         break
@@ -61,7 +60,7 @@ class Mentions(ProcessMixin, StreamMixin):
                     self.submission_queue.put(data)
 
                 if not self._killed.is_set():
-                    logger.prepend_id(logger.debug, self,
+                    logger.id(logger.debug, self,
                             'Waiting {time} before checking messages again ...',
                             time=delay,
                     )
@@ -69,8 +68,9 @@ class Mentions(ProcessMixin, StreamMixin):
 
         except Exception as e:
             # TODO? only catch praw errors
-            logger.prepend_id(logger.error, self,
-                    'Something went wrong! Message processing terminated.', e,
+            logger.id(logger.exception, self,
+                    'Something went wrong! Message processing terminated.',
+                    exc_info=e,
             )
 
 

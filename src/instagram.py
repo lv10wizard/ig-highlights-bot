@@ -3,14 +3,15 @@ import os
 import re
 import time
 
-from utillib import logger
-
 from constants import EMAIL
 from src import (
         config,
         database,
 )
-from src.util import requestor
+from src.util import (
+        logger,
+        requestor,
+)
 from src.util.version import get_version
 
 
@@ -161,14 +162,14 @@ class Instagram(object):
         self.initial_last_id = last_id
 
         if not Instagram.cfg:
-            logger.prepend_id(logger.debug, self,
+            logger.id(logger.debug, self,
                     'I don\'t know where cached instagram data is stored:'
                     ' cfg not set!',
             )
             raise MissingVariable('Please set the Instagram.cfg variable!')
 
         if not Instagram.user_agent:
-            logger.prepend_id(logger.debug, self,
+            logger.id(logger.debug, self,
                     'I cannot fetch data from instagram: no user-agent!',
             )
             raise MissingVariable(
@@ -242,10 +243,11 @@ class Instagram(object):
                     os.remove(self.__db_path)
 
                 except OSError as e:
-                    logger.prepend_id(logger.error, self,
+                    logger.id(logger.exception, self,
                             'Could not remove empty database file'
-                            ' \'{path}\'', e,
+                            ' \'{path}\'',
                             path=self.__db_path,
+                            exc_info=e,
                     )
 
         return data
@@ -276,17 +278,19 @@ class Instagram(object):
                 cache_mtime = 0
 
             else:
-                logger.prepend_id(logger.error, self,
+                logger.id(logger.exception, self,
                         'I cannot determine if \'{user}\' media cache is'
-                        ' expired! (Could not stat \'{path}\')', e, True,
+                        ' expired! (Could not stat \'{path}\')',
                         user=user,
                         path=self.__db_path,
+                        exc_info=e,
                 )
+                raise
 
         cache_age = time.time() - cache_mtime
         expired = cache_age > self.cfg.instagram_cache_expire_time
         if cache_mtime > 0 and expired:
-            logger.prepend_id(logger.debug, self,
+            logger.id(logger.debug, self,
                     'Cache expired ({time_age} > {time_expire})',
                     time_age=cache_age,
                     time_expire=self.cfg.instagram_cache_expire_time,
@@ -297,7 +301,7 @@ class Instagram(object):
     def __handle_rate_limit(self):
         is_rate_limited = Instagram.is_rate_limited()
         if is_rate_limited:
-            logger.prepend_id(logger.debug, self,
+            logger.id(logger.debug, self,
                     'Rate-limited! (~{time} left)',
                     time=Instagram.rate_limit_reset_time(),
             )
@@ -320,7 +324,7 @@ class Instagram(object):
             if last_id:
                 msg.append('(starting @ {last_id})')
             msg.append('...')
-            logger.prepend_id(logger.debug, self,
+            logger.id(logger.debug, self,
                     ' '.join(msg),
                     last_id=last_id,
             )
@@ -338,7 +342,7 @@ class Instagram(object):
                     )
                     if time.time() < delayed_time:
                         # still delayed
-                        logger.prepend_id(logger.debug, self,
+                        logger.id(logger.debug, self,
                                 'Fetch delayed for another {time} ...',
                                 time=delayed_time - time.time(),
                         )
@@ -361,7 +365,7 @@ class Instagram(object):
 
                     if response.status_code == 200:
                         if Instagram.has_server_error():
-                            logger.prepend_id(logger.debug, self,
+                            logger.id(logger.debug, self,
                                     'Resetting Instagram delay'
                                     ' (t={timestamp}) ...',
                                     timestamp=time.time(),
@@ -394,7 +398,7 @@ class Instagram(object):
                         Instagram._server_error_delay = requestor.choose_delay(
                                 Instagram._server_error_delay or 1
                         )
-                        logger.prepend_id(logger.debug, self,
+                        logger.id(logger.debug, self,
                                 'Setting Instagram delay = {delay}'
                                 ' (t={timestamp})',
                                 delay=Instagram._server_error_delay,
@@ -411,25 +415,31 @@ class Instagram(object):
 
             except KeyError as e:
                 # json structure changed
-                fatal_msg.append('(keys={unpack_color})')
-                logger.prepend_id(logger.error, self,
-                        ' '.join(fatal_msg), e, True,
-                        unpack_color=data.keys(),
+                fatal_msg.append('(keys={color})')
+                logger.id(logger.exception, self,
+                        ' '.join(fatal_msg),
+                        color=data.keys(),
+                        exc_info=e,
                 )
+                raise
 
             except TypeError as e:
                 # probably tried to index None (data == None)
                 # I'm not sure if this can happen
-                logger.prepend_id(logger.error, self,
-                        ' '.join(fatal_msg), e, True,
+                logger.id(logger.exception, self,
+                        ' '.join(fatal_msg),
+                        exc_info=e,
                 )
+                raise
 
             except ValueError as e:
                 # response not json (bad endpoint?)
                 fatal_msg.append('(bad endpoint?)')
-                logger.prepend_id(logger.error, self,
-                        ' '.join(fatal_msg), e, True,
+                logger.id(logger.exception, self,
+                        ' '.join(fatal_msg),
+                        exc_info=e,
                 )
+                raise
 
     def __parse_data(self, data, stop_at_first_duplicate=False):
         """
@@ -473,7 +483,7 @@ class Instagram(object):
                     # Note: stop_at_first_duplicate skips pruning
                     # assumption: media data is fetched newest -> oldest
                     if stop_at_first_duplicate:
-                        logger.prepend_id(logger.debug, self,
+                        logger.id(logger.debug, self,
                                 'Already cached \'{code}\' ({id}). halting ...',
                                 code=code,
                                 id=item['id'],
@@ -488,18 +498,18 @@ class Instagram(object):
                 # prune any rows in the cache db that we did not see
                 missing = self.__cache.get_all_codes() - seen
                 if missing:
-                    logger.prepend_id(logger.debug, self,
+                    logger.id(logger.debug, self,
                             '#{num} links missing (probably deleted).'
                             ' pruning ...'
-                            '\ncodes: {unpack_color}',
+                            '\ncodes: {color}',
                             num=len(missing),
-                            unpack_color=missing,
+                            color=missing,
                     )
                     with self.__cache:
                         self.__cache.delete(missing)
 
         elif not data['items']:
-            logger.prepend_id(logger.debug, self,
+            logger.id(logger.debug, self,
                     'No data. halting ...'
                     '\nstatus = \'{status}\'\titems = {items}',
                     status=data['status'],
@@ -513,7 +523,7 @@ class Instagram(object):
                     pass
 
                 # user changed profile to private?
-                logger.prepend_id(logger.debug, self,
+                logger.id(logger.debug, self,
                         'Removing \'{path}\' ...',
                         path=self.__db_path,
                 )
@@ -522,9 +532,10 @@ class Instagram(object):
                     os.remove(self.__db_path)
 
                 except OSError as e:
-                    logger.prepend_id(logger.error, self,
-                            'Could not remove \'{path}\'!', e,
+                    logger.id(logger.exception, self,
+                            'Could not remove \'{path}\'!',
                             path=self.__db_path,
+                            exc_info=e,
                     )
 
         return last_id

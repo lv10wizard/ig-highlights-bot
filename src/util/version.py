@@ -2,9 +2,8 @@ import os
 import shlex
 import subprocess
 
-from utillib import logger
-
 from constants import ROOT_DIR
+from src.util import logger
 
 
 __VERSION__ = None
@@ -18,7 +17,7 @@ def run_cmd(cmd_str, fail_msg):
                 stderr=subprocess.PIPE,
         )
     except (OSError, ValueError) as e:
-        logger.error(fail_msg, e)
+        logger.exception(fail_msg, exc_info=e)
     else:
         output = proc.stdout.read().strip()
         if not output:
@@ -44,7 +43,7 @@ def get_version():
         os.chdir(ROOT_DIR)
 
     except OSError as e:
-        logger.error('Could not determine version', e)
+        logger.exception('Could not determine version', exc_info=e)
 
     else:
         # https://stackoverflow.com/a/4277828

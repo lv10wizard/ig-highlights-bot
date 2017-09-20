@@ -9,8 +9,6 @@ python2.7
 
 - praw >= 5.1 (> 4.0 may work; untested)
 
-- utillib
-
 *For testing*:
 
 - mock

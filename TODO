@@ -112,7 +112,7 @@ O. refactor logging
     - bare-bones formatter
         need to refactor handle_special_keyword so that Formatter child classes
         can extend/override
-    - actually refactor logger calls in app
+    O. actually refactor logger calls in app
 
 N. testing!
 

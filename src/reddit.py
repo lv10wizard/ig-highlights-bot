@@ -7,7 +7,6 @@ from prawcore.exceptions import (
         Forbidden,
         OAuthException,
 )
-from utillib import logger
 
 from constants import (
         AUTHOR,
@@ -18,6 +17,7 @@ from src import (
         config,
         error_handling,
 )
+from src.util import logger
 from src.util.version import get_version
 
 
@@ -175,8 +175,8 @@ class Reddit(praw.Reddit):
         praw_ini_login = True
         manual_login = False
         # prevent other processes logging while trying to get user input
-        with logger.get()._lock:
-            logger.prepend_id(logger.debug, self,
+        with logger.lock():
+            logger.id(logger.debug, self,
                     'Looking up login credentials ...',
             )
             manual_username = self.__try_set_username()
@@ -203,13 +203,15 @@ class Reddit(praw.Reddit):
             if manual_login:
                 msg.append('you entered the correct username/password')
 
-            logger.prepend_id(logger.error, self,
-                    ' '.join(msg), e, True,
+            logger.id(logger.exception, self,
+                    ' '.join(msg),
                     username=self.username_raw or '<Not Set>',
                     section=cfg.praw_sitename,
+                    exc_info=e,
             )
+            raise
 
-        logger.prepend_id(logger.debug, self,
+        logger.id(logger.debug, self,
                 '\n\tclient id:  {client_id}'
                 '\n\tuser name:  {username}'
                 '\n\tuser agent: {user_agent}',
@@ -295,7 +297,7 @@ class Reddit(praw.Reddit):
                 self._prepare_prawcore()
                 did_set = True
             else:
-                logger.prepend_id(logger.warn, self,
+                logger.id(logger.warn, self,
                         'Passwords do not match! Please try again.',
                 )
         return did_set
@@ -308,12 +310,14 @@ class Reddit(praw.Reddit):
             revision = int(revision)
         except ValueError as e:
             # something went horribly wrong
-            logger.prepend_id(logger.error, self,
-                    'Failed to determine praw version!', e, True,
+            logger.id(logger.exception, self,
+                    'Failed to determine praw version!',
+                    exc_info=e,
             )
+            raise
         else:
             if not (major == 5 and minor == 1 and revision == 0):
-                logger.prepend_id(logger.warn, self,
+                logger.id(logger.warn, self,
                         'praw version != 5.1.0 (version={ver});'
                         ' authentication may fail!',
                         ver=praw.__version__,
@@ -327,7 +331,7 @@ class Reddit(praw.Reddit):
             self.__error_handler.wait_for_rate_limit()
 
             if not (isinstance(body, basestring) and body):
-                logger.prepend_id(logger.debug, self,
+                logger.id(logger.debug, self,
                         'Cannot send debug pm: need non-empty body text,'
                         ' not \'{body}\' ({body_type}).',
                         body=body,
@@ -344,7 +348,7 @@ class Reddit(praw.Reddit):
             if not maintainer:
                 return
 
-            logger.prepend_id(logger.debug, self,
+            logger.id(logger.debug, self,
                     'Sending debug pm to \'{maintainer}\':'
                     '\n{sep}'
                     '\n{body}'
@@ -359,16 +363,17 @@ class Reddit(praw.Reddit):
 
             except Forbidden as e:
                 # failed to log in? bot account suspended?
-                logger.prepend_id(logger.error, self,
-                        'Failed to send debug pm to \'{name}\'!', e,
+                logger.id(logger.exception, self,
+                        'Failed to send debug pm to \'{name}\'!',
                         name=maintainer.name,
+                        exc_info=e,
                 )
 
             except praw.exceptions.APIException as e:
                 if e.error_type.lower() in ['no_user', 'user_doesnt_exist']:
                     # deleted, banned, or otherwise doesn't exist
                     # (is AUTHOR spelled correctly?)
-                    logger.prepend_id(logger.debug, self,
+                    logger.id(logger.debug, self,
                             'Could not send debug pm to \'{name}\':'
                             ' does not exist.',
                             name=maintainer.name,
@@ -396,7 +401,7 @@ class Reddit(praw.Reddit):
         success = False
         # TODO: do all thing.reply methods require a non-empty body?
         if not (isinstance(body, basestring) and body):
-            logger.prepend_id(logger.debug, self,
+            logger.id(logger.debug, self,
                     'Cannot reply to {color_thing} with \'{body}\''
                     ' ({body_type}). Needs non-empty string!',
                     color_thing=display_fullname(thing),
@@ -407,7 +412,7 @@ class Reddit(praw.Reddit):
         else:
             self.__error_handler.wait_for_rate_limit()
 
-            logger.prepend_id(logger.debug, self,
+            logger.id(logger.debug, self,
                     'Replying to {color_thing}:'
                     '\n{sep}'
                     '\n{body}'
@@ -421,10 +426,11 @@ class Reddit(praw.Reddit):
                 thing.reply(body)
 
             except (AttributeError, TypeError) as e:
-                logger.prepend_id(logger.error, self,
+                logger.id(logger.exception, self,
                         'Could not reply to {color_thing}:'
-                        ' no \'reply\' method!', e,
+                        ' no \'reply\' method!',
                         color_thing=display_fullname(thing),
+                        exc_info=e,
                 )
 
             except Forbidden as e:
@@ -432,10 +438,12 @@ class Reddit(praw.Reddit):
                 # - probably means bot was banned from subreddit
                 #   or blocked by user
                 # (could also mean auth failed, maybe something else?)
-                logger.prepend_id(logger.error, self,
-                        'Failed to reply to {color_thing}!', e, True,
+                logger.id(logger.exception, self,
+                        'Failed to reply to {color_thing}!',
                         color_thing=display_fullname(thing),
+                        exc_info=e,
                 )
+                raise
 
             except praw.exceptions.APIException as e:
                 success = self.__error_handler.handle(

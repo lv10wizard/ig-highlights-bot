@@ -1,10 +1,9 @@
 import multiprocessing
 import os
 
-from utillib import logger
-
 from src import reddit
 from src.database import BlacklistDatabase
+from src.util import logger
 
 
 class Blacklist(object):
@@ -66,7 +65,7 @@ class Blacklist(object):
         success = False
         name_type = Blacklist.__get_blacklist_type(name, prefix)
         if not name_type:
-            logger.prepend_id(logger.debug, self,
+            logger.id(logger.debug, self,
                     'Could not add {color_name} to blacklist:'
                     ' failed to determine blacklist type'
                     ' (name=\'{name}\', prefix=\'{prefix}\')',
@@ -88,7 +87,7 @@ class Blacklist(object):
                     if tmp:
                         # tried to ban temporarily but was already temporarily
                         # banned
-                        logger.prepend_id(logger.debug, self,
+                        logger.id(logger.debug, self,
                                 'Could not temporarily add {color_name} to'
                                 ' blacklist: already temporarily blacklisted.',
                                 color_name=name_raw,
@@ -99,7 +98,7 @@ class Blacklist(object):
                         time_left = self.__database.blacklist_time_left_seconds(
                                 name_raw,
                         )
-                        logger.prepend_id(logger.debug, self,
+                        logger.id(logger.debug, self,
                                 'Flagging {color_name}\'s ban to be made'
                                 ' permanent ({time} remaining)',
                                 color_name=name_raw,
@@ -109,7 +108,7 @@ class Blacklist(object):
                         success = True
 
                 elif not is_blacklisted:
-                    logger.prepend_id(logger.debug, self,
+                    logger.id(logger.debug, self,
                             'Adding {color_name} {tmp}to blacklist',
                             color_name=name_raw,
                             tmp=('temporarily ' if tmp else ''),
@@ -119,7 +118,7 @@ class Blacklist(object):
                     success = True
 
                 else:
-                    logger.prepend_id(logger.debug, self,
+                    logger.id(logger.debug, self,
                             'Could not add {color_name} to blacklist:'
                             ' already blacklisted.',
                             color_name=name_raw,
@@ -144,7 +143,7 @@ class Blacklist(object):
         success = False
         name_type = Blacklist.__get_blacklist_type(name, prefix)
         if not name_type:
-            logger.prepend_id(logger.debug, self,
+            logger.id(logger.debug, self,
                     'Could not remove {color_name} from blacklist:'
                     ' failed to determine blacklist type'
                     ' (name=\'{name}\', prefix=\'{prefix}\')',
@@ -163,7 +162,7 @@ class Blacklist(object):
                         name_raw
                 )
                 if time_left < 0:
-                    logger.prepend_id(logger.debug, self,
+                    logger.id(logger.debug, self,
                             'Removing {color_name} from blacklist',
                             color_name=name_raw,
                     )
@@ -172,7 +171,7 @@ class Blacklist(object):
                     success = True
 
                 elif time_left > 0:
-                    logger.prepend_id(logger.debug, self,
+                    logger.id(logger.debug, self,
                             'Clearing flag to make {color_name}\'s ban'
                             ' permanent ({time} remaining)',
                             color_name=name_raw,
@@ -219,7 +218,7 @@ class Blacklist(object):
         """
         name_type = Blacklist.__get_blacklist_type(name, prefix)
         if not name_type:
-            logger.prepend_id(logger.debug, self,
+            logger.id(logger.debug, self,
                     'Could not determine if {color_name} is blacklisted:'
                     ' failed to determine blacklist type'
                     ' (name=\'{name}\', prefix=\'{prefix}\')',
@@ -252,7 +251,7 @@ class Blacklist(object):
         """
         name_type = Blacklist.__get_blacklist_type(name, prefix)
         if not name_type:
-            logger.prepend_id(logger.debug, self,
+            logger.id(logger.debug, self,
                     'Could not determine time remaining on {color_name}\'s'
                     ' blacklisted: failed to determine blacklist type'
                     ' (name=\'{name}\', prefix=\'{prefix}\')',

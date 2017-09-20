@@ -3,8 +3,6 @@ import argparse
 import os
 from pprint import pformat
 
-from utillib import logger
-
 from constants import (
         __DEBUG__,
         AUTHOR,
@@ -13,6 +11,7 @@ from src import (
         config,
         reddit,
 )
+from src.util import logger
 
 
 ADD_SUBREDDIT = 'add-subreddit'
@@ -75,8 +74,9 @@ def do_print_database(path):
         )
     except sqlite3.DatabaseError as e:
         # eg. not a database
-        logger.error('Could not lookup tables in \'{path}\'', e,
+        logger.exception('Could not lookup tables in \'{path}\'',
                 path=path,
+                exc_info=e,
         )
     else:
         print('{0}:'.format(os.path.basename(path)))
@@ -124,10 +124,11 @@ def print_database(cfg, *databases):
     for db_name in databases:
         try:
             path = getattr(cfg, '{0}_db_path'.format(db_name))
-        except AttributeError:
-            logger.error('Could not lookup \'{db_name}\':'
-                    ' missing config option', e,
+        except AttributeError as e:
+            logger.exception('Could not lookup \'{db_name}\':'
+                    ' missing config option',
                     db_name=db_name,
+                    exc_info=e,
             )
         else:
             if os.path.exists(path):
@@ -155,8 +156,9 @@ def handle(cfg, args):
             try:
                 handlers[opt_key](cfg, *opt_val)
             except KeyError as e:
-                logger.error('No option handler defined for \'{opt}\'!', e,
+                logger.exception('No option handler defined for \'{opt}\'!',
                         opt=opt,
+                        exc_info=e,
                 )
 
     return had_handleable_opt

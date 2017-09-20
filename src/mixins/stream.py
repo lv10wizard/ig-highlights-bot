@@ -5,10 +5,12 @@ from prawcore.exceptions import (
         ServerError,
 )
 from praw.models import util as praw_util
-from utillib import logger
 
 from src import reddit
-from src.util import requestor
+from src.util import (
+        logger,
+        requestor,
+)
 
 
 class StreamMixin(object):
@@ -71,7 +73,7 @@ class StreamMixin(object):
             raise NotImplementedError('_loop_condition')
 
     def __sleep(self, delay):
-        logger.prepend_id(logger.debug, self,
+        logger.id(logger.debug, self,
                 'Waiting {time} ...',
                 time=delay,
         )
@@ -97,7 +99,7 @@ class StreamMixin(object):
         new_delay = 1
         try:
             if self.__cached_delay > new_delay:
-                logger.prepend_id(logger.debug, self,
+                logger.id(logger.debug, self,
                         'Resetting delay {old} -> {new}',
                         old=self.__cached_delay,
                         new=new_delay,
@@ -116,8 +118,9 @@ class StreamMixin(object):
                 for thing in self._stream:
                     yield thing
             except (RequestException, ServerError) as e:
-                logger.prepend_id(logger.error, self,
-                        'Failed to fetch stream element!', e,
+                logger.id(logger.exception, self,
+                        'Failed to fetch stream element!',
+                        exc_info=e,
                 )
                 self.__sleep(self.__delay)
             else:

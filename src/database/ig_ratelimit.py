@@ -1,8 +1,7 @@
 import time
 
-from utillib import logger
-
 from _database import Database
+from src.util import logger
 
 
 class InstagramRateLimitDatabase(Database):
@@ -40,7 +39,7 @@ class InstagramRateLimitDatabase(Database):
         )
         to_prune = [(row['uid'],) for row in cursor]
         if to_prune:
-            logger.prepend_id(logger.debug, self,
+            logger.id(logger.debug, self,
                     'Pruning #{num} entries ...',
                     num=len(to_prune),
             )

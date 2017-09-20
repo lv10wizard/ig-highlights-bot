@@ -84,7 +84,7 @@ class Formatter(object):
                 force=bool(current_reply and ig_users),
         )
         if current_reply or ig_users:
-            logger.prepend_id(logger.debug, self,
+            logger.id(logger.debug, self,
                     'Extra reply data not added!'
                     '\n\tcurrent_reply: {current_reply}'
                     '\n\tig_uesrs:      {ig_users}',

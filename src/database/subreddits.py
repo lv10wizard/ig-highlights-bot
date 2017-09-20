@@ -2,10 +2,9 @@ from contextlib import contextmanager
 import os
 import time
 
-from utillib import logger
-
 from _database import Database
 from constants import SUBREDDITS_DEFAULTS_PATH
+from src.util import logger
 
 
 class SubredditsDatabase(Database):
@@ -33,15 +32,17 @@ class SubredditsDatabase(Database):
 
         except OSError as e:
             # probably a permissions issue; this should be fatal
-            logger.prepend_id(logger.error, self,
-                    'Failed to stat \'{path}\'', e, True,
+            logger.id(logger.exception, self,
+                    'Failed to stat \'{path}\'',
                     path=self.path,
+                    exc_info=e,
             )
+            raise
 
     def __contains__(self, thing):
         name = SubredditsDatabase.get_subreddit_name(thing)
         if not name:
-            logger.prepend_id(logger.debug, self,
+            logger.id(logger.debug, self,
                     'Unhandled __contains__ type for \'{thing}\' ({type})',
                     thing=thing,
                     type=type(thing),
@@ -65,7 +66,7 @@ class SubredditsDatabase(Database):
 
     def _initialize_tables(self, db):
         if self.do_seed:
-            logger.prepend_id(logger.debug, self,
+            logger.id(logger.debug, self,
                     'Seeding subreddits database from \'{path}\' ...',
                     path=SUBREDDITS_DEFAULTS_PATH,
             )
@@ -75,10 +76,11 @@ class SubredditsDatabase(Database):
                     subreddits = fd.read().split('\n')
 
             except OSError as e:
-                logger.prepend_id(logger.error, self,
+                logger.id(logger.exception, self,
                         'Failed to seed subreddits database from'
-                        ' \'{path}\'!', e,
+                        ' \'{path}\'!',
                         path=SUBREDDITS_DEFAULTS_PATH,
+                        exc_info=e,
                 )
 
             else:
@@ -98,7 +100,7 @@ class SubredditsDatabase(Database):
     def _insert(self, thing):
         name = SubredditsDatabase.get_subreddit_name(thing)
         if not name:
-            logger.prepend_id(logger.debug, self,
+            logger.id(logger.debug, self,
                     'Cannot add \'{thing}\' to subreddits database:'
                     ' unhandled type=\'{type}\'',
                     thing=thing,
@@ -115,7 +117,7 @@ class SubredditsDatabase(Database):
     def _delete(self, thing):
         name = SubredditsDatabase.get_subreddit_name(thing)
         if not name:
-            logger.prepend_id(logger.debug, self,
+            logger.id(logger.debug, self,
                     'Cannot remove \'{thing}\' from subreddits database:'
                     ' unhandled type=\'{type}\'',
                     thing=thing,

@@ -6,7 +6,6 @@ import signal
 import time
 
 from prawcore.exceptions import Redirect
-from utillib import logger
 
 from constants import SUBREDDITS_DEFAULTS_PATH
 from src import (
@@ -24,6 +23,7 @@ from src.database import (
         UniqueConstraintFailed,
 )
 from src.mixins import StreamMixin
+from src.util import logger
 
 
 class IgHighlightsBot(StreamMixin):
@@ -78,7 +78,7 @@ class IgHighlightsBot(StreamMixin):
         msg.append('Shutting down ...')
 
         try:
-            logger.prepend_id(logger.debug, self,
+            logger.id(logger.debug, self,
                     ' '.join(msg),
                     name=signames[signum] if signum is not None else '???',
                     num=signum,
@@ -86,7 +86,7 @@ class IgHighlightsBot(StreamMixin):
         except KeyError as e:
             # signum doesn't match a signal specified in the signal module ...?
             # this is probably not possible
-            logger.prepend_id(logger.debug, self,
+            logger.id(logger.debug, self,
                     ' '.join(msg),
                     name='???',
                     num=signum,
@@ -103,7 +103,7 @@ class IgHighlightsBot(StreamMixin):
 
     def _increment_bad_actor(self, thing, data):
         if thing.author:
-            logger.prepend_id(logger.debug, self,
+            logger.id(logger.debug, self,
                     'Incrementing {color_author}\'s bad actor count',
                     color_author=thing.author.name,
             )
@@ -113,7 +113,7 @@ class IgHighlightsBot(StreamMixin):
                     self.bad_actors.insert(thing, data)
 
             except UniqueConstraintFailed:
-                logger.prepend_id(logger.debug, self,
+                logger.id(logger.debug, self,
                         '{color_author} already flagged as a bad actor for'
                         '{color_thing}!',
                         color_author=thing.author.name,
@@ -129,19 +129,19 @@ class IgHighlightsBot(StreamMixin):
         """
         success = False
 
-        logger.prepend_id(logger.debug, self,
-                '{depth}Replying to {color_comment}: {unpack_color}',
+        logger.id(logger.debug, self,
+                '{depth}Replying to {color_comment}: {color}',
                 depth=(
                     '[#{0}] '.format(callback_depth)
                     if callback_depth > 0 else ''
                 ),
                 color_comment=reddit.display_id(comment),
-                unpack_color=ig_list,
+                color=ig_list,
         )
 
         reply_text_list = self._formatter.format(ig_list)
         if len(reply_text_list) > self.cfg.max_replies_per_comment:
-            logger.prepend_id(logger.debug, self,
+            logger.id(logger.debug, self,
                     '{color_comment} ({color_author}) almost made me reply'
                     ' #{num} times: skipping.',
                     color_comment=reddit.display_id(comment),
@@ -205,19 +205,19 @@ class IgHighlightsBot(StreamMixin):
                         for c in ancestor_tree
                 ]
 
-                logger.prepend_id(logger.debug, self,
+                logger.id(logger.debug, self,
                         '{color_comment} author tree:'
-                        ' [#{num}] {unpack_color}',
+                        ' [#{num}] {color}',
                         color_comment=reddit.display_id(comment),
                         num=len(author_tree),
-                        unpack_color=author_tree,
+                        color=author_tree,
                 )
 
                 num_comments_by_me = author_tree.count(
                         self._reddit.username_raw.lower()
                 )
                 if num_comments_by_me > self.cfg.max_replies_in_comment_thread:
-                    logger.prepend_id(logger.debug, self,
+                    logger.id(logger.debug, self,
                             'I\'ve made too many replies in'
                             ' {color_comment}\'s thread: skipping.',
                             color_comment=reddit.display_id(comment),
@@ -250,7 +250,7 @@ class IgHighlightsBot(StreamMixin):
                             if ig.last_id:
                                 msg.append('(@ {last_id})')
                             msg.append('from {color_comment}')
-                            logger.prepend_id(logger.debug, self,
+                            logger.id(logger.debug, self,
                                     ' '.join(msg),
                                     user=ig_user,
                                     last_id=ig.last_id,
@@ -281,13 +281,13 @@ class IgHighlightsBot(StreamMixin):
                         elif not is_rate_limited:
                             reply_attempted = False
                             servererr = instagram.Instagram.has_server_error()
-                            logger.prepend_id(logger.debug, self,
+                            logger.id(logger.debug, self,
                                     'Skipping reply to {color_comment}:'
                                     '\nis queued? {queued};'
                                     ' rate-limit? {ratelimit};'
                                     ' server err? {servererr}'
                                     '\npermalink: {permalink}'
-                                    '\nusers #{num_users}: {unpack_color}'
+                                    '\nusers #{num_users}: {color}'
                                     '\n#ig_list: {num_list}',
                                     color_comment=reddit.display_id(comment),
                                     queued=('yes' if comment_queued else 'no'),
@@ -298,7 +298,7 @@ class IgHighlightsBot(StreamMixin):
                                     servererr=('yes' if servererr else 'no'),
                                     permalink=comment.permalink(),
                                     num_users=len(ig_usernames),
-                                    unpack_color=ig_usernames,
+                                    color=ig_usernames,
                                     num_list=len(ig_list),
                             )
 
@@ -333,7 +333,7 @@ class IgHighlightsBot(StreamMixin):
         # check the database first (guaranteed to incur no network request)
         already_replied = self.reply_history.has_replied(comment)
         if already_replied:
-            logger.prepend_id(logger.debug, self,
+            logger.id(logger.debug, self,
                     'I already replied to {color_comment}: skipping.',
                     color_comment=reddit.display_id(comment),
             )
@@ -343,7 +343,7 @@ class IgHighlightsBot(StreamMixin):
                 comment.submission
         )
         if len(replied) > self.cfg.max_replies_per_post:
-            logger.prepend_id(logger.debug, self,
+            logger.id(logger.debug, self,
                     'I\'ve made too many replies (#{num}) to {color_post}:'
                     ' skipping.',
                     num=self.cfg.max_replies_per_post,
@@ -353,14 +353,14 @@ class IgHighlightsBot(StreamMixin):
 
         # potentially spammy
         if comment.archived:
-            logger.prepend_id(logger.debug, self,
+            logger.id(logger.debug, self,
                     '{color_comment} is too old: skipping.',
                     color_comment=reddit.display_id(comment),
             )
 
         by_me = self.by_me(comment)
         if by_me:
-            logger.prepend_id(logger.debug, self,
+            logger.id(logger.debug, self,
                     'I posted {color_comment}: skipping.',
                     color_comment=reddit.display_id(comment),
             )
@@ -387,7 +387,7 @@ class IgHighlightsBot(StreamMixin):
 
             # potentially spammy (for subreddits)
             # TODO? don't log if is_subreddit
-            logger.prepend_id(logger.debug, self,
+            logger.id(logger.debug, self,
                     ' '.join(msg),
                     color_name=prefixed_name,
                     time=time_left,
@@ -405,13 +405,13 @@ class IgHighlightsBot(StreamMixin):
         pruned = ig_username.intersection(already_posted)
         ig_usernames -= already_posted
         if pruned:
-            logger.prepend_id(logger.debug, self,
-                    'Pruned #{num_posted} usernames: {unpack_color_posted}'
-                    '\n\t#{num_users}: {unpack_color_users}',
+            logger.id(logger.debug, self,
+                    'Pruned #{num_posted} usernames: {color_posted}'
+                    '\n\t#{num_users}: {color_users}',
                     num_posted=len(pruned),
-                    unpack_color_posted=pruned,
+                    color_posted=pruned,
                     num_users=len(ig_usernames),
-                    unpack_color_users=ig_usernames,
+                    color_users=ig_usernames,
             )
         return ig_usernames
 
@@ -438,7 +438,7 @@ class IgHighlightsBot(StreamMixin):
             for i in xrange(num):
                 submission, mention = self.submission_queue.get_nowait()
 
-                logger.prepend_id(logger.debug, self,
+                logger.id(logger.debug, self,
                         '[{i:>{padding}}/{num}] Processing submission'
                         ' {color_submission} (#{qnum} remaining) ...',
                         i=i+1,
@@ -477,7 +477,7 @@ class IgHighlightsBot(StreamMixin):
                             submission.subreddit.display_name
                     )
                     if to_add_count + 1 > self.cfg.add_subreddit_threshold:
-                        logger.prepend_id(logger.debug, self,
+                        logger.id(logger.debug, self,
                                 'Adding {color_subreddit} to permanent'
                                 ' subreddits',
                                 color_subreddit=prefixed_subreddit,
@@ -491,7 +491,7 @@ class IgHighlightsBot(StreamMixin):
                             self.potential_subreddits.delete(submission)
 
                     else:
-                        logger.prepend_id(logger.debug, self,
+                        logger.id(logger.debug, self,
                                 '{color_subreddit} to-add count: {num}',
                                 color_subreddit=prefixed_subreddit,
                                 num=to_add_count+1,
@@ -522,7 +522,7 @@ class IgHighlightsBot(StreamMixin):
                 # queue empty
                 break
 
-            logger.prepend_id(logger.debug, self,
+            logger.id(logger.debug, self,
                     '[{i:>{padding}}/{num}] Processing ig queue:'
                     ' {color_comment} (#{qsize} remaining) ...',
                     i=i,
@@ -541,7 +541,7 @@ class IgHighlightsBot(StreamMixin):
                 break
 
             elif did_reply:
-                logger.prepend_id(logger.debug, self,
+                logger.id(logger.debug, self,
                         'Removing {color_comment} from queue ...',
                         color_comment=reddit.display_id(comment),
                 )
@@ -576,9 +576,9 @@ class IgHighlightsBot(StreamMixin):
                 diff = subs_from_db.symmetric_difference(current_subreddits)
 
                 if bool(diff):
-                    logger.prepend_id(logger.debug, self,
-                            'New/missing subreddits: {unpack_color}',
-                            unpack_color=diff,
+                    logger.id(logger.debug, self,
+                            'New/missing subreddits: {color}',
+                            color=diff,
                     )
 
                     subreddits_str = reddit.pack_subreddits(subs_from_db)
@@ -623,19 +623,20 @@ class IgHighlightsBot(StreamMixin):
                     subs = self.__current_subreddits
                 except AttributeError:
                     # this shouldn't happen
-                    logger.prepend_id(logger.debug, self,
+                    logger.id(logger.debug, self,
                             'No current subreddits ...?',
                     )
                     subs = set()
 
-                logger.prepend_id(logger.error, self,
-                        'One or more non-existent subreddits:'
-                        ' {unpack_color}', e, True,
-                        unpack_color=subs,
+                logger.id(logger.exception, self,
+                        'One or more non-existent subreddits: {color}',
+                        color=subs,
+                        exc_info=e,
                 )
+                raise
 
         finally:
-            logger.prepend_id(logger.info, self,
+            logger.id(logger.info, self,
                     'Exiting ...',
             )
 

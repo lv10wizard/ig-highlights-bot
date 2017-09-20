@@ -4,7 +4,6 @@ from __future__ import print_function
 import logging
 import re
 import sys
-import traceback
 
 
 __DEBUG__ = False
@@ -119,6 +118,7 @@ class Formatter(logging.Formatter):
                 record.msg = escaped_msg.format(*record.args, **record.kwargs)
 
             except Exception as e:
+                import traceback
                 # failed to catch some edge-case in __handle_bad_msg
                 # (could be missing format_spec info eg. '{0:{}}')
                 print(

@@ -4,13 +4,12 @@ import os
 import re
 import sys
 
-from utillib import logger
-
 from constants import (
         CONFIG_ROOT_DIR,
         DATA_ROOT_DIR,
         DEFAULT_APP_NAME,
 )
+from src.util import logger
 
 
 # ######################################################################
@@ -89,7 +88,7 @@ def parse_time(time_str):
             try:
                 for amt, unit in match:
                     if unit in seen_units:
-                        logger.prepend_id(logger.warn, 'parse_time',
+                        logger.id(logger.warn, 'parse_time',
                                 'Duplicate unit \'{unit}\' found'
                                 ' in \'{time_str}\': skipping \'{amt}{unit}\'',
                                 unit=unit,
@@ -102,11 +101,12 @@ def parse_time(time_str):
                         seen_units.add(unit)
 
             except KeyError as e:
-                logger.prepend_id(logger.error, 'parse_time',
+                logger.id(logger.exception, 'parse_time',
                         'Unrecognized time unit: \'{unit}\''
-                        ' in \'{time_str}\'', e,
+                        ' in \'{time_str}\'',
                         unit=unit,
                         time_str=time_str,
+                        exc_info=e,
                 )
                 raise InvalidTime(time_str)
 
@@ -252,7 +252,7 @@ class Config(object):
         """
         resolved_path = resolve_path(self.path)
         if not os.path.exists(resolved_path):
-            logger.prepend_id(logger.debug, self,
+            logger.id(logger.debug, self,
                     'Creating directories in \'{path}\'',
                     path=os.path.dirname(resolved_path),
             )
@@ -263,7 +263,7 @@ class Config(object):
                 if e.errno == errno.EEXIST:
                     pass
 
-            logger.prepend_id(logger.info, self,
+            logger.id(logger.info, self,
                     'Writing default config to \'{path}\'',
                     path=self.path,
             )
@@ -272,7 +272,7 @@ class Config(object):
             self.__write()
 
         else:
-            logger.prepend_id(logger.info, self,
+            logger.id(logger.info, self,
                     'Loading config from \'{path}\'',
                     path=self.path,
             )
@@ -292,12 +292,13 @@ class Config(object):
         value = self.__parser.get(Config.SECTION, key)
         default = self.__defaults[key]
 
-        logger.prepend_id(logger.error, self,
+        logger.id(logger.exception, self,
                 'Invalid value for \'{key}\': \'{value}\'.'
-                ' Setting to default ({default})', err,
+                ' Setting to default ({default})',
                 key=key,
                 value=value,
                 default=default,
+                exc_info=err,
         )
 
         self.__parser.set(Config.SECTION, key, default)

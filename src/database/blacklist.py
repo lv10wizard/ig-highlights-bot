@@ -1,14 +1,13 @@
 import re
 import time
 
-from utillib import logger
-
 from _database import Database
 from constants import (
         BLACKLIST_DEFAULTS_PATH,
         PREFIX_USER,
 )
 from src import reddit
+from src.util import logger
 
 
 class BlacklistDatabase(Database):
@@ -68,7 +67,7 @@ class BlacklistDatabase(Database):
 
     def _initialize_tables(self, db):
         if self.do_seed:
-            logger.prepend_id(logger.debug, self,
+            logger.id(logger.debug, self,
                     'Seeding blacklist database from \'{path}\' ...',
                     path=BLACKLIST_DEFAULTS_PATH,
             )
@@ -79,9 +78,10 @@ class BlacklistDatabase(Database):
                     subreddits = fd.read().split('\n')
 
             except OSError as e:
-                logger.prepend_id(logger.error, self,
-                        'Failed to seed blacklist database from \'{path}\'!', e,
+                logger.id(logger.exception, self,
+                        'Failed to seed blacklist database from \'{path}\'!',
                         path=BLACKLIST_DEFAULTS_PATH,
+                        exc_info=e,
                 )
 
             else:
@@ -158,7 +158,7 @@ class BlacklistDatabase(Database):
         elif name_type == BlacklistDatabase.TYPE_USER:
             return self.is_blacklisted_user(name)
 
-        logger.prepend_id(logger.debug, self,
+        logger.id(logger.debug, self,
                 'Unrecognized name_type: \'{type}\'',
                 type=name_type,
         )
@@ -242,7 +242,7 @@ class BlacklistDatabase(Database):
             else:
                 action = 'lifting blacklist'
 
-            logger.prepend_id(logger.debug, self,
+            logger.id(logger.debug, self,
                     '{user} temp blacklist expired {time} ago:'
                     ' {action} ...',
                     user=reddit.prefix_user(name),

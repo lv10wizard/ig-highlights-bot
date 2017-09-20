@@ -7,8 +7,6 @@ from praw.models import (
         Message,
         SubredditMessage,
 )
-from utillib import logger
-
 from constants import (
         BLACKLIST_SUBJECT,
         REMOVE_BLACKLIST_SUBJECT,
@@ -21,6 +19,7 @@ from src.mixins import (
         ProcessMixin,
         StreamMixin,
 )
+from src.util import logger
 
 
 class Messages(ProcessMixin, StreamMixin):
@@ -56,10 +55,11 @@ class Messages(ProcessMixin, StreamMixin):
             except AttributeError as e:
                 # not sure how this would happen..
                 # maybe subreddit went private? can subreddits be deleted?
-                logger.prepend_id(logger.error, self,
+                logger.id(logger.exception, self,
                         'Failed to get message\'s subreddit display_name'
-                        ' ({color_message})', e,
+                        ' ({color_message})',
                         color_message=message.id,
+                        exc_info=e,
                 )
             else:
                 prefix = PREFIX_SUBREDDIT
@@ -69,16 +69,17 @@ class Messages(ProcessMixin, StreamMixin):
                 name = message.author.name
             except AttributeError as e:
                 # probably account deletion (possibly suspension)
-                logger.prepend_id(logger.error, self,
+                logger.id(logger.exception, self,
                         'Failed to get message\'s author name'
-                        ' ({color_message})', e,
+                        ' ({color_message})',
                         color_message=message.id,
+                        exc_info=e,
                 )
             else:
                 prefix = PREFIX_USER
 
         else:
-            logger.prepend_id(logger.debug, self,
+            logger.id(logger.debug, self,
                     'Unknown message type={mtype}. ignoring ...',
                     mtype=type(message),
             )
@@ -102,7 +103,7 @@ class Messages(ProcessMixin, StreamMixin):
         if not you:
             # could fail if prefix is unhandled (new reddit prefix
             # or changed prefixes)
-            logger.prepend_id(logger.debug, self,
+            logger.id(logger.debug, self,
                     'Could not format appropriate \'you\' to'
                     ' reply to message ({color_message}) with!'
                     '\nprefix = \'{p}\'\tname = \'{n}\'',
@@ -119,7 +120,7 @@ class Messages(ProcessMixin, StreamMixin):
                 reply_text = 'I should start replying to {0} again'.format(you)
 
             else:
-                logger.prepend_id(logger.debug, self,
+                logger.id(logger.debug, self,
                         'Could not format appropriate reply: unhandled subject'
                         ' \'{subject}\'!',
                         subject=subject,
@@ -190,13 +191,13 @@ class Messages(ProcessMixin, StreamMixin):
 
         try:
             while not self._killed.is_set():
-                logger.prepend_id(logger.debug, self, 'Processing messages ...')
+                logger.id(logger.debug, self, 'Processing messages ...')
                 for message in self.stream:
                     # don't rely on read/unread flag in case someone logs in
                     # to the bot account and reads all the messages
                     # assumption: inbox.messages() fetches newest -> oldest
                     if messages_db.has_seen(message):
-                        logger.prepend_id(logger.debug, self,
+                        logger.id(logger.debug, self,
                                 'I\'ve already read {color_message}!'
                                 ' (\'{subject}\' from {color_from})',
                                 color_message=reddit.display_fullname(message),
@@ -210,7 +211,7 @@ class Messages(ProcessMixin, StreamMixin):
                         break
 
                     elif self._killed.is_set():
-                        logger.prepend_id(logger.debug, self, 'Killed!')
+                        logger.id(logger.debug, self, 'Killed!')
                         break
 
                     elif message is None:
@@ -232,7 +233,7 @@ class Messages(ProcessMixin, StreamMixin):
                     match = blacklist_re.search(subject)
                     # ignore random messages
                     if not match:
-                        logger.prepend_id(logger.debug, self,
+                        logger.id(logger.debug, self,
                                 'Ignoring {color_message}: \'{subject}\'',
                                 color_message=message.id,
                                 subject=subject,
@@ -242,7 +243,7 @@ class Messages(ProcessMixin, StreamMixin):
                     # need to blacklist a subreddit or user
                     prefix, name = self._get_prefix_name(message)
                     if not name:
-                        logger.prepend_id(logger.debug, self,
+                        logger.id(logger.debug, self,
                                 'Message ({color_message}) \'{subject}\':'
                                 ' could not find name! skipping ...',
                                 color_message=message.id,
@@ -263,7 +264,7 @@ class Messages(ProcessMixin, StreamMixin):
                         # necessarily do anything if it does not remain the
                         # newest message
 
-                        logger.prepend_id(logger.debug, self,
+                        logger.id(logger.debug, self,
                                 'Unhandled subject: \'{subject}\'!'
                                 '\nmatch: \'{match}\'',
                                 subject=subject,
@@ -291,7 +292,7 @@ class Messages(ProcessMixin, StreamMixin):
                             reddit_obj.do_reply(message, reply_text)
 
                 if not self._killed.is_set():
-                    logger.prepend_id(logger.debug, self,
+                    logger.id(logger.debug, self,
                             'Waiting {time} before checking messages again ...',
                             time=delay,
                     )
@@ -299,8 +300,9 @@ class Messages(ProcessMixin, StreamMixin):
 
         except Exception as e:
             # TODO? only catch praw errors
-            logger.prepend_id(logger.error, self,
-                    'Something went wrong! Message processing terminated.', e,
+            logger.id(logger.exception, self,
+                    'Something went wrong! Message processing terminated.',
+                    exc_info=e,
             )
 
 

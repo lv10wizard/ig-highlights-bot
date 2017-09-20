@@ -1,7 +1,8 @@
 import time
 
 import requests
-from utillib import logger
+
+from src.util import logger
 
 
 def choose_delay(delay):
@@ -34,7 +35,7 @@ class Requestor(object):
             if hasattr(self.__session, attr):
                 attr_obj = getattr(self.__session, attr)
                 if hasattr(attr_obj, 'update'):
-                    logger.prepend_id(logger.debug, self,
+                    logger.id(logger.debug, self,
                             'Updating {attr}: {value}',
                             attr=attr,
                             value=value,
@@ -60,10 +61,11 @@ class Requestor(object):
             request_func = getattr(self.__session, method.lower())
 
         except AttributeError as e:
-            logger.prepend_id(logger.error, self,
-                    'Cannot {method} \'{url}\': no such method!', e,
+            logger.id(logger.exception, self,
+                    'Cannot {method} \'{url}\': no such method!',
                     method=method.upper(),
                     url=url,
+                    exc_info=e,
             )
 
         else:
@@ -72,7 +74,7 @@ class Requestor(object):
                 msg.append('args: {args}')
             if kwargs:
                 msg.append('kwargs: {kwargs}')
-            logger.prepend_id(logger.debug, self,
+            logger.id(logger.debug, self,
                     '\n\t'.join(msg),
                     method=method.upper(),
                     url=url,
@@ -86,20 +88,22 @@ class Requestor(object):
 
                 except requests.ConnectionError as e:
                     delay = self.__choose_delay()
-                    logger.prepend_id(logger.error, self,
-                            '{method} {url}: waiting {time} ...', e,
+                    logger.id(logger.exception, self,
+                            '{method} {url}: waiting {time} ...',
                             method=method.upper(),
                             url=url,
                             time=delay,
+                            exc_info=e,
                     )
                     # assumption: all ConnectionErrors indicate internet outage
                     time.sleep(delay)
 
                 except (requests.Timeout, requests.TooManyRedirects) as e:
-                    logger.prepend_id(logger.error, self,
-                            '{method} {url}', e,
+                    logger.id(logger.exception, self,
+                            '{method} {url}',
                             method=method.upper(),
                             url=url,
+                            exc_info=e,
                     )
                     # TODO? worth retrying ?
                     break
@@ -112,7 +116,7 @@ class Requestor(object):
                     except AttributeError:
                         pass
 
-                    logger.prepend_id(logger.debug, self,
+                    logger.id(logger.debug, self,
                             '{method} {url}: {status} {reason}',
                             method=method.upper(),
                             url=url,

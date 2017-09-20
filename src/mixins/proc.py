@@ -1,7 +1,7 @@
 import abc
 import multiprocessing
 
-from utillib import logger
+from src.util import logger
 
 
 class ProcessMixin(object):
@@ -36,13 +36,13 @@ class ProcessMixin(object):
         Sets the kill flag for the process. Blocks if block==True.
         """
         if hasattr(self, '_killed') and hasattr(self._killed, 'set'):
-            logger.prepend_id(logger.debug, self, 'Setting kill flag ...')
+            logger.id(logger.debug, self, 'Setting kill flag ...')
             self._killed.set()
             if block:
                 self.join()
 
         else:
-            logger.prepend_id(logger.debug, self,
+            logger.id(logger.debug, self,
                     'Failed to set kill flag (is alive? {status})',
                     status=('yes' if self.is_alive else 'no'),
             )
@@ -51,7 +51,7 @@ class ProcessMixin(object):
         return self.__proc.join()
 
     def start(self):
-        logger.prepend_id(logger.debug, self, 'Starting process ...')
+        logger.id(logger.debug, self, 'Starting process ...')
         if not hasattr(self, '_killed'):
             self._killed = multiprocessing.Event()
 
@@ -65,7 +65,7 @@ class ProcessMixin(object):
                 # start at 2 since this should be the second time start() was
                 # called
                 self.__multi_start_count = 2
-            logger.prepend_id(logger.debug, self,
+            logger.id(logger.debug, self,
                     'Attempted to start process again (#{num})!',
                     num=self.__multi_start_count,
             )
@@ -78,7 +78,7 @@ class ProcessMixin(object):
             self._run_forever()
 
         finally:
-            logger.prepend_id(logger.info, self,
+            logger.id(logger.info, self,
                     'Exiting ...',
             )
 
