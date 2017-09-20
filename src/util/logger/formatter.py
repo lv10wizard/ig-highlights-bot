@@ -319,7 +319,7 @@ class Formatter(logging.Formatter):
 
     @staticmethod
     def __decode(msg, encoding=ENCODING):
-        if isinstance(msg, unicode):
+        if isinstance(msg, str):
             return msg.decode(encoding, 'replace')
         return msg
 
