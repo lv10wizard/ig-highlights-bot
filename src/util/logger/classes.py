@@ -82,9 +82,6 @@ class ProcessStreamHandler(logging.StreamHandler):
     """
     multiprocessing-safe stream logging handler
     """
-    def __init__(self, *args, **kwargs):
-        logging.StreamHandler.__init__(self, *args, **kwargs)
-
     def emit(self, *args, **kwargs):
         with _lock:
             logging.StreamHandler.emit(self, *args, **kwargs)
@@ -93,9 +90,6 @@ class ProcessFileHandler(logging.FileHandler):
     """
     multiprocessing-safe file logging handler
     """
-    def __init__(self, *args, **kwargs):
-        logging.FileHandler.__init__(self, *args, **kwargs)
-
     def emit(self, *args, **kwargs):
         with _lock:
             logging.FileHandler.emit(self, *args, **kwargs)
