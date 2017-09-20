@@ -252,8 +252,9 @@ class Formatter(logging.Formatter):
             # TODO: recursion required? I think it's theoretically possible
             # for an unbounded chain of format strings in format_specs but
             # why would someone do that ...?
-            for _, spec_field, _, _ in str_formatter.parse(format_spec):
-                msg = handle_field(spec_field, parent=field)
+            if isinstance(format_spec, basestring):
+                for _, spec_field, _, _ in str_formatter.parse(format_spec):
+                    msg = handle_field(spec_field, parent=field)
 
             if __DEBUG__:
                 print('->', msg, end='\n\n')
