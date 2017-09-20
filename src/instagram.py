@@ -507,6 +507,11 @@ class Instagram(object):
             )
 
             if os.path.exists(self.__db_path):
+                try:
+                    self.__cache.close()
+                except AttributeError:
+                    pass
+
                 # user changed profile to private?
                 logger.prepend_id(logger.debug, self,
                         'Removing \'{path}\' ...',
