@@ -1,5 +1,7 @@
 *.pyc
 *.api
+.cache
+__pycache__
 praw.ini
 __DEBUG__
 EMAIL

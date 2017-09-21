@@ -130,11 +130,12 @@ def set_level(level, root=True):
     name = None if root else _module_name()
     _get(name).setLevel(level)
 
-def get_level():
+def get_level(root=True):
     """
     Gets the effective level for the calling module's logger
     """
-    _get(_module_name()).getEffectiveLevel()
+    name = None if root else _module_name()
+    return _get(name).getEffectiveLevel()
 
 def is_enabled_for(level):
     """

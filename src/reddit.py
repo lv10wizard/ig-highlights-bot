@@ -76,7 +76,7 @@ def prefix_user(name):
     return prefix(name, PREFIX_USER)
 
 def prefix(name, prefix):
-    if re.search(r'^{0}', prefix):
+    if re.search(r'^{0}'.format(prefix), name):
         return name
     return '{0}{1}'.format(prefix, name)
 
