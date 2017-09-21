@@ -1,5 +1,9 @@
 import re
+import sys
 import time
+
+if sys.version_info.major >= 3:
+    long = int
 
 from ._database import Database
 from constants import (
