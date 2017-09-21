@@ -173,7 +173,7 @@ class Reddit(praw.Reddit):
             Reddit._kinds = {
                     type_prefix: thing_name
                     for thing_name, type_prefix in
-                    self.config.kinds.iteritems()
+                    self.config.kinds.items()
             }
 
         praw_ini_login = True

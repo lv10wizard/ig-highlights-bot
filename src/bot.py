@@ -73,7 +73,7 @@ class IgHighlightsBot(StreamMixin):
         # https://stackoverflow.com/a/2549950
         signames = {
                 num: name for name, num in
-                reversed(sorted(signal.__dict__.iteritems()))
+                reversed(sorted(signal.__dict__.items()))
                 if name.startswith('SIG') and not name.startswith('SIG_')
         }
 
