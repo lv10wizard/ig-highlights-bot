@@ -1,6 +1,10 @@
 from contextlib import contextmanager
 import os
+import sys
 import time
+
+if sys.version_info.major >= 3:
+    basestring = str
 
 from ._database import Database
 from constants import SUBREDDITS_DEFAULTS_PATH

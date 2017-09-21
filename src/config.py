@@ -7,6 +7,7 @@ if sys.version_info.major < 3:
     import ConfigParser as configparser
 else:
     import configparser
+    basestring = str
 
 from constants import (
         CONFIG_ROOT_DIR,

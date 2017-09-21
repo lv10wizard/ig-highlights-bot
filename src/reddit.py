@@ -1,6 +1,10 @@
 import multiprocessing
 import os
 import re
+import sys
+
+if sys.version_info.major >= 3:
+    basestring = str
 
 import praw
 from prawcore.exceptions import (
