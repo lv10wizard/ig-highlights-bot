@@ -184,10 +184,9 @@ class Instagram(object):
             )
 
     def __str__(self):
-        result = filter(None, [
-                self.__class__.__name__,
-                self.user,
-        ])
+        result = [self.__class__.__name__]
+        if self.user:
+            result.append(self.user)
         return ':'.join(result)
 
     @property

@@ -17,10 +17,9 @@ class ProcessMixin(object):
         self.__proc.daemon = daemon
 
     def __str__(self):
-        result = filter(None, [
-            self.__class__.__name__,
-            self.__proc.pid,
-        ])
+        result = [self.__class__.__name__]
+        if self.__proc.pid:
+            result.append(self.__proc.pid)
         return ':'.join(result)
 
     @abc.abstractmethod

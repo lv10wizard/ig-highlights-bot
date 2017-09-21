@@ -442,9 +442,9 @@ class Formatter(logging.Formatter):
 
             # construct human readable string format, skipping parts that are 0
             # '{d}d{h}h{m}m{s}s'
-            fmt = [filter(None, '{{{0}:02d}}{0}'.format(u)
-                if time_parts[u] > 0 else '')
-                for u, _ in UNITS
+            fmt = [
+                    '{{{0}:02d}}{0}'.format(u)
+                    for u, _ in UNITS if time_parts[u] > 0
             ]
             if is_negative:
                 fmt.insert(0, '-')

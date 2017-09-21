@@ -225,16 +225,9 @@ class Reddit(praw.Reddit):
         )
 
     def __str__(self):
-        try:
-            pid = os.getpid()
-        except OSError:
-            pid = None
-
-        result = filter(None, [
-            self.__class__.__name__,
-            pid and '{0}'.format(pid),
-            self.username,
-        ])
+        result = [self.__class__.__name__]
+        if self.username:
+            result.append(self.username)
         return ':'.join(result)
 
     @property
