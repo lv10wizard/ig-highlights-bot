@@ -280,7 +280,7 @@ class Config(object):
                     'Loading config from \'{path}\'',
                     path=self.path,
             )
-            with open(resolved_path, 'rb') as fd:
+            with open(resolved_path, 'r') as fd:
                 self.__parser.readfp(fd)
             # write the settings back in case the file is missing any
             # Note: this will effectively wipe any deletions the user has made
@@ -289,7 +289,7 @@ class Config(object):
 
     def __write(self):
         resolved_path = resolve_path(self.path)
-        with open(resolved_path, 'wb') as fd:
+        with open(resolved_path, 'w') as fd:
             self.__parser.write(fd)
 
     def __handle_bad_val(self, key, err):

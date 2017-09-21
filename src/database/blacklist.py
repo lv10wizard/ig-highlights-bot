@@ -73,7 +73,7 @@ class BlacklistDatabase(Database):
             )
 
             try:
-                with open(BLACKLIST_DEFAULTS_PATH, 'rb') as fd:
+                with open(BLACKLIST_DEFAULTS_PATH, 'r') as fd:
                     # assumption: all lines are subreddits
                     subreddits = fd.read().split('\n')
 

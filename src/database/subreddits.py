@@ -72,7 +72,7 @@ class SubredditsDatabase(Database):
             )
 
             try:
-                with open(SUBREDDITS_DEFAULTS_PATH, 'rb') as fd:
+                with open(SUBREDDITS_DEFAULTS_PATH, 'r') as fd:
                     subreddits = fd.read().split('\n')
 
             except OSError as e:
