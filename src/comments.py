@@ -41,7 +41,7 @@ class Parser(object):
                 self.__ig_links = set()
 
             else:
-                logger.id(logger.spam2, self, 'Parsing comment ...')
+                logger.id(logger.debug, self, 'Parsing comment ...')
 
                 try:
                     soup = BeautifulSoup(comment.body_html, 'lxml')
