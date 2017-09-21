@@ -440,7 +440,7 @@ class IgHighlightsBot(StreamMixin):
             num = 5
 
         try:
-            for i in xrange(num):
+            for i in range(num):
                 submission, mention = self.submission_queue.get_nowait()
 
                 logger.id(logger.debug, self,
@@ -521,7 +521,7 @@ class IgHighlightsBot(StreamMixin):
         if not isinstance(num, int) or num < 0:
             num = 5
 
-        for i in xrange(num):
+        for i in range(num):
             comment_id = self.ig_queue.get()
             if not comment_id:
                 # queue empty
