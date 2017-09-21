@@ -37,3 +37,6 @@ python 2.7+ or 3.5+
     username=BOT_ACCOUNT_NAME
     password=BOT_ACCOUNT_PASSWORD
 
+username/password are optional; the bot will prompt the user when it
+requires login credentials (this may occur multiple times).
+
