@@ -16,6 +16,11 @@ ROOT = '__logger_ROOT__'
 __ROOT_LOGGER = None
 
 def _module_name():
+    """
+    Returns the first non-logger module name in the stack (ie, returns the
+    calling module's name)
+            or None if eg. called from interpreter
+    """
     name = None
     module = None
     stack = inspect.stack()
@@ -30,6 +35,10 @@ def _module_name():
     return name
 
 def _initialize_root_logger():
+    """
+    Initializes the custom root logger so that the _Logger class is used instead
+    of the bulit-in logging.RootLogger.
+    """
     global __ROOT_LOGGER
 
     if not __ROOT_LOGGER:
@@ -161,6 +170,15 @@ def remove_handler(handler, root=True):
     """
     name = None if root else _module_name()
     _get(name).removeHandler(handler)
+
+def clear_handlers(root=True):
+    """
+    Removes all handlers for either the root logger or current module's logger
+    """
+    name = None if root else _module_name()
+    logger = _get(name)
+    while logger.handlers:
+        logger.removeHandler(logger.handlers[-1])
 
 
 __all__ = [
