@@ -47,25 +47,26 @@ def _initialize_root_logger():
         # it is an instance of _Logger (ie, so that it behaves in an expected
         # way)
         logger = root.getChild(ROOT)
-
-        # set some default logging variables in case we're in the interpreter
         logger.setLevel(logging.DEBUG)
 
-        # log DEBUG -> WARNING to stdout; ERROR+ to stderr
-        stdout_filter = LevelFilter(logging.DEBUG, logging.WARNING)
-        stderr_filter = LevelFilter(logging.ERROR)
+        # set some default logging variables if we're in the interpreter
+        # https://stackoverflow.com/a/2356427
+        if hasattr(sys, 'ps1') and hasattr(sys, 'ps2') and sys.ps1 and sys.ps2:
+            # log DEBUG -> WARNING to stdout; ERROR+ to stderr
+            stdout_filter = LevelFilter(logging.DEBUG, logging.WARNING)
+            stderr_filter = LevelFilter(logging.ERROR)
 
-        formatter = Formatter(fmt=Formatter.FORMAT_NO_DATE)
-        stdout_handler = ProcessStreamHandler(stream=sys.stdout)
-        stdout_handler.addFilter(stdout_filter)
-        stdout_handler.setFormatter(formatter)
+            formatter = Formatter(fmt=Formatter.FORMAT_NO_DATE)
+            stdout_handler = ProcessStreamHandler(stream=sys.stdout)
+            stdout_handler.addFilter(stdout_filter)
+            stdout_handler.setFormatter(formatter)
 
-        stderr_handler = ProcessStreamHandler(stream=sys.stderr)
-        stderr_handler.addFilter(stderr_filter)
-        stderr_handler.setFormatter(formatter)
+            stderr_handler = ProcessStreamHandler(stream=sys.stderr)
+            stderr_handler.addFilter(stderr_filter)
+            stderr_handler.setFormatter(formatter)
 
-        logger.addHandler(stdout_handler)
-        logger.addHandler(stderr_handler)
+            logger.addHandler(stdout_handler)
+            logger.addHandler(stderr_handler)
 
         __ROOT_LOGGER = logger
 
