@@ -426,7 +426,7 @@ class IgHighlightsBot(StreamMixin):
         padding = 0
         while num > 0:
             padding += 1
-            num /= 10
+            num //= 10
         return padding if padding > 0 else 1
 
     def process_submission_queue(self, num=5):

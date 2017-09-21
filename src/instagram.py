@@ -385,13 +385,13 @@ class Instagram(object):
                     #     # ip banned by instagram?
                     #     pass # TODO?
 
-                    elif response.status_code / 100 == 4:
+                    elif response.status_code // 100 == 4:
                         # client error
                         # just raise, I guess
                         # TODO? enqueue maybe
                         response.raise_for_status()
 
-                    elif response.status_code / 100 == 5:
+                    elif response.status_code // 100 == 5:
                         # server error
                         Instagram._server_error_timestamp = time.time()
                         Instagram._server_error_delay = requestor.choose_delay(

@@ -127,7 +127,7 @@ class Formatter(object):
             idx = len(current_reply)
 
         if idx != 0:
-            ig_idx = idx / step
+            ig_idx = idx // step
             replies.append( (full_reply, ig_users[:ig_idx]) )
             # return the remainder
             # if force: ([], [])
