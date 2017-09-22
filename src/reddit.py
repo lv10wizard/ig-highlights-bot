@@ -376,6 +376,7 @@ class Reddit(praw.Reddit):
                             name=maintainer.name,
                     )
                     # flag that we shouldn't try to send any more debug pms
+                    # Note: this is NOT persistent
                     self.__maintainer = None
 
                 else:

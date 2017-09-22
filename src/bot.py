@@ -23,6 +23,9 @@ from src import (
         replies,
 )
 from src.database import (
+        BadActorsDatabase,
+        InstagramQueueDatabase,
+        PotentialSubredditsDatabase,
         ReplyDatabase,
         SubredditsDatabase,
         UniqueConstraintFailed,
@@ -541,17 +544,17 @@ class IgHighlightsBot(StreamMixin):
             comment = self._reddit.comment(comment_id)
             reply_attempted, did_reply = self.reply(comment)
 
-            if instagram.Instagram.is_rate_limited():
-                # no point in continuing if we're rate-limited
-                break
-
-            elif did_reply:
+            if did_reply:
                 logger.id(logger.debug, self,
                         'Removing {color_comment} from queue ...',
                         color_comment=reddit.display_id(comment),
                 )
                 with self.ig_queue:
                     self.ig_queue.delete(comment)
+
+            if instagram.Instagram.is_rate_limited():
+                # no point in continuing if we're rate-limited
+                break
 
     @property
     def _stream(self):
