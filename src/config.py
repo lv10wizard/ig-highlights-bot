@@ -69,6 +69,7 @@ def parse_time(time_str):
         return float(time_str)
 
     if isinstance(time_str, string_types):
+        match = None
         try:
             return float(time_str)
 
@@ -83,38 +84,38 @@ def parse_time(time_str):
                 ''.join(Config.TO_SECONDS.keys())
             ), time_str)
 
-            if not match:
-                raise InvalidTime(time_str)
+        if not match:
+            raise InvalidTime(time_str)
 
-            # do not allow duplicate units (eg. 3d4d)
-            result = 0.0
-            seen_units = set()
-            try:
-                for amt, unit in match:
-                    if unit in seen_units:
-                        logger.id(logger.warn, 'parse_time',
-                                'Duplicate unit \'{unit}\' found'
-                                ' in \'{time_str}\': skipping \'{amt}{unit}\'',
-                                unit=unit,
-                                time_str=time_str,
-                                amt=amt,
-                        )
+        # do not allow duplicate units (eg. 3d4d)
+        result = 0.0
+        seen_units = set()
+        try:
+            for amt, unit in match:
+                if unit in seen_units:
+                    logger.id(logger.warn, 'parse_time',
+                            'Duplicate unit \'{unit}\' found'
+                            ' in \'{time_str}\': skipping \'{amt}{unit}\'',
+                            unit=unit,
+                            time_str=time_str,
+                            amt=amt,
+                    )
 
-                    else:
-                        result += (float(amt) * Config.TO_SECONDS[unit])
-                        seen_units.add(unit)
+                else:
+                    result += (float(amt) * Config.TO_SECONDS[unit])
+                    seen_units.add(unit)
 
-            except KeyError as e:
-                logger.id(logger.exception, 'parse_time',
-                        'Unrecognized time unit: \'{unit}\''
-                        ' in \'{time_str}\'',
-                        unit=unit,
-                        time_str=time_str,
-                )
-                raise InvalidTime(time_str)
+        except KeyError as e:
+            logger.id(logger.exception, 'parse_time',
+                    'Unrecognized time unit: \'{unit}\''
+                    ' in \'{time_str}\'',
+                    unit=unit,
+                    time_str=time_str,
+            )
+            raise InvalidTime(time_str)
 
-            else:
-                return result
+        else:
+            return result
 
 # ######################################################################
 
