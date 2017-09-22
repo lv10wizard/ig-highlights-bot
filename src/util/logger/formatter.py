@@ -20,11 +20,9 @@ class Formatter(logging.Formatter):
     """
 
     ENCODING = sys.getfilesystemencoding()
-    FORMAT = '%(asctime)s [%(levelname)s][%(process)s] %(message)s'
-    FORMAT_NO_DATE = '[%(levelname)s][%(process)s] %(message)s'
+    FORMAT = '%(asctime)s [%(levelname)s][%(process)s]%(ident)s %(message)s'
+    FORMAT_NO_DATE = '[%(levelname)s][%(process)s]%(ident)s %(message)s'
     DATEFMT = '%m/%d@%H:%M:%S'
-
-    ID_KEY = '__Formatter_ident__'
 
     # assumes 256 colors
     # EXCLUDE_COLORS = [0, 256] + list(range(16, 22)) + listrange((232, 245))
@@ -82,10 +80,16 @@ class Formatter(logging.Formatter):
 
         try:
             if record.process:
-                pid_fg = Formatter.color_fg(record.process)
-                record.process = Formatter.color_msg(record.process, pid_fg)
+                record.process = Formatter.get_fg_color_msg(record.process)
         except AttributeError:
             pass
+
+        try:
+            record.ident = Formatter.get_fg_color_msg(record.ident)
+        except AttributeError:
+            record.ident = ''
+        else:
+            record.ident = ' ({0})'.format(record.ident)
 
         def handle_special_keyword(
                 keyword, format_func, *func_args, **func_kwargs
@@ -158,18 +162,8 @@ class Formatter(logging.Formatter):
 
                 return ''
 
-        # log an empty line if user called without msg (eg. logger.debug())
-        cached_fmt = None
-        if record.msg == '':
-            cached_fmt = self._fmt
-            self._fmt = ''
-
         record.args = tuple() # TODO: pop only used arguments
         formatted_msg = logging.Formatter.format(self, record)
-
-        # reset the format
-        if cached_fmt:
-            self._fmt = cached_fmt
 
         return formatted_msg
 

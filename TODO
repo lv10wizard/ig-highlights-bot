@@ -122,7 +122,7 @@ O. refactor logging
         ? need in-memory queue?
     - need to handle hitting rate-limit again from queue
     ? does this make error_handling obsolete?
-- logger: prepend msg with exc_info type name, ie:
+O. logger: prepend msg with exc_info type name, ie:
             '.'.join([ exc_info.__module__, exc_info.__class__.__name__ ])
     > ideally, after any id information
 O. __metaclass__ py2/3 compatibility

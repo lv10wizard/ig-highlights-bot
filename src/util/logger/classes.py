@@ -33,8 +33,21 @@ class _Logger(logging.Logger):
             if not isinstance(exc_info, tuple):
                 exc_info = sys.exc_info()
 
-        if msg is None:
-            msg = ''
+        if msg and exc_info:
+            # prepend the exception type name before the message
+            exc = exc_info[1]
+            if isinstance(exc, BaseException):
+                try:
+                    exc_type = []
+                    if hasattr(exc, '__module__'):
+                        exc_type.append(exc.__module__)
+                    exc_type.append(exc.__class__.__name__)
+                    exc_type_str = '.'.join(exc_type)
+                except AttributeError as e:
+                    pass
+                else:
+                    msg = '{0}: {1}'.format(exc_type_str, msg)
+
         record = self.makeRecord(
                 self.name, level, fn, lno, msg, args, exc_info, func, extra,
                 **kwargs

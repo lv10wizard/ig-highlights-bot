@@ -109,9 +109,12 @@ def id(logger_func, __id__=None, msg=None, *args, **kwargs):
     Prepends an id to the message
     """
     if __id__ and msg:
-        key = '_'.join([Formatter.ID_KEY, 'color'])
-        kwargs[key] = __id__
-        msg = ''.join(['({', key, '}) ', msg])
+        extra = {'ident': __id__}
+        if 'extra' in kwargs and isinstance(kwargs['extra'], dict):
+            kwargs['extra'].update(extra)
+        else:
+            # this will squash 'extra' keywords that are not dictionaries
+            kwargs['extra'] = extra
 
     logger_func(msg, *args, **kwargs)
 
