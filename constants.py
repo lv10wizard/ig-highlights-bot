@@ -1,10 +1,7 @@
 import os
 import sys
 
-if sys.version_info.major < 3:
-    import urllib
-else:
-    import urllib.parse as urllib
+from six.moves.urllib.parse import quote
 
 
 ROOT_DIR = os.path.dirname( os.path.realpath(os.path.abspath(__file__)) )
@@ -61,14 +58,14 @@ CONTACT_URL_FMT = (
         + '&subject={subject}'
 )
 CONTACT_URL = CONTACT_URL_FMT.format(
-        subject=urllib.quote(CONTACT_SUBJECT_SKELETON),
+        subject=quote(CONTACT_SUBJECT_SKELETON),
 )
 BLACKLIST_SUBJECT = 'BLACKLIST ME'
 REMOVE_BLACKLIST_SUBJECT = 'UNBLACKLIST ME'
 BLACKLIST_URL_FMT = (
         COMPOSE_MESSAGE_BASE_URL
         + '?to={to}&subject='
-        + urllib.quote(BLACKLIST_SUBJECT)
+        + quote(BLACKLIST_SUBJECT)
 )
 REPO_URL = 'https://github.com/lv10wizard/ig-highlights-bot'
 HELP_URL = '' # TODO

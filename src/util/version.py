@@ -1,11 +1,7 @@
 import shlex
 import subprocess
-import sys
 
-if sys.version_info.major < 3:
-    from os import getcwdu as getcwd
-else:
-    from os import getcwd
+from six.moves import getcwd
 
 from constants import ROOT_DIR
 from src.util import logger

@@ -1,9 +1,7 @@
 import re
-import sys
 import time
 
-if sys.version_info.major >= 3:
-    long = int
+from six import integer_types
 
 from ._database import Database
 from constants import (
@@ -206,7 +204,7 @@ class BlacklistDatabase(Database):
         )
         return (
                 remaining > 0
-                if isinstance(remaining, (int, float, long))
+                if isinstance(remaining, integer_types + (float,))
                 else False
         )
 

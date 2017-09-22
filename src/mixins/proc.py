@@ -1,16 +1,17 @@
 import abc
 import multiprocessing
 
+from six import add_metaclass
+
 from src.util import logger
 
 
+@add_metaclass(abc.ABCMeta)
 class ProcessMixin(object):
     """
     Provides multiprocessing functionality through the abstract method
     _run_forever
     """
-
-    __metaclass__ = abc.ABCMeta
 
     def __init__(self, daemon=True):
         self.__proc = multiprocessing.Process(target=self.run_forever)

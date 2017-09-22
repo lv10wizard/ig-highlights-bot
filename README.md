@@ -11,6 +11,8 @@ user's top liked media.
 
 - bs4
 
+- six
+
 *For testing*:
 
 - mock (for python2)
@@ -19,13 +21,13 @@ user's top liked media.
 
 python 2.7:
 
-- `pip install -U praw requests bs4`
+- `pip install -U praw requests bs4 six`
 
 - for testing: `pip install -U mock pytest`
 
 python 3.5+:
 
-- `pip install -U praw requests bs4`
+- `pip install -U praw requests bs4 six`
 
 - for testing: `pip install -U pytest`
 

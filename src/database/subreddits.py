@@ -1,10 +1,8 @@
 from contextlib import contextmanager
 import os
-import sys
 import time
 
-if sys.version_info.major >= 3:
-    basestring = str
+from six import string_types
 
 from ._database import Database
 from constants import SUBREDDITS_DEFAULTS_PATH
@@ -22,7 +20,7 @@ class SubredditsDatabase(Database):
             name = thing.subreddit.display_name
         elif hasattr(thing, 'display_name'):
             name = thing.display_name
-        elif isinstance(thing, basestring):
+        elif isinstance(thing, string_types):
             name = thing
         else:
             name = None

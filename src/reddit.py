@@ -3,13 +3,14 @@ import os
 import re
 import sys
 
-if sys.version_info.major >= 3:
-    basestring = str
-
 import praw
 from prawcore.exceptions import (
         Forbidden,
         OAuthException,
+)
+from six import (
+        iteritems,
+        string_types,
 )
 
 from constants import (
@@ -173,7 +174,7 @@ class Reddit(praw.Reddit):
             Reddit._kinds = {
                     type_prefix: thing_name
                     for thing_name, type_prefix in
-                    self.config.kinds.items()
+                    iteritems(self.config.kinds)
             }
 
         praw_ini_login = True
@@ -327,7 +328,7 @@ class Reddit(praw.Reddit):
         if self.__cfg.send_debug_pm:
             self.__error_handler.wait_for_rate_limit()
 
-            if not (isinstance(body, basestring) and body):
+            if not (isinstance(body, string_types) and body):
                 logger.id(logger.debug, self,
                         'Cannot send debug pm: need non-empty body text,'
                         ' not \'{body}\' ({body_type}).',
@@ -398,7 +399,7 @@ class Reddit(praw.Reddit):
         """
         success = False
         # TODO: do all thing.reply methods require a non-empty body?
-        if not (isinstance(body, basestring) and body):
+        if not (isinstance(body, string_types) and body):
             logger.id(logger.debug, self,
                     'Cannot reply to {color_thing} with \'{body}\''
                     ' ({body_type}). Needs non-empty string!',

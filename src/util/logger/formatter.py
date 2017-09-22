@@ -5,9 +5,10 @@ import logging
 import re
 import sys
 
-if sys.version_info.major >= 3:
-    basestring = str
-    unicode = str
+from six import (
+        binary_type,
+        string_types,
+)
 
 
 __DEBUG__ = False
@@ -260,7 +261,7 @@ class Formatter(logging.Formatter):
             # TODO: recursion required? I think it's theoretically possible
             # for an unbounded chain of format strings in format_specs but
             # why would someone do that ...?
-            if isinstance(format_spec, basestring):
+            if isinstance(format_spec, string_types):
                 for _, spec_field, _, _ in str_formatter.parse(format_spec):
                     msg = handle_field(spec_field, parent=field)
 
@@ -330,7 +331,7 @@ class Formatter(logging.Formatter):
     @staticmethod
     def __decode(msg, encoding=ENCODING):
         try:
-            if isinstance(msg, str):
+            if isinstance(msg, binary_type):
                 return msg.decode(encoding, 'replace')
         except AttributeError:
             pass
@@ -338,7 +339,7 @@ class Formatter(logging.Formatter):
 
     @staticmethod
     def __stringify(msg):
-        if not isinstance(msg, basestring):
+        if not isinstance(msg, string_types):
             msg = str(msg)
         else:
             msg = Formatter.__encode(msg)
@@ -410,7 +411,7 @@ class Formatter(logging.Formatter):
         Unpacks the {seq}, applying {func} on each element. If {seq} is a dict,
         this will only unpack the keys.
         """
-        if hasattr(seq, '__iter__') and not isinstance(seq, basestring):
+        if hasattr(seq, '__iter__') and not isinstance(seq, string_types):
             return ', '.join([
                     func(element, *func_args, **func_kwargs)
                     for element in seq

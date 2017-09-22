@@ -1,14 +1,12 @@
 import errno
 import os
 import re
-import sys
 
-if sys.version_info.major < 3:
-    import ConfigParser as configparser
-else:
-    import configparser
-    basestring = str
-    long = int
+from six import (
+        string_types,
+        integer_types,
+)
+from six.moves import configparser
 
 from constants import (
         CONFIG_ROOT_DIR,
@@ -67,10 +65,10 @@ def parse_time(time_str):
     Returns a float (seconds)
             -1 if parsing failed
     """
-    if isinstance(time_str, (int, long, float)):
+    if isinstance(time_str, integer_types + (float,)):
         return float(time_str)
 
-    if isinstance(time_str, basestring):
+    if isinstance(time_str, string_types):
         try:
             return float(time_str)
 

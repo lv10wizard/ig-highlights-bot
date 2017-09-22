@@ -5,8 +5,10 @@ import re
 import sqlite3
 import sys
 
-if sys.version_info.major >= 3:
-    basestring = str
+from six import (
+        add_metaclass,
+        string_types,
+)
 
 from src import config
 from src.util import logger
@@ -64,12 +66,11 @@ class _SqliteConnectionWrapper(object):
         )
         return self.connection.executemany(sql, *args, **kwargs)
 
+@add_metaclass(abc.ABCMeta)
 class Database(object):
     """
     Data storage handling (replied comments, etc) abstract base class
     """
-
-    __metaclass__ = abc.ABCMeta
 
     @staticmethod
     def resolve_path(path):
@@ -165,7 +166,7 @@ class Database(object):
         else:
 
             def create_table(table):
-                if not isinstance(table, basestring):
+                if not isinstance(table, string_types):
                     raise TypeError(
                             'create_table string expected, got {type}'
                             ' (\'{data}\')'.format(
@@ -176,7 +177,7 @@ class Database(object):
                 db.execute('CREATE TABLE IF NOT EXISTS {0}'.format(table))
 
             try:
-                if isinstance(self._create_table_data, basestring):
+                if isinstance(self._create_table_data, string_types):
                     create_table(self._create_table_data)
                 elif isinstance(self._create_table_data, (list, tuple)):
                     for table in self._create_table_data:

@@ -2,15 +2,11 @@ import multiprocessing
 import os
 import re
 import signal
-import sys
 import time
 
-if sys.version_info.major < 3:
-    import Queue as queue
-else:
-    import queue
-
 from prawcore.exceptions import Redirect
+from six import iteritems
+from six.moves import queue
 
 from constants import SUBREDDITS_DEFAULTS_PATH
 from src import (
@@ -76,7 +72,7 @@ class IgHighlightsBot(StreamMixin):
         # https://stackoverflow.com/a/2549950
         signames = {
                 num: name for name, num in
-                reversed(sorted(signal.__dict__.items()))
+                reversed(sorted(iteritems(signal.__dict__)))
                 if name.startswith('SIG') and not name.startswith('SIG_')
         }
 
