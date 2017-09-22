@@ -3,6 +3,8 @@ import inspect
 import logging
 import sys
 
+from six import iteritems
+
 from src.util.logger.classes import (
         LevelFilter,
         ProcessStreamHandler,
@@ -14,6 +16,8 @@ ROOT = '__logger_ROOT__'
 # "root" _Logger instance
 # (not actually the RootLogger instance but a child of it)
 __ROOT_LOGGER = None
+
+__EMPTY_FORMATTER = logging.Formatter('')
 
 def _module_name():
     """
@@ -84,25 +88,49 @@ def _get(name=None):
         return __ROOT_LOGGER.getChild(name)
     return __ROOT_LOGGER
 
+def _empty(logger, level):
+    if logger.isEnabledFor(level):
+        formatters = {}
+        # set each handler to an empty formatter
+        for handler in logger.handlers:
+            formatters[handler] = handler.formatter
+            handler.setFormatter(__EMPTY_FORMATTER)
+
+        logger.log(level, '')
+
+        # reset the formatters
+        if formatters:
+            for handler, formatter in iteritems(formatters):
+                handler.setFormatter(formatter)
+
+def _log(level, msg, *args, **kwargs):
+    logger = _get(_module_name())
+    if msg is None:
+        _empty(logger, level)
+    else:
+        logger.log(level, msg, *args, **kwargs)
+
 def debug(msg=None, *args, **kwargs):
-    _get(_module_name()).debug(msg, *args, **kwargs)
+    _log(logging.DEBUG, msg, *args, **kwargs)
 
 def info(msg=None, *args, **kwargs):
-    _get(_module_name()).info(msg, *args, **kwargs)
+    _log(logging.INFO, msg, *args, **kwargs)
 
 def warn(msg=None, *args, **kwargs):
-    _get(_module_name()).warn(msg, *args, **kwargs)
+    _log(logging.WARNING, msg, *args, **kwargs)
 
 def error(msg=None, *args, **kwargs):
-    _get(_module_name()).error(msg, *args, **kwargs)
+    _log(logging.ERROR, msg, *args, **kwargs)
 
 def critical(msg=None, *args, **kwargs):
-    _get(_module_name()).critical(msg, *args, **kwargs)
+    _log(logging.CRITICAL, msg, *args, **kwargs)
 
 def exception(msg=None, *args, **kwargs):
-    _get(_module_name()).exception(msg, *args, **kwargs)
+    if 'exc_info' not in kwargs:
+        kwargs['exc_info'] = True
+    error(msg, *args, **kwargs)
     # log an empty line to help highlight exceptions
-    _get(_module_name()).error(None)
+    error()
 
 def id(logger_func, __id__=None, msg=None, *args, **kwargs):
     """
