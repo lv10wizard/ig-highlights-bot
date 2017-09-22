@@ -1,6 +1,11 @@
-import os
 import shlex
 import subprocess
+import sys
+
+if sys.version_info.major < 3:
+    from os import getcwdu as getcwd
+else:
+    from os import getcwd
 
 from constants import ROOT_DIR
 from src.util import logger
@@ -38,7 +43,7 @@ def get_version():
 
     stock_version = '0.1.0'
 
-    cwd = os.getcwdu()
+    cwd = getcwd()
     try:
         os.chdir(ROOT_DIR)
 
