@@ -109,6 +109,9 @@ def _log(level, msg, *args, **kwargs):
         _empty(logger, level)
     else:
         logger.log(level, msg, *args, **kwargs)
+        if 'exc_info' in kwargs and kwargs['exc_info']:
+            # log an empty line to help highlight exceptions
+            _empty(logger, level)
 
 def debug(msg=None, *args, **kwargs):
     _log(logging.DEBUG, msg, *args, **kwargs)
@@ -129,8 +132,6 @@ def exception(msg=None, *args, **kwargs):
     if 'exc_info' not in kwargs:
         kwargs['exc_info'] = True
     error(msg, *args, **kwargs)
-    # log an empty line to help highlight exceptions
-    error()
 
 def id(logger_func, __id__=None, msg=None, *args, **kwargs):
     """
