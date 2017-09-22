@@ -635,7 +635,6 @@ class IgHighlightsBot(StreamMixin):
                 logger.id(logger.exception, self,
                         'One or more non-existent subreddits: {color}',
                         color=subs,
-                        exc_info=e,
                 )
                 raise
 

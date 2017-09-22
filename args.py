@@ -76,7 +76,6 @@ def do_print_database(path):
         # eg. not a database
         logger.exception('Could not lookup tables in \'{path}\'',
                 path=path,
-                exc_info=e,
         )
     else:
         print('{0}:'.format(os.path.basename(path)))
@@ -128,7 +127,6 @@ def print_database(cfg, *databases):
             logger.exception('Could not lookup \'{db_name}\':'
                     ' missing config option',
                     db_name=db_name,
-                    exc_info=e,
             )
         else:
             if os.path.exists(path):
@@ -158,7 +156,6 @@ def handle(cfg, args):
             except KeyError as e:
                 logger.exception('No option handler defined for \'{opt}\'!',
                         opt=opt,
-                        exc_info=e,
                 )
 
     return had_handleable_opt

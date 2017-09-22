@@ -110,7 +110,6 @@ def parse_time(time_str):
                         ' in \'{time_str}\'',
                         unit=unit,
                         time_str=time_str,
-                        exc_info=e,
                 )
                 raise InvalidTime(time_str)
 
@@ -302,7 +301,6 @@ class Config(object):
                 key=key,
                 value=value,
                 default=default,
-                exc_info=err,
         )
 
         self.__parser.set(Config.SECTION, key, default)

@@ -120,7 +120,6 @@ class StreamMixin(object):
             except (RequestException, ServerError) as e:
                 logger.id(logger.exception, self,
                         'Failed to fetch stream element!',
-                        exc_info=e,
                 )
                 self.__sleep(self.__delay)
             else:

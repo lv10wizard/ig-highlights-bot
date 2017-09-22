@@ -18,7 +18,7 @@ def run_cmd(cmd_str, fail_msg):
                 stderr=subprocess.PIPE,
         )
     except (OSError, ValueError) as e:
-        logger.exception(fail_msg, exc_info=e)
+        logger.exception(fail_msg)
     else:
         output = proc.stdout.read().strip()
         if not output:
@@ -44,7 +44,7 @@ def get_version():
         os.chdir(ROOT_DIR)
 
     except OSError as e:
-        logger.exception('Could not determine version', exc_info=e)
+        logger.exception('Could not determine version')
 
     else:
         # https://stackoverflow.com/a/4277828

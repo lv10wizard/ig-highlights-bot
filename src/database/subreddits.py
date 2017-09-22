@@ -37,7 +37,6 @@ class SubredditsDatabase(Database):
             logger.id(logger.exception, self,
                     'Failed to stat \'{path}\'',
                     path=self.path,
-                    exc_info=e,
             )
             raise
 
@@ -82,7 +81,6 @@ class SubredditsDatabase(Database):
                         'Failed to seed subreddits database from'
                         ' \'{path}\'!',
                         path=SUBREDDITS_DEFAULTS_PATH,
-                        exc_info=e,
                 )
 
             else:

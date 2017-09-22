@@ -70,7 +70,6 @@ class Mentions(ProcessMixin, StreamMixin):
             # TODO? only catch praw errors
             logger.id(logger.exception, self,
                     'Something went wrong! Message processing terminated.',
-                    exc_info=e,
             )
 
 

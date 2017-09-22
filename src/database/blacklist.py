@@ -83,7 +83,6 @@ class BlacklistDatabase(Database):
                 logger.id(logger.exception, self,
                         'Failed to seed blacklist database from \'{path}\'!',
                         path=BLACKLIST_DEFAULTS_PATH,
-                        exc_info=e,
                 )
 
             else:

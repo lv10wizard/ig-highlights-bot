@@ -59,7 +59,6 @@ class Messages(ProcessMixin, StreamMixin):
                         'Failed to get message\'s subreddit display_name'
                         ' ({color_message})',
                         color_message=message.id,
-                        exc_info=e,
                 )
             else:
                 prefix = PREFIX_SUBREDDIT
@@ -73,7 +72,6 @@ class Messages(ProcessMixin, StreamMixin):
                         'Failed to get message\'s author name'
                         ' ({color_message})',
                         color_message=message.id,
-                        exc_info=e,
                 )
             else:
                 prefix = PREFIX_USER
@@ -302,7 +300,6 @@ class Messages(ProcessMixin, StreamMixin):
             # TODO? only catch praw errors
             logger.id(logger.exception, self,
                     'Something went wrong! Message processing terminated.',
-                    exc_info=e,
             )
 
 

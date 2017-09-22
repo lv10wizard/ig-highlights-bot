@@ -73,7 +73,6 @@ class ErrorHandler(object):
                         [err.__module__, err.__class__.__name__]
                     ),
                     err_msg=err.message,
-                    exc_info=e,
             )
 
         else:

@@ -112,7 +112,6 @@ class Database(object):
         else:
             logger.id(logger.exception, self,
                     'An error occurred! Rolling back changes ...',
-                    exc_info=exc_value,
             )
             self._db.rollback()
             # TODO? suppress error ?
@@ -235,7 +234,6 @@ class Database(object):
                     '\n\tkwargs={kwargs}',
                     args=args,
                     kwargs=kwargs,
-                    exc_info=e,
             )
 
     def delete(self, *args, **kwargs):
@@ -255,7 +253,6 @@ class Database(object):
                     '\n\tkwargs={kwargs}',
                     args=args,
                     kwargs=kwargs,
-                    exc_info=e,
             )
 
     def update(self, *args, **kwargs):
@@ -275,7 +272,6 @@ class Database(object):
                     '\n\tkwargs={kwargs}',
                     args=args,
                     kwargs=kwargs,
-                    exc_info=e,
             )
 
     def _initialize_tables(self, db):

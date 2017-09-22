@@ -246,7 +246,6 @@ class Instagram(object):
                             'Could not remove empty database file'
                             ' \'{path}\'',
                             path=self.__db_path,
-                            exc_info=e,
                     )
 
         return data
@@ -282,7 +281,6 @@ class Instagram(object):
                         ' expired! (Could not stat \'{path}\')',
                         user=user,
                         path=self.__db_path,
-                        exc_info=e,
                 )
                 raise
 
@@ -418,26 +416,19 @@ class Instagram(object):
                 logger.id(logger.exception, self,
                         ' '.join(fatal_msg),
                         color=data.keys(),
-                        exc_info=e,
                 )
                 raise
 
             except TypeError as e:
                 # probably tried to index None (data == None)
                 # I'm not sure if this can happen
-                logger.id(logger.exception, self,
-                        ' '.join(fatal_msg),
-                        exc_info=e,
-                )
+                logger.id(logger.exception, self, ' '.join(fatal_msg))
                 raise
 
             except ValueError as e:
                 # response not json (bad endpoint?)
                 fatal_msg.append('(bad endpoint?)')
-                logger.id(logger.exception, self,
-                        ' '.join(fatal_msg),
-                        exc_info=e,
-                )
+                logger.id(logger.exception, self, ' '.join(fatal_msg))
                 raise
 
     def __parse_data(self, data, stop_at_first_duplicate=False):
@@ -534,7 +525,6 @@ class Instagram(object):
                     logger.id(logger.exception, self,
                             'Could not remove \'{path}\'!',
                             path=self.__db_path,
-                            exc_info=e,
                     )
 
         return last_id

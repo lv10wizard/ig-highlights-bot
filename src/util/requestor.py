@@ -65,7 +65,6 @@ class Requestor(object):
                     'Cannot {method} \'{url}\': no such method!',
                     method=method.upper(),
                     url=url,
-                    exc_info=e,
             )
 
         else:
@@ -93,7 +92,6 @@ class Requestor(object):
                             method=method.upper(),
                             url=url,
                             time=delay,
-                            exc_info=e,
                     )
                     # assumption: all ConnectionErrors indicate internet outage
                     time.sleep(delay)
@@ -103,7 +101,6 @@ class Requestor(object):
                             '{method} {url}',
                             method=method.upper(),
                             url=url,
-                            exc_info=e,
                     )
                     # TODO? worth retrying ?
                     break

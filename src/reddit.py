@@ -212,7 +212,6 @@ class Reddit(praw.Reddit):
                     ' '.join(msg),
                     username=self.username_raw or '<Not Set>',
                     section=cfg.praw_sitename,
-                    exc_info=e,
             )
             raise
 
@@ -310,7 +309,6 @@ class Reddit(praw.Reddit):
             # something went horribly wrong
             logger.id(logger.exception, self,
                     'Failed to determine praw version!',
-                    exc_info=e,
             )
             raise
         else:
@@ -364,7 +362,6 @@ class Reddit(praw.Reddit):
                 logger.id(logger.exception, self,
                         'Failed to send debug pm to \'{name}\'!',
                         name=maintainer.name,
-                        exc_info=e,
                 )
 
             except praw.exceptions.APIException as e:
@@ -429,7 +426,6 @@ class Reddit(praw.Reddit):
                         'Could not reply to {color_thing}:'
                         ' no \'reply\' method!',
                         color_thing=display_fullname(thing),
-                        exc_info=e,
                 )
 
             except Forbidden as e:
@@ -440,7 +436,6 @@ class Reddit(praw.Reddit):
                 logger.id(logger.exception, self,
                         'Failed to reply to {color_thing}!',
                         color_thing=display_fullname(thing),
-                        exc_info=e,
                 )
                 raise
 
