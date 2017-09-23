@@ -54,7 +54,9 @@ INSTAGRAM_CACHE_EXPIRE_TIME     = 'instagram_cache_expire_time'
 # ######################################################################
 
 def resolve_path(path):
-    return os.path.realpath( os.path.abspath( os.path.expanduser(path) ) )
+    if path:
+        path = os.path.realpath( os.path.abspath( os.path.expanduser(path) ) )
+    return path
 
 def parse_time(time_str):
     """
