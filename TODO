@@ -108,25 +108,36 @@ O. refactor logging
         need to refactor handle_special_keyword so that Formatter child classes
         can extend/override
     O. actually refactor logger calls in app
-- refactor reddit rate-limit handling to queue callbacks rather than sleeping
+O. refactor reddit rate-limit handling to queue callbacks rather than sleeping
     this way, the bot will miss less comments to reply to
     assumption: POST/GET are separate rate-limits; ie, replying may be rate-
         limited but can still fetch new comments.
-    - persistent queue (adds a lot of complexity for a rare situation)
+    O. persistent queue (adds a lot of complexity for a rare situation)
         requires a larger refactor (need to queue comment ?)
         X. plug into ig-queue
-        - table(thing_id, body_text, rate_limit_expire_time_utc)
-        - insert on rate-limit (or if rate-limit is active)
+        O. table(thing_id, body_text, rate_limit_expire_time_utc)
+        O. insert on rate-limit (or if rate-limit is active)
             (update if already queued -- ie, hit rate-limit again)
-        - delete on successful processing
-        ? need in-memory queue?
-    - need to handle hitting rate-limit again from queue
-    ? does this make error_handling obsolete?
+        O. delete on successful processing
+        X. need in-memory queue?
+    O. need to handle hitting rate-limit again from queue
+    O. does this make error_handling obsolete? yes
 O. logger: prepend msg with exc_info type name, ie:
             '.'.join([ exc_info.__module__, exc_info.__class__.__name__ ])
     > ideally, after any id information
 O. __metaclass__ py2/3 compatibility
     (added six dependency which I think requests already depends on)
+- change submission_queue from Queue -> database
+    in case the program terminates before the queue can be processed
+- catch UniqueConstraintFailed
+    - grep '[.]insert('
+    - grep '[.]update('
+- split config into sections
+- use logger {yesno} keyword
+- reclassify logger.exceptions
+- graceful exit
+    - logging.flush (or whatever the method is)
+    - database.close? .flush?
 
 N. testing!
 

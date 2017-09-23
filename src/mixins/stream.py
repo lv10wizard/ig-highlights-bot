@@ -7,7 +7,8 @@ from prawcore.exceptions import (
 from praw.models import util as praw_util
 from six import add_metaclass
 
-from src import reddit
+
+from .redditinstance import RedditInstanceMixin
 from src.util import (
         logger,
         requestor,
@@ -15,16 +16,12 @@ from src.util import (
 
 
 @add_metaclass(abc.ABCMeta)
-class StreamMixin(object):
+class StreamMixin(RedditInstanceMixin):
     """
     Provides Reddit.stream_generator fetching through the .stream property.
     This mixin handles delaying the next fetch when either a RequestException or
     ServerError is thrown (internet hiccup, reddit down).
     """
-
-    def __init__(self, cfg):
-        self.cfg = cfg
-        self._reddit = reddit.Reddit(cfg)
 
     @abc.abstractproperty
     def _stream_method(self):

@@ -10,7 +10,8 @@ class ReplyDatabase(Database):
     def _create_table_data(self):
         return (
                 'comments('
-                '   comment_fullname TEXT PRIMARY KEY'
+                '   uid INTEGER PRIMARY KEY NOT NULL,'
+                '   comment_fullname TEXT NOT NULL,'
                 '   submission_fullname TEXT NOT NULL,'
                 # case-insensitive
                 # https://stackoverflow.com/a/973785
@@ -22,9 +23,20 @@ class ReplyDatabase(Database):
         )
 
     def _insert(self, comment, ig_list):
+        def get_user(ig):
+            try:
+                return ig.user
+            except AttributeError:
+                # probably a string
+                return ig
+
         if isinstance(ig_list, (list, tuple)):
             values = [
-                    (comment.fullname, comment.submission.fullname, ig.user)
+                    (
+                        comment.fullname,
+                        comment.submission.fullname,
+                        get_user(ig),
+                    )
                     for ig in ig_list
             ]
         else:
@@ -33,7 +45,7 @@ class ReplyDatabase(Database):
                     (
                         comment.fullname,
                         comment.submission.fullname,
-                        ig_list.user
+                        get_user(ig_list),
                     )
             ]
 

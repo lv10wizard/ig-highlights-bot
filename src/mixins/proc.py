@@ -77,10 +77,12 @@ class ProcessMixin(object):
         try:
             self._run_forever()
 
+        except:
+            logger.id(logger.exception, self, 'An uncaught exception occured!')
+            raise
+
         finally:
-            logger.id(logger.info, self,
-                    'Exiting ...',
-            )
+            logger.id(logger.info, self, 'Exiting ...')
 
 
 __all__ = [

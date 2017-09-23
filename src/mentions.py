@@ -15,9 +15,9 @@ class Mentions(ProcessMixin, StreamMixin):
     Username mentions (in comments) parser
     """
 
-    def __init__(self, cfg, submission_queue):
+    def __init__(self, cfg, rate_limited, rate_limit_time, submission_queue):
         ProcessMixin.__init__(self)
-        StreamMixin.__init__(self, cfg)
+        StreamMixin.__init__(self, cfg, rate_limited, rate_limit_time)
 
         self.submission_queue = submission_queue
 

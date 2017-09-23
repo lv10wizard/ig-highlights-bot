@@ -2,6 +2,7 @@ import multiprocessing
 import os
 import re
 import sys
+import time
 
 import praw
 from prawcore.exceptions import (
@@ -20,7 +21,7 @@ from constants import (
 )
 from src import (
         config,
-        error_handling,
+        database,
 )
 from src.util import logger
 from src.util.version import get_version
@@ -122,6 +123,15 @@ def display_fullname(thing):
         return '{0} ({1})'.format(thing.fullname, thing_type)
     return thing
 
+def split_fullname(fullname):
+    """
+    Returns [type_str, id] from a {fullname} (eg. 't3_6zztml')
+            or {fullname} if the string does not look like a proper fullname
+    """
+    if isinstance(fullname, string_types) and '_' in fullname:
+        return fullname.split('_', 1)
+    return fullname
+
 def get_ancestor_tree(comment, to_lower=True):
     """
     Returns a list of comments starting with the parent of the given
@@ -156,13 +166,20 @@ class Reddit(praw.Reddit):
     """
 
     NOTSET_TYPE = praw.config._NotSet
+    NOUSER_ERR = ('NO_USER', 'USER_DOESNT_EXIST')
+    RATELIMIT_ERR = ('RATELIMIT',)
+
     LINE_SEP = '=' * 72
 
     _kinds = {}
 
-    def __init__(self, cfg, *args, **kwargs):
+    def __init__(self, cfg, rate_limited, rate_limit_time, *args, **kwargs):
         self.__cfg = cfg
-        self.__error_handler = error_handling.ErrorHandler()
+        self.__rate_limit_queue = database.RedditRateLimitQueueDatabase(
+                cfg.reddit_rate_limit_db_path
+        )
+        self.__rate_limited = rate_limited
+        self.__rate_limit_time = rate_limit_time
 
         praw.Reddit.__init__(self,
                 site_name=cfg.praw_sitename,
@@ -259,6 +276,10 @@ class Reddit(praw.Reddit):
             user_agent = self.__user_agent
         return user_agent
 
+    @property
+    def is_rate_limited(self):
+        return self.__rate_limited.is_set()
+
     def __try_set_username(self):
         """
         Asks the user to enter the bot account username if not defined in
@@ -319,12 +340,107 @@ class Reddit(praw.Reddit):
                         ver=praw.__version__,
                 )
 
+    def __handle_api_exception(self, err):
+        """
+        Generic APIException handling
+        """
+        if isinstance(err, praw.exceptions.APIException):
+            if err.error_type.upper() in Reddit.RATELIMIT_ERR:
+                self.__flag_rate_limit(err.message)
+
+            else:
+                logger.id(logger.debug, self, 'Ignoring ...', exc_info=True)
+
+    def __flag_rate_limit(self, err_msg):
+        """
+        Flags that we are rate-limited by reddit
+        """
+        if not self.is_rate_limited:
+            try:
+                delay = config.parse_time(err_msg)
+            except config.InvalidTime:
+                delay = 10 * 60
+                logger.id(logger.debug, self,
+                        'Could not determine appropriate rate-limit delay:'
+                        ' using {time}',
+                        time=delay,
+                )
+
+            reset_time = time.time() + delay
+            logger.id(logger.debug, self,
+                    'Flagging rate-limit: {time} ({stftime})',
+                    time=delay,
+                    strftime='%H:%M:%S',
+                    strf_time=reset_time,
+            )
+
+            self.__rate_limit_time.value = reset_time
+            self.__rate_limited.set()
+
+        else:
+            # another process hit the rate-limit (probably)
+            delay = self.__rate_limit_time.value - time.time()
+            logger.id(logger.debug, self,
+                    'Attempted to flag rate-limit again: \'{msg}\''
+                    ' (time left: {time} = {strftime})',
+                    msg=err_msg,
+                    time=delay,
+                    strftime='%H:%M:%S',
+                    strf_time=self.__rate_limit_time.value,
+            )
+
+    def __queue_reply(self, thing, body, force=False):
+        """
+        Enqueues the reply to {thing} (see: RateLimitHandler)
+
+        thing (praw.models.*) - the {thing} to queue (should be Replyable)
+        body (str) - the text to reply to {thing} with
+        force (bool, optional) - whether the {thing} should be enqueued,
+                ignoring current rate-limit status
+
+        Returns True if queued successfully
+                False if enqueue failed
+                None if rate-limit is over
+        """
+        success = False
+        delay = self.__rate_limit_time.value - time.time()
+        if delay > 0 or force:
+            try:
+                logger.id(logger.debug, self,
+                        'Rate limited! Queueing {color_thing} ...',
+                        color_thing=display_fullname(thing),
+                )
+                with self.__rate_limit_queue:
+                    self.__rate_limit_queue.insert(thing, body, delay)
+            except database.UniqueConstraintFailed:
+                logger.id(logger.warn, self,
+                        'Attempted to enqueue duplicate {color_thing}',
+                        color_thing=display_fullname(thing),
+                        exc_info=True,
+                )
+                with self.__rate_limit_queue:
+                    self.__rate_limit_queue.update(thing, body, delay)
+            else:
+                success = True
+
+        else:
+            # rate limit reset
+            success = None
+
+        return success
+
     def send_debug_pm(self, subject, body, callback_depth=0):
         """
         Sends a pm to the AUTHOR reddit account
         """
         if self.__cfg.send_debug_pm:
-            self.__error_handler.wait_for_rate_limit()
+            if self.is_rate_limited:
+                logger.id(logger.debug, self,
+                        'Rate-limited! Skipping sending debug pm:'
+                        ' \'{subject}\'',
+                        subject=subject,
+                )
+                return
 
             if not (isinstance(body, string_types) and body):
                 logger.id(logger.debug, self,
@@ -365,7 +481,7 @@ class Reddit(praw.Reddit):
                 )
 
             except praw.exceptions.APIException as e:
-                if e.error_type.lower() in ['no_user', 'user_doesnt_exist']:
+                if e.error_type.upper() in Reddit.NOUSER_ERR:
                     # deleted, banned, or otherwise doesn't exist
                     # (is AUTHOR spelled correctly?)
                     logger.id(logger.debug, self,
@@ -378,16 +494,7 @@ class Reddit(praw.Reddit):
                     self.__maintainer = None
 
                 else:
-                    self.__error_handler.handle(
-                            err=e,
-                            depth=callback_depth,
-                            callback=self.send_debug_pm,
-                            callback_kwargs={
-                                'subject': subject,
-                                'body': body,
-                                'callback_depth': callback_depth+1,
-                            },
-                    )
+                    self.__handle_api_exception(e)
 
     def do_reply(self, thing, body, callback_depth=0):
         """
@@ -406,53 +513,78 @@ class Reddit(praw.Reddit):
             )
 
         else:
-            self.__error_handler.wait_for_rate_limit()
+            num_attempts = 0
+            queued = None
+            # XXX: try to queue in a loop in case the rate-limit ends while
+            # attempting to queue the reply but starts again from a different
+            # process
+            while self.is_rate_limited:
+                # num_attempts should not grow > 2
+                # 1  = rate-limited do_reply entry
+                # 2  = was not rate-limited during __queue_reply but became
+                #      rate-limited again
+                # 3+ = ???
+                num_attempts += 1
+                if num_attempts > 1:
+                    # very spammy if this somehow gets stuck looping
+                    remaining = self.__rate_limit_time.value - time.time()
+                    logger.id(logger.debug, self,
+                            '[#{num}] Attempting to queue {color_thing}'
+                            ' (rate-limited? {yesno_ratelimit};'
+                            ' time left: {time} = {strftime})'
+                            num=num_attempts,
+                            yesno_ratelimit=self.is_rate_limited,
+                            time=remaining,
+                            strftime='%H:%M:%S',
+                            strf_time=self.__rate_limit_time.value,
+                    )
 
-            logger.id(logger.debug, self,
-                    'Replying to {color_thing}:'
-                    '\n{sep}'
-                    '\n{body}'
-                    '\n{sep}',
-                    color_thing=display_fullname(thing),
-                    sep=Reddit.LINE_SEP,
-                    body=body,
-            )
+                queued = self.__queue_reply(thing, body)
+                if queued is not None:
+                    break
 
-            try:
-                thing.reply(body)
-
-            except (AttributeError, TypeError) as e:
-                logger.id(logger.exception, self,
-                        'Could not reply to {color_thing}:'
-                        ' no \'reply\' method!',
+            if queued is None:
+                logger.id(logger.debug, self,
+                        'Replying to {color_thing}:'
+                        '\n{sep}'
+                        '\n{body}'
+                        '\n{sep}',
                         color_thing=display_fullname(thing),
+                        sep=Reddit.LINE_SEP,
+                        body=body,
                 )
 
-            except Forbidden as e:
-                # TODO? blacklist subreddit / user instead (base off thing type)
-                # - probably means bot was banned from subreddit
-                #   or blocked by user
-                # (could also mean auth failed, maybe something else?)
-                logger.id(logger.exception, self,
-                        'Failed to reply to {color_thing}!',
-                        color_thing=display_fullname(thing),
-                )
-                raise
+                try:
+                    thing.reply(body)
 
-            except praw.exceptions.APIException as e:
-                success = self.__error_handler.handle(
-                        err=e,
-                        depth=callback_depth,
-                        callback=self.do_reply,
-                        callback_kwargs={
-                            'thing': thing,
-                            'body': body,
-                            'callback_depth': callback_depth+1,
-                        },
-                )
+                except (AttributeError, TypeError) as e:
+                    logger.id(logger.exception, self,
+                            'Could not reply to {color_thing}:'
+                            ' no \'reply\' method!',
+                            color_thing=display_fullname(thing),
+                    )
 
-            else:
-                success = True
+                except Forbidden as e:
+                    # TODO? blacklist subreddit / user instead (base off thing
+                    # type)
+                    # - probably means bot was banned from subreddit
+                    #   or blocked by user
+                    # (could also mean auth failed, maybe something else?)
+                    logger.id(logger.exception, self,
+                            'Failed to reply to {color_thing}!',
+                            color_thing=display_fullname(thing),
+                    )
+                    raise
+
+                except praw.exceptions.APIException as e:
+                    self.__handle_api_exception(e)
+
+                    if e.error_type.upper() in Reddit.RATELIMIT_ERR:
+                        # force in case the rate-limit flag is unset somehow
+                        self.__queue_reply(thing, body, force=True)
+
+                else:
+                    success = True
 
         return success
 

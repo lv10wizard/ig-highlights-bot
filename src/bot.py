@@ -1,3 +1,4 @@
+import ctypes
 import multiprocessing
 import os
 import re
@@ -15,6 +16,7 @@ from src import (
         instagram,
         mentions,
         messages,
+        ratelimit,
         reddit,
         replies,
 )
@@ -22,6 +24,7 @@ from src.database import (
         BadActorsDatabase,
         InstagramQueueDatabase,
         PotentialSubredditsDatabase,
+        RedditRateLimitQueueDatabase,
         ReplyDatabase,
         SubredditsDatabase,
         UniqueConstraintFailed,
@@ -38,7 +41,18 @@ class IgHighlightsBot(StreamMixin):
         signal.signal(signal.SIGINT, self.graceful_exit)
         signal.signal(signal.SIGTERM, self.graceful_exit)
 
-        StreamMixin.__init__(self, cfg)
+        # rate-limited flag. this is created here so that any process can
+        # flag that the account is rate-limited.
+        rate_limited = multiprocessing.Event()
+        rate_limit_time = multiprocessing.Value(ctypes.c_float, 0.0)
+        StreamMixin.__init__(self, cfg, rate_limited)
+
+        self.reddit_ratelimit_queue = RedditRateLimitQueueDatabase(
+                cfg.reddit_rate_limit_db_path
+        )
+        self.ratelimit_handler = ratelimit.RateLimitHandler(
+                cfg, rate_limited, rate_limit_time,
+        )
 
         self._killed = False
         self.reply_history = ReplyDatabase(cfg.replies_db_path)
@@ -53,11 +67,15 @@ class IgHighlightsBot(StreamMixin):
         self.blacklist = blacklist.Blacklist(cfg)
         self.ig_queue = InstagramQueueDatabase(cfg.instagram_queue_db_path)
 
-        self.messages = messages.Messages(cfg, self.blacklist)
+        self.messages = messages.Messages(
+                cfg, rate_limited, rate_limit_time, self.blacklist
+        )
         # queue of submissions to be processed (produced through separate
         # processes -- eg. summoned to post through user mention)
         self.submission_queue = multiprocessing.JoinableQueue()
-        self.mentions = mentions.Mentions(cfg, self.submission_queue)
+        self.mentions = mentions.Mentions(
+                cfg, rate_limited, rate_limit_time, self.submission_queue
+        )
 
         # initialize stuff that requires correct credentials
         instagram.Instagram.initialize(cfg, self._reddit.username)
@@ -96,8 +114,11 @@ class IgHighlightsBot(StreamMixin):
                     num=signum,
             )
 
+        self.ratelimit_handler.kill()
         self.messages.kill()
         self.mentions.kill()
+
+        self.ratelimit_handler.join()
         self.messages.join()
         self.mentions.join()
 
@@ -323,6 +344,7 @@ class IgHighlightsBot(StreamMixin):
         """
         Returns True if
             - comment not already replied to by the bot
+            - comment is not in the rate-limit queue
             - the bot has not replied too many times to the submission (too many
               defined in config)
             - comment not archived (too old)
@@ -339,6 +361,14 @@ class IgHighlightsBot(StreamMixin):
         if already_replied:
             logger.id(logger.debug, self,
                     'I already replied to {color_comment}: skipping.',
+                    color_comment=reddit.display_id(comment),
+            )
+            return False
+
+        if comment in self.reddit_ratelimit_queue:
+            # will be handled by the RateLimitHandler
+            logger.id(logger.debug, self,
+                    '{color_comment} is rate-limit queued: skipping.',
                     color_comment=reddit.display_id(comment),
             )
             return False
@@ -601,6 +631,7 @@ class IgHighlightsBot(StreamMixin):
         """
         Bot comment stream parsing
         """
+        self.ratelimit_handler.start()
         self.messages.start()
         self.mentions.start()
 
@@ -638,10 +669,12 @@ class IgHighlightsBot(StreamMixin):
                 )
                 raise
 
+        except:
+            logger.id(logger.exception, self, 'An uncaught exception occured!')
+            raise
+
         finally:
-            logger.id(logger.info, self,
-                    'Exiting ...',
-            )
+            logger.id(logger.info, self, 'Exiting ...')
 
 
 __all__ = [

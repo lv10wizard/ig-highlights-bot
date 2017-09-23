@@ -24,6 +24,7 @@ PRAW_SITENAME                   = 'praw_sitename'
 
 SEND_DEBUG_PM                   = 'send_debug_pm'
 
+REDDIT_RATE_LIMIT_DB_PATH       = 'reddit_rate_limit_db_path'
 REPLIES_DB_PATH                 = 'replies_db_path'
 NUM_HIGHLIGHTS_PER_IG_USER      = 'num_highlights_per_ig_user'
 MAX_REPLIES_PER_COMMENT         = 'max_replies_per_comment'
@@ -152,6 +153,12 @@ class Config(object):
                 # whether the bot should send debug pms to AUTHOR reddit account
                 SEND_DEBUG_PM: 'true',
 
+                # path to the persistent reddit rate-limited queue database
+                REDDIT_RATE_LIMIT_DB_PATH: os.path.join(
+                    DATA_ROOT_DIR,
+                    'reddit-queue.db',
+                ),
+
                 # path to the replies database file
                 REPLIES_DB_PATH: os.path.join(DATA_ROOT_DIR, 'replies.db'),
 
@@ -225,15 +232,15 @@ class Config(object):
 
                 # path to instagram rate-limit database file
                 INSTAGRAM_RATE_LIMIT_DB_PATH: os.path.join(
-                        DATA_ROOT_DIR,
-                        'ig-ratelimit.db',
+                    DATA_ROOT_DIR,
+                    'ig-ratelimit.db',
                 ),
 
                 # path to the persistent instagram rate-limited queue
                 # (queue of to-fetch users)
                 INSTAGRAM_QUEUE_DB_PATH: os.path.join(
-                        DATA_ROOT_DIR,
-                        'ig-queue.db',
+                    DATA_ROOT_DIR,
+                    'ig-queue.db',
                 ),
 
                 # the minimum amount of time required for cached instagram data
@@ -341,6 +348,14 @@ class Config(object):
     @property
     def send_debug_pm(self):
         return self.__get(SEND_DEBUG_PM, 'getboolean')
+
+    @property
+    def reddit_rate_limit_db_path(self):
+        return resolve_path(self.__get(REDDIT_RATE_LIMIT_DB_PATH))
+
+    @property
+    def reddit_rate_limit_db_path_raw(self):
+        return self.__get(REDDIT_RATE_LIMIT_DB_PATH)
 
     @property
     def replies_db_path(self):

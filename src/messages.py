@@ -27,9 +27,9 @@ class Messages(ProcessMixin, StreamMixin):
     Inbox message parser
     """
 
-    def __init__(self, cfg, blacklist):
+    def __init__(self, cfg, rate_limited, rate_limit_time, blacklist):
         ProcessMixin.__init__(self)
-        StreamMixin.__init__(self, cfg)
+        StreamMixin.__init__(self, cfg, rate_limited, rate_limit_time)
 
         self.blacklist = blacklist
 

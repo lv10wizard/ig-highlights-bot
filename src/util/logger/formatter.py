@@ -107,11 +107,15 @@ class Formatter(logging.Formatter):
             return keys
 
         # Note: most of these keywords are mutually exclusive (unpack is baked
-        # into time, size, color). This mutual exclusion is not enforced, so
-        # nothing will break if multiple special keywords are specified but the
-        # behavior is probably not what you will want (whatever that may be).
+        # into time, size, color, strftime). This mutual exclusion is not
+        # enforced, so nothing will break if multiple special keywords are
+        # specified but the behavior is probably not what you will want
+        # (whatever that may be).
         handle_special_keyword('unpack', Formatter.unpack)
         handle_special_keyword('pprint', Formatter.pprint)
+        # XXX: send record.kwargs to strftime so it can try to get the passed-in
+        # time instead of using the default current time
+        handle_special_keyword('strftime', Formatter.strftime, **record.kwargs)
         handle_special_keyword('time', Formatter.readable_time)
         handle_special_keyword('size', Formatter.readable_size)
         handle_special_keyword('yesno', Formatter.yesno)
@@ -485,6 +489,36 @@ class Formatter(logging.Formatter):
     def pprint(thing):
         import pprint
         return pprint.pformat(thing)
+
+    @staticmethod
+    def __strftime(fmt, **kwargs):
+        import time
+
+        try:
+            # special extra key: {strf_time} to use instead of current time
+            time_val = kwargs['strf_time']
+        except KeyError:
+            # no strf_time key specified
+            pass
+        else:
+            try:
+                # try to use the specified time
+                return time.strftime(fmt, time_val)
+            except TypeError:
+                # Tuple or struct_time argument required
+                try:
+                    # try to convert it
+                    return time.strftime(fmt, time.localtime(time_val))
+                except TypeError:
+                    # bad time_val (not integer/float)
+                    pass
+
+        # everything failed, just return the current time
+        return time.strftime(fmt)
+
+    @staticmethod
+    def strftime(fmt, **kwargs):
+        return Formatter.unpack(fmt, Formatter.__strftime, **kwargs)
 
 
 __all__ = [

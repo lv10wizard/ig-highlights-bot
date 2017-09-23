@@ -24,6 +24,32 @@ class Formatter(object):
     HIGHLIGHT_FMT = '[{i}]({link})'
     LINE_DELIM = '\n\n'
 
+    @staticmethod
+    def ig_users_in(body):
+        """
+        Returns a list of instagram usernames present in a reply body
+                (if there are no usernames found, returns an empty list)
+        """
+        import re
+
+        try:
+            header_re = Formatter.HEADER_REGEX
+        except AttributeError:
+            # escape special characters so we can format the header into a
+            # regex pattern
+            escaped_header = re.sub(
+                    # match any '[', ']', '(', or ')'
+                    r'([\[\]\(\)])',
+                    # escape the matched character
+                    r'\\\1',
+                    Formatter.HEADER_FMT
+            )
+            pattern = escaped_header.format(user='([\w\.]+)', link='.+')
+            header_re = re.compile(pattern)
+            Formatter.HEADER_REGEX = header_re
+
+        return header_re.findall(body)
+
     def __init__(self, username):
         # wrap the string in a list so it is easier to work with
         self.FOOTER = list(Formatter.FOOTER_FMT.format(
