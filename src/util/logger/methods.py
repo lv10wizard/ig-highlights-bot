@@ -90,18 +90,32 @@ def _get(name=None):
 
 def _empty(logger, level):
     if logger.isEnabledFor(level):
+        # get all handlers for this logger and its ancestors
+        _logger = logger
+        _handlers = []
+        while _logger:
+            _handlers.append(_logger.handlers)
+            if not _logger.propagate:
+                # don't bother replacing any more handlers if this logger
+                # doesn't propagate
+                break
+            _logger = _logger.parent
+
         formatters = {}
         # set each handler to an empty formatter
-        for handler in logger.handlers:
-            formatters[handler] = handler.formatter
-            handler.setFormatter(__EMPTY_FORMATTER)
+        for handler_list in _handlers:
+            for handler in handler_list:
+                formatters[handler] = handler.formatter
+                handler.setFormatter(__EMPTY_FORMATTER)
 
         logger.log(level, '')
 
         # reset the formatters
         if formatters:
-            for handler, formatter in iteritems(formatters):
-                handler.setFormatter(formatter)
+            for handler_list in _handlers:
+                for handler in handler_list:
+                    if handler in formatters:
+                        handler.setFormatter(formatters[handler])
 
 def _log(level, msg, *args, **kwargs):
     logger = _get(_module_name())
