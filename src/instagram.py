@@ -4,10 +4,7 @@ import re
 import time
 
 from constants import EMAIL
-from src import (
-        config,
-        database,
-)
+from src import database
 from src.util import (
         logger,
         requestor,
@@ -152,8 +149,7 @@ class Instagram(object):
             )
         if not Instagram._rate_limit:
             Instagram._rate_limit = database.InstagramRateLimitDatabase(
-                    Instagram.cfg.instagram_rate_limit_db_path,
-                    max_age=config.parse_time('1h'),
+                    max_age='1h',
             )
 
     def __init__(self, user, last_id=None):
@@ -162,14 +158,14 @@ class Instagram(object):
         self.initial_last_id = last_id
 
         if not Instagram.cfg:
-            logger.id(logger.debug, self,
+            logger.id(logger.critical, self,
                     'I don\'t know where cached instagram data is stored:'
                     ' cfg not set!',
             )
             raise MissingVariable('Please set the Instagram.cfg variable!')
 
         if not Instagram.user_agent:
-            logger.id(logger.debug, self,
+            logger.id(logger.critical, self,
                     'I cannot fetch data from instagram: no user-agent!',
             )
             raise MissingVariable(
@@ -254,7 +250,7 @@ class Instagram(object):
     def __db_path(self):
         if self.user:
             return os.path.join(
-                    Instagram.cfg.instagram_db_path,
+                    InstagramDatabase.PATH,
                     '{0}.db'.format(self.user),
             )
         return ''

@@ -51,32 +51,7 @@ python 3.5+:
 
 ##### default config:
 
-*See [`src/config.py`](src/config.py) for some meager documentation of these options*
-
-    [DEFAULT]
-    max_replies_per_post = 15
-    bad_actors_db_path = ~/igHighlightsBot/badactors.db
-    replies_db_path = ~/igHighlightsBot/replies.db
-    logging_path = ~/igHighlightsBot/logs
-    instagram_db_path = ~/igHighlightsBot/instagram
-    add_subreddit_threshold = 10
-    instagram_queue_db_path = ~/igHighlightsBot/ig-queue.db
-    instagram_cache_expire_time = 7d
-    mentions_db_path = ~/igHighlightsBot/mentions.db
-    num_highlights_per_ig_user = 15
-    bad_actor_expire_time = 1d
-    max_replies_per_comment = 2
-    blacklist_temp_ban_time = 3d
-    potential_subreddits_db_path = ~/igHighlightsBot/to-add-subreddits.db
-    blacklist_db_path = ~/igHighlightsBot/blacklist.db
-    subreddits_db_path = ~/igHighlightsBot/subreddits.db
-    praw_sitename = igHighlightsBot
-    app_name = igHighlightsBot
-    instagram_rate_limit_db_path = ~/igHighlightsBot/ig-ratelimit.db
-    send_debug_pm = true
-    bad_actor_threshold = 3
-    messages_db_path = ~/igHighlightsBot/messages.db
-    max_replies_in_comment_thread = 3
+*See [ bot.cfg ](bot.cfg) for the default config*
 
 ##### praw.ini:
 

@@ -14,6 +14,8 @@ class SubredditsDatabase(Database):
     Storage of subreddits to fetch comment streams from
     """
 
+    PATH = Database.PATH_FMT.format('subreddits.db')
+
     @staticmethod
     def get_subreddit_name(thing):
         if hasattr(thing, 'subreddit'):
@@ -26,9 +28,12 @@ class SubredditsDatabase(Database):
             name = None
         return name
 
-    def __init__(self, path, do_seed):
-        Database.__init__(self, path)
-        self.do_seed = do_seed
+    def __init__(self, do_seed=None):
+        if do_seed is None:
+            self.do_seed = not bool(os.path.exists(SubredditsDatabase.PATH))
+        else:
+            self.do_seed = bool(do_seed)
+        Database.__init__(self, SubredditsDatabase.PATH)
         try:
             self.__mtime = os.stat(self._resolved_path).st_mtime
 

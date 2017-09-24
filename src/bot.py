@@ -35,6 +35,7 @@ from src.util import logger
 
 class IgHighlightsBot(StreamMixin):
     """
+    Instagram Highlights reddit bot class
     """
 
     def __init__(self, cfg):
@@ -47,25 +48,18 @@ class IgHighlightsBot(StreamMixin):
         rate_limit_time = multiprocessing.Value(ctypes.c_float, 0.0)
         StreamMixin.__init__(self, cfg, rate_limited)
 
-        self.reddit_ratelimit_queue = RedditRateLimitQueueDatabase(
-                cfg.reddit_rate_limit_db_path
-        )
+        self.reddit_ratelimit_queue = RedditRateLimitQueueDatabase()
         self.ratelimit_handler = ratelimit.RateLimitHandler(
                 cfg, rate_limited, rate_limit_time,
         )
 
         self._killed = False
-        self.reply_history = ReplyDatabase(cfg.replies_db_path)
-        self.subreddits = SubredditsDatabase(
-                path=cfg.subreddits_db_path,
-                do_seed=(not os.path.exists(SUBREDDITS_DEFAULTS_PATH)),
-        )
-        self.potential_subreddits = PotentialSubredditsDatabase(
-                path=cfg.potential_subreddits_db_path,
-        )
-        self.bad_actors = BadActorsDatabase(cfg.bad_actors_db_path, cfg)
+        self.reply_history = ReplyDatabase()
+        self.subreddits = SubredditsDatabase()
+        self.potential_subreddits = PotentialSubredditsDatabase()
+        self.bad_actors = BadActorsDatabase(cfg)
         self.blacklist = blacklist.Blacklist(cfg)
-        self.ig_queue = InstagramQueueDatabase(cfg.instagram_queue_db_path)
+        self.ig_queue = InstagramQueueDatabase()
 
         self.messages = messages.Messages(
                 cfg, rate_limited, rate_limit_time, self.blacklist
@@ -121,6 +115,8 @@ class IgHighlightsBot(StreamMixin):
         self.ratelimit_handler.join()
         self.messages.join()
         self.mentions.join()
+
+        # TODO: logger.flush, databases.flush/close
 
         # XXX: kill the main process last so that daemon processes aren't
         # killed at inconvenient times

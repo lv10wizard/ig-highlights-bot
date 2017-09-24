@@ -10,6 +10,11 @@ class MessagesDatabase(Database):
     message processing.
     """
 
+    PATH = Database.PATH_FMT.format('messages.db')
+
+    def __init__(self):
+        Database.__init__(self, MessagesDatabase.PATH)
+
     def _create_table_data(self):
         return (
                 'messages('

@@ -1,3 +1,4 @@
+import os
 import re
 import time
 
@@ -17,6 +18,8 @@ class BlacklistDatabase(Database):
     Storage of blacklisted subreddits/users
     """
 
+    PATH = Database.PATH_FMT.format('blacklist.db')
+
     PERMANENT = -1
 
     # XXX: use arbitrary type strings in case reddit's 'u/', 'r/' prefixes
@@ -24,16 +27,10 @@ class BlacklistDatabase(Database):
     TYPE_SUBREDDIT = '__subreddit__'
     TYPE_USER      = '__user__'
 
-    def __init__(self, path, cfg, do_seed):
-        """
-        path (str) - path to the database file
-        cfg (config.Config) - Config instance
-        do_seed (bool) - whether the database should be seeded from the default
-                         BLACKLIST file in the root directory of the repo
-        """
-        Database.__init__(self, path)
+    def __init__(self, cfg):
+        self.do_seed = not bool(os.path.exists(BlacklistDatabase.PATH))
+        Database.__init__(self, BlacklistDatabase.PATH)
         self.cfg = cfg
-        self.do_seed = do_seed
 
     @property
     def _create_table_data(self):

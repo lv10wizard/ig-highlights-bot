@@ -1,3 +1,5 @@
+import os
+
 from ._database import Database
 
 
@@ -5,6 +7,8 @@ class InstagramDatabase(Database):
     """
     Cached instagram user data
     """
+
+    PATH = Database.PATH_FMT.format('instagram')
 
     def _create_table_data(self):
         return (

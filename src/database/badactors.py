@@ -7,8 +7,10 @@ class BadActorsDatabase(Database):
     worthy of a temp ban (eg. linking to many 404s in a "short" timeframe)
     """
 
-    def __init__(self, path, cfg):
-        Database.__init__(self, path)
+    PATH = Database.PATH_FMT.format('bad-actors.db')
+
+    def __init__(self, cfg):
+        Database.__init__(self, BadActorsDatabase.PATH)
         self.cfg = cfg
 
     def _create_table_data(self):

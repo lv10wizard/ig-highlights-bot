@@ -12,8 +12,10 @@ class InstagramQueueDatabase(Database):
     replied to
     """
 
-    def __init__(self, *args, **kwargs):
-        Database.__init__(self, *args, **kwargs)
+    PATH = Database.PATH_FMT.format('ig-queue.db')
+
+    def __init__(self):
+        Database.__init__(self, InstagramQueueDatabase.PATH)
 
     def __contains__(self, comment):
         cursor = self._db.execute(

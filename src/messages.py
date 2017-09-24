@@ -181,7 +181,7 @@ class Messages(ProcessMixin, StreamMixin):
             BLACKLIST_SUBJECT,
             REMOVE_BLACKLIST_SUBJECT,
         ))
-        messages_db = database.MessagesDatabase(self.cfg.messages_db_path)
+        messages_db = database.MessagesDatabase()
         # XXX: a manual delay is used instead of relying on praw's stream
         # delay so that external shutdown events can be received in a timely
         # fashion.

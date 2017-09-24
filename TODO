@@ -132,7 +132,7 @@ O. split config into sections
     O. read default config & merge with existing (if exists) & write config
         basically, don't squash existing options but do merge in newly defined
         options (and create a default config if it doesn't exist)
-- remove (all?) database paths from config
+O. remove (all?) database paths from config
     why even allow the user to change these?
 - dynamically update config settings
     - config.reload (check mtime vs cached mtime)

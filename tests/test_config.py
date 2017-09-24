@@ -86,45 +86,6 @@ def test_config__str__(tmpdir_factory):
     ('bad_actor_threshold', 3),
 
     ('instagram_cache_expire_time', config.parse_time('7d')),
-
-    ('logging_path', config.resolve_path(
-        os.path.join(constants.DATA_ROOT_DIR, 'logs')
-    )),
-    ('logging_level', 'INFO'),
-
-    ('replies_db_path', config.resolve_path(
-        os.path.join(constants.DATA_ROOT_DIR, 'replies.db')
-    )),
-    ('reddit_rate_limit_db_path', config.resolve_path(
-        os.path.join(constants.DATA_ROOT_DIR, 'reddit-queue.db')
-    )),
-    ('subreddits_db_path', config.resolve_path(
-        os.path.join(constants.DATA_ROOT_DIR, 'subreddits.db')
-    )),
-    ('potential_subreddits_db_path', config.resolve_path(
-        os.path.join(constants.DATA_ROOT_DIR, 'to-add-subreddits.db')
-    )),
-    ('blacklist_db_path', config.resolve_path(
-        os.path.join(constants.DATA_ROOT_DIR, 'blacklist.db')
-    )),
-    ('bad_actors_db_path', config.resolve_path(
-        os.path.join(constants.DATA_ROOT_DIR, 'bad-actors.db')
-    )),
-    ('messages_db_path', config.resolve_path(
-        os.path.join(constants.DATA_ROOT_DIR, 'messages.db')
-    )),
-    ('mentions_db_path', config.resolve_path(
-        os.path.join(constants.DATA_ROOT_DIR, 'mentions.db')
-    )),
-    ('instagram_db_path', config.resolve_path(
-        os.path.join(constants.DATA_ROOT_DIR, 'instagram')
-    )),
-    ('instagram_rate_limit_db_path', config.resolve_path(
-        os.path.join(constants.DATA_ROOT_DIR, 'ig-ratelimit.db')
-    )),
-    ('instagram_queue_db_path', config.resolve_path(
-        os.path.join(constants.DATA_ROOT_DIR, 'ig-queue.db')
-    )),
 ])
 def test_properties(cfg, attr, expected):
     fallback = cfg._Config__fallback

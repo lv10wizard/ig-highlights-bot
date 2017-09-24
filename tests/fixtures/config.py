@@ -26,20 +26,6 @@ instagram_cache_expire_time = 7d
 logging_path = %(data_dir)s/logs
 logging_level = INFO
 
-[DATABASE]
-replies_db_path = %(data_dir)s/replies.db
-reddit_rate_limit_db_path = %(data_dir)s/reddit-queue.db
-subreddits_db_path = %(data_dir)s/subreddits.db
-potential_subreddits_db_path = %(data_dir)s/to-add-subreddits.db
-blacklist_db_path = %(data_dir)s/blacklist.db
-bad_actors_db_path = %(data_dir)s/bad-actors.db
-messages_db_path = %(data_dir)s/messages.db
-mentions_db_path = %(data_dir)s/mentions.db
-instagram_db_path = %(data_dir)s/instagram
-instagram_rate_limit_db_path = %(data_dir)s/ig-ratelimit.db
-instagram_queue_db_path = %(data_dir)s/ig-queue.db
-
-
 '''
 
 @pytest.fixture(scope='session')

@@ -175,9 +175,7 @@ class Reddit(praw.Reddit):
 
     def __init__(self, cfg, rate_limited, rate_limit_time, *args, **kwargs):
         self.__cfg = cfg
-        self.__rate_limit_queue = database.RedditRateLimitQueueDatabase(
-                cfg.reddit_rate_limit_db_path
-        )
+        self.__rate_limit_queue = database.RedditRateLimitQueueDatabase()
         self.__rate_limited = rate_limited
         self.__rate_limit_time = rate_limit_time
 

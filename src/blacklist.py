@@ -14,11 +14,7 @@ class Blacklist(object):
     """
 
     def __init__(self, cfg):
-        self.__database = BlacklistDatabase(
-                path=cfg.blacklist_db_path,
-                cfg=cfg,
-                do_seed=(not os.path.exists(cfg.blacklist_db_path)),
-        )
+        self.__database = BlacklistDatabase(cfg)
         self.__lock = multiprocessing.RLock()
 
     def __str__(self):

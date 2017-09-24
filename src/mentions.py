@@ -26,7 +26,7 @@ class Mentions(ProcessMixin, StreamMixin):
         self._reddit.inbox.mentions
 
     def _run_forever(self):
-        mentions_db = database.MentionsDatabase(self.cfg.mentions_db_path)
+        mentions_db = database.MentionsDatabase()
         delay = 5 * 60
 
         try:

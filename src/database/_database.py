@@ -10,6 +10,7 @@ from six import (
         string_types,
 )
 
+from constants import DATA_ROOT_DIR
 from src import config
 from src.util import logger
 
@@ -71,6 +72,8 @@ class Database(object):
     """
     Data storage handling (replied comments, etc) abstract base class
     """
+
+    PATH_FMT = os.path.join(DATA_ROOT_DIR, 'data', '{0}')
 
     @staticmethod
     def resolve_path(path):

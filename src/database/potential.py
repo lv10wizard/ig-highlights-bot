@@ -3,7 +3,15 @@ from ._database import Database
 
 class PotentialSubredditsDatabase(Database):
     """
+    Database of successful summoned-to subreddits. This is essentially a counter
+    for subreddits which may be added to the bot's default set of crawled
+    subreddits.
     """
+
+    PATH = Database.PATH_FMT.format('to-add-subreddits.db')
+
+    def __init__(self):
+        Database.__init__( self, PotentialSubredditsDatabase.PATH)
 
     def _create_table_data(self):
         return (

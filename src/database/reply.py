@@ -6,6 +6,11 @@ class ReplyDatabase(Database):
     Storage of all replies made by the bot
     """
 
+    PATH = Database.PATH_FMT.format('replies.db')
+
+    def __init__(self):
+        Database.__init__(self, ReplyDatabase.PATH)
+
     @property
     def _create_table_data(self):
         return (

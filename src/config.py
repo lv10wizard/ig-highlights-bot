@@ -47,19 +47,6 @@ SECTION_LOGGING                 = 'LOGGING'
 LOGGING_PATH                    = 'logging_path'
 LOGGING_LEVEL                   = 'logging_level'
 
-SECTION_DATABASE                = 'DATABASE'
-REPLIES_DB_PATH                 = 'replies_db_path'
-REDDIT_RATE_LIMIT_DB_PATH       = 'reddit_rate_limit_db_path'
-SUBREDDITS_DB_PATH              = 'subreddits_db_path'
-POTENTIAL_SUBREDDITS_DB_PATH    = 'potential_subreddits_db_path'
-BLACKLIST_DB_PATH               = 'blacklist_db_path'
-BAD_ACTORS_DB_PATH              = 'bad_actors_db_path'
-MESSAGES_DB_PATH                = 'messages_db_path'
-MENTIONS_DB_PATH                = 'mentions_db_path'
-INSTAGRAM_DB_PATH               = 'instagram_db_path'
-INSTAGRAM_RATE_LIMIT_DB_PATH    = 'instagram_rate_limit_db_path'
-INSTAGRAM_QUEUE_DB_PATH         = 'instagram_queue_db_path'
-
 # ######################################################################
 
 def resolve_path(path):
@@ -135,6 +122,7 @@ class InvalidTime(Exception): pass
 
 class Config(object):
     """
+    Config handling (basically a configparser wrapper)
     """
 
     FILENAME = 'bot.cfg'
@@ -326,105 +314,6 @@ class Config(object):
     @property
     def logging_level(self):
         return self.__get(SECTION_LOGGING, LOGGING_LEVEL)
-
-    # ##################################################################
-    # [DATABASE]
-
-    @property
-    def reddit_rate_limit_db_path(self):
-        return resolve_path(
-                self.__get(SECTION_DATABASE, REDDIT_RATE_LIMIT_DB_PATH)
-        )
-
-    @property
-    def reddit_rate_limit_db_path_raw(self):
-        return self.__get(REDDIT_RATE_LIMIT_DB_PATH)
-
-    @property
-    def replies_db_path(self):
-        return resolve_path(self.__get(SECTION_DATABASE, REPLIES_DB_PATH))
-
-    @property
-    def replies_db_path_raw(self):
-        return self.__get(REPLIES_DB_PATH)
-
-    @property
-    def subreddits_db_path(self):
-        return resolve_path(self.__get(SECTION_DATABASE, SUBREDDITS_DB_PATH))
-
-    @property
-    def subreddits_db_path_raw(self):
-        return self.__get(SUBREDDITS_DB_PATH)
-
-    @property
-    def potential_subreddits_db_path(self):
-        return resolve_path(
-                self.__get(SECTION_DATABASE, POTENTIAL_SUBREDDITS_DB_PATH)
-        )
-
-    @property
-    def potential_subreddits_db_path_raw(self):
-        return self.__get(POTENTIAL_SUBREDDITS_DB_PATH)
-
-    @property
-    def blacklist_db_path(self):
-        return resolve_path(self.__get(SECTION_DATABASE, BLACKLIST_DB_PATH))
-
-    @property
-    def blacklist_db_path_raw(self):
-        return self.__get(BLACKLIST_DB_PATH)
-
-    @property
-    def bad_actors_db_path(self):
-        return resolve_path(self.__get(SECTION_DATABASE, BAD_ACTORS_DB_PATH))
-
-    @property
-    def bad_actors_db_path_raw(self):
-        return self.__get(BAD_ACTORS_DB_PATH)
-
-    @property
-    def messages_db_path(self):
-        return resolve_path(self.__get(SECTION_DATABASE, MESSAGES_DB_PATH))
-
-    @property
-    def messages_db_path_raw(self):
-        return self.__get(MESSAGES_DB_PATH)
-
-    @property
-    def mentions_db_path(self):
-        return resolve_path(self.__get(SECTION_DATABASE, MENTIONS_DB_PATH))
-
-    @property
-    def mentions_db_path_raw(self):
-        return self.__get(MENTIONS_DB_PATH)
-
-    @property
-    def instagram_db_path(self):
-        return resolve_path(self.__get(SECTION_DATABASE, INSTAGRAM_DB_PATH))
-
-    @property
-    def instagram_db_path_raw(self):
-        return self.__get(INSTAGRAM_DB_PATH)
-
-    @property
-    def instagram_rate_limit_db_path(self):
-        return resolve_path(
-                self.__get(SECTION_DATABASE, INSTAGRAM_RATE_LIMIT_DB_PATH)
-        )
-
-    @property
-    def instagram_rate_limit_db_path_raw(self):
-        return self.__get(INSTAGRAM_RATE_LIMIT_DB_PATH)
-
-    @property
-    def instagram_queue_db_path(self):
-        return resolve_path(
-                self.__get(SECTION_DATABASE, INSTAGRAM_QUEUE_DB_PATH)
-        )
-
-    @property
-    def instagram_queue_db_path_raw(self):
-        return self.__get(INSTAGRAM_QUEUE_DB_PATH)
 
 
 __all__ = [

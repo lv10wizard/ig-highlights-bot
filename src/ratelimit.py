@@ -63,10 +63,8 @@ class RateLimitHandler(ProcessMixin, RedditInstanceMixin):
 
         self.__rate_limit_proc = _RateLimit(rate_limited, rate_limit_time)
 
-        self.reply_history = database.ReplyDatabase(cfg.replies_db_path)
-        self.rate_limit_queue = database.RedditRateLimitQueueDatabase(
-                cfg.reddit_rate_limit_db_path
-        )
+        self.reply_history = database.ReplyDatabase()
+        self.rate_limit_queue = database.RedditRateLimitQueueDatabase()
 
     def kill(self, block=False):
         self.__rate_limit_proc.kill(block)

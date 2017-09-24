@@ -1,16 +1,20 @@
 import time
 
 from ._database import Database
+from src.config import parse_time
 from src.util import logger
 
 
 class InstagramRateLimitDatabase(Database):
     """
+    Internal instagram rate-limit data
     """
 
-    def __init__(self, path, max_age):
-        Database.__init__(self, path)
-        self.max_age = max_age
+    PATH = Database.PATH_FMT.format('ig-ratelimit.db')
+
+    def __init__(self, max_age):
+        Database.__init__(self, InstagramRateLimitDatabase.PATH)
+        self.max_age = parse_time(max_age)
 
     def _create_table_data(self):
         return (
