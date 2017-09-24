@@ -531,7 +531,7 @@ class Reddit(praw.Reddit):
                     logger.id(logger.debug, self,
                             '[#{num}] Attempting to queue {color_thing}'
                             ' (rate-limited? {yesno_ratelimit};'
-                            ' time left: {time} = {strftime})'
+                            ' time left: {time} = {strftime})',
                             num=num_attempts,
                             yesno_ratelimit=self.is_rate_limited,
                             time=remaining,

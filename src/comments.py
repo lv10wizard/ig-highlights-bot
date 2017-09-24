@@ -4,7 +4,7 @@ from bs4 import (
         BeautifulSoup,
         FeatureNotFound,
 )
-from six.movies.urllib.parse import urlparse
+from six.moves.urllib.parse import urlparse
 
 from src import reddit
 from src.instagram import Instagram
