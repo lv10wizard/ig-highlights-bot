@@ -185,7 +185,7 @@ class Messages(ProcessMixin, StreamMixin):
         # XXX: a manual delay is used instead of relying on praw's stream
         # delay so that external shutdown events can be received in a timely
         # fashion.
-        delay = 5 * 60 # probably too long
+        delay = 15 # too long?
 
         try:
             while not self._killed.is_set():

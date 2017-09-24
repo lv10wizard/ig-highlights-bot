@@ -27,7 +27,7 @@ class Mentions(ProcessMixin, StreamMixin):
 
     def _run_forever(self):
         mentions_db = database.MentionsDatabase()
-        delay = 5 * 60
+        delay = 15 # too long?
 
         try:
             while not self._killed.is_set():
