@@ -127,12 +127,26 @@ O. logger: prepend msg with exc_info type name, ie:
     > ideally, after any id information
 O. __metaclass__ py2/3 compatibility
     (added six dependency which I think requests already depends on)
+O. split config into sections
+    O. write default config in repo
+    O. read default config & merge with existing (if exists) & write config
+        basically, don't squash existing options but do merge in newly defined
+        options (and create a default config if it doesn't exist)
+- remove (all?) database paths from config
+    why even allow the user to change these?
+- dynamically update config settings
+    - config.reload (check mtime vs cached mtime)
+- write pids to RUNTIME_ROOT_DIR
+    - os.makedirs(RUNTIME_ROOT_DIR)
+- initialize logger from config / args
+    - initialize immediately to streamhandler
+    - once config loaded, initialize with config settings
+- --dump: handle instagram databases
 - change submission_queue from Queue -> database
     in case the program terminates before the queue can be processed
 - catch UniqueConstraintFailed
     - grep '[.]insert('
     - grep '[.]update('
-- split config into sections
 - use logger {yesno} keyword
 - reclassify logger.exceptions
 - graceful exit
