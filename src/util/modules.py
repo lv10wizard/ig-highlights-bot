@@ -68,6 +68,43 @@ def get_all_modules(path):
     _debug('modules:', pformat(modules), sep='\n', end='\n\n')
     return modules
 
+def _submodule_attrs(path, prefix):
+    """
+    Iterates over the submodules in {path}
+
+    Yields the tuple (imported_module, attr, attr_obj)
+        imported_module - the imported module
+        attr - an attribute string in the imported_module
+        attr_obj - the corresponding attribute object
+    """
+    modules = get_all_modules(path)
+    for module in modules:
+        module = str(module)
+        _debug(module)
+        if not module.endswith('__init__.py'):
+            package_prefix = '{0}'.format(prefix)
+            # get the filename
+            module_name = os.path.basename(module).rsplit('.', 1)[0]
+            _debug(
+                    '\timporting',
+                    '{0}.{1}'.format(package_prefix, module_name),
+                    '...',
+            )
+            imported_module = __import__(
+                    '{0}.{1}'.format(package_prefix, module_name),
+                    fromlist=[module],
+            )
+            for attr in dir(imported_module):
+                _debug('\t\t', attr)
+                attr_obj = getattr(imported_module, attr)
+                yield imported_module, attr, attr_obj
+
+def _attr_name(attr, obj):
+    try:
+        return obj.__name__
+    except AttributeError:
+        return attr
+
 def expose_modules(path, prefix, locals, all_array=[]):
     """
     Exposes modules' (.py) __all__ elements by appending them to {all_array}
@@ -79,44 +116,41 @@ def expose_modules(path, prefix, locals, all_array=[]):
 
     Returns {all_array}
     """
-    modules = get_all_modules(path)
-    for module in modules:
-        module = str(module)
-        _debug(module)
-        if not module.endswith('__init__.py'):
-            package_prefix = '{0}'.format(prefix)
-            # get the filename
-            module_name = os.path.basename(module).rsplit('.', 1)[0]
-            all_array.append(module_name)
-            _debug(
-                    '\timporting',
-                    '{0}.{1}'.format(package_prefix, module_name),
-                    '...',
-            )
-            imported_module = __import__(
-                    '{0}.{1}'.format(package_prefix, module_name),
-                    fromlist=[module],
-            )
-
-            # expose module attributes at this level
-            # ie:
-            #   >>> from src import database
-            #   >>> dir(database)
-            #   ['Database', 'FailedInit', ...]
-            for attr in dir(imported_module):
-                _debug('\t\t', attr)
-                if (
-                        hasattr(imported_module, '__all__')
-                        and attr in imported_module.__all__
-                ):
-                    _debug('\t\t\texposing ...')
-                    attr_obj = getattr(imported_module, attr)
-                    try:
-                        attr_name = attr_obj.__name__
-                    except AttributeError:
-                        attr_name = attr
-                    locals[attr_name] = attr_obj
-                    all_array.append(attr_name)
+    for imported_module, attr, attr_obj in _submodule_attrs(path, prefix):
+        # expose module attributes at this level
+        # ie:
+        #   >>> from src import database
+        #   >>> dir(database)
+        #   ['Database', 'FailedInit', ...]
+        if imported_module.__name__ not in all_array:
+            all_array.append(imported_module.__name__)
+        if (
+                hasattr(imported_module, '__all__')
+                and attr in imported_module.__all__
+        ):
+            _debug('\t\t\texposing ...')
+            attr_name = _attr_name(attr, attr_obj)
+            locals[attr_name] = attr_obj
+            all_array.append(attr_name)
 
     return all_array
+
+def register_subclasses(path, prefix, base_class):
+    """
+    Collects subclasses of {base_class} defined in submodules of {path}
+
+    path (str) - the path to where the submodules are stored
+    prefix (str) - the __name__ variable of the caller module
+    base_class (class) - the base class to register subclasses of
+
+    Returns a dictionary {class_name: class} of registered subclasses
+    """
+    subclasses = {}
+    for imported_module, attr, attr_obj in _submodule_attrs(path, prefix):
+        if hasattr(attr_obj, '__bases__') and base_class in attr_obj.__bases__:
+            _debug('\t\t\tregistering subclass ...')
+            attr_name = _attr_name(attr, attr_obj)
+            subclasses[attr_name] = attr_obj
+
+    return subclasses
 

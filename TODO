@@ -141,7 +141,8 @@ O. remove (all?) database paths from config
 - initialize logger from config / args
     - initialize immediately to streamhandler
     - once config loaded, initialize with config settings
-- --dump: handle instagram databases
+O. --dump: handle instagram databases
+- no-color logging setting
 - change submission_queue from Queue -> database
     in case the program terminates before the queue can be processed
 - catch UniqueConstraintFailed

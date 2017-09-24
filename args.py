@@ -1,7 +1,7 @@
 from __future__ import print_function
 import argparse
 import os
-from pprint import pformat
+import re
 
 from constants import (
         __DEBUG__,
@@ -9,6 +9,7 @@ from constants import (
 )
 from src import (
         config,
+        database,
         reddit,
 )
 from src.util import logger
@@ -19,10 +20,10 @@ RM_SUBREDDIT  = 'rm-subreddit'
 ADD_BLACKLIST = 'add-blacklist'
 RM_BLACKLIST  = 'rm-blacklist'
 DUMP          = 'dump'
+IG_DB         = 'ig-db'
 
 def add_subreddit(cfg, *subreddits):
-    from src.database import SubredditsDatabase
-    subreddits = SubredditsDatabase(cfg.subreddits_db_path, do_seed=False)
+    subreddits = database.SubredditsDatabase(do_seed=False)
     for sub in subreddits:
         _, sub_name = reddit.split_prefixed_name(sub)
         # in case the user passed something like '/u/'
@@ -36,8 +37,7 @@ def add_subreddit(cfg, *subreddits):
                 )
 
 def rm_subreddit(cfg, *subreddits):
-    from src.database import SubredditsDatabase
-    subreddits = SubredditsDatabase(cfg.subreddits_db_path, do_seed=False)
+    subreddits = database.SubredditsDatabase(do_seed=False)
     for sub in subreddits:
         _, sub_name = reddit.split_prefixed_name(sub)
         # in case the user passed something like '/u/'
@@ -121,16 +121,35 @@ def do_print_database(path):
 
 def print_database(cfg, *databases):
     for db_name in databases:
+        if db_name == 'InstagramDatabase':
+            logger.info('Please use --{opt} to dump individual instagram'
+                    ' databases',
+                    opt=IG_DB,
+            )
+            continue
+
         try:
-            path = getattr(cfg, '{0}_db_path'.format(db_name))
-        except AttributeError as e:
-            logger.exception('Could not lookup \'{db_name}\':'
-                    ' missing config option',
+            db_class = database.SUBCLASSES[db_name]
+        except KeyError:
+            logger.info('Unrecognized database: \'{db_name}\'',
                     db_name=db_name,
             )
         else:
-            if os.path.exists(path):
-                do_print_database(path)
+            if os.path.exists(db_class.PATH):
+                do_print_database(db_class.PATH)
+
+def print_instagram_database(cfg, *user_databases):
+    resolved_igdb_path = config.resolve_path(database.InstagramDatabase.PATH)
+    for user_db in user_databases:
+        path = os.path.join(resolved_igdb_path, user_db)
+        if os.path.exists(path):
+            do_print_database(path)
+
+        else:
+            path_raw = os.path.join(database.InstagramDatabase.PATH, user_db)
+            logger.info('No instagram data for user: \'{user}\'',
+                    user=re.sub(r'[.]db$', '', user_db),
+            )
 
 def handle(cfg, args):
     def convert(arg_str):
@@ -143,6 +162,7 @@ def handle(cfg, args):
             convert(ADD_BLACKLIST): add_blacklist,
             convert(RM_BLACKLIST): rm_blacklist,
             convert(DUMP): print_database,
+            convert(IG_DB): print_instagram_database,
     }
 
     had_handleable_opt = False
@@ -211,19 +231,27 @@ def parse():
             )
     )
 
-    databases = [
-            # assumption: all database attributes end in '_DB_PATH'
-            attr.split('_DB_PATH')[0].lower() for attr in dir(config)
-            if attr.endswith('_DB_PATH')
-    ]
     parser.add_argument('--{0}'.format(DUMP),
-            metavar='NAME', nargs='+', choices=databases,
+            metavar='NAME', nargs='+', choices=database.SUBCLASSES.keys(),
             help='Dump the specified databases to stdout',
+    )
+
+    resolved_igdb_path = config.resolve_path(database.InstagramDatabase.PATH)
+    try:
+        ig_choices = [
+                name for name in os.listdir(resolved_igdb_path)
+                if name.endswith('.db')
+        ]
+    except OSError:
+        ig_choices = []
+    parser.add_argument('--{0}'.format(IG_DB),
+            metavar='NAME', nargs='+', choices=ig_choices,
+            help='Dump the specified instagram user databases to stdout',
     )
 
     args = vars(parser.parse_args())
     if __DEBUG__:
-        logger.debug('args:\n{args}', args=pformat(args))
+        logger.debug('args:\n{pprint}', pprint=args)
     return args
 
 
