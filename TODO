@@ -150,12 +150,14 @@ O. initialize logger from config / args
 - fix python2 database (+more?) import
     dies on blacklist trying to import reddit
 O. --dump: handle instagram databases
-- README:
-    - include section explaining config time parsing
-    - explain what EMAIL is used for (instagram user-agent string)
-    - change 'ig user\'s' -> 'instagram user\'s'
-    - change praw '> 4.0' -> '>= 4.0'
-    - document all locations that the program stores files
+O. README:
+    O. include section explaining config time parsing
+    O. explain what EMAIL is used for (instagram user-agent string)
+    O. change 'ig user\'s' -> 'instagram user\'s'
+    O. change praw '> 4.0' -> '>= 4.0'
+    O. document all locations that the program stores files
+- --remove-all-files (or similar)
+    delete all stored files (ie, uninstall)
 - change submission_queue from Queue -> database
     in case the program terminates before the queue can be processed
 - catch UniqueConstraintFailed
@@ -166,6 +168,8 @@ O. use logger {yesno} keyword
 - graceful exit
     - logging.flush (or whatever the method is)
     - database.close? .flush?
+- target only python3?
+    there's no real reason to support both
 
 N. testing!
 
