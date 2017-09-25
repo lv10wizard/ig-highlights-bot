@@ -13,6 +13,7 @@ from six import (
         iteritems,
         string_types,
 )
+from six.moves import input
 
 from constants import (
         AUTHOR,
@@ -285,7 +286,7 @@ class Reddit(praw.Reddit):
         """
         did_set = False
         if isinstance(self.config.username, NOTSET_TYPE):
-            self.config.username = raw_input('bot account username: ')
+            self.config.username = input('bot account username: ')
             self.__warn_if_wrong_praw_version()
             self._prepare_prawcore()
             did_set = True
