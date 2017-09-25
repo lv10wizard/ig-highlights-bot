@@ -156,7 +156,7 @@ O. README:
     O. change 'ig user\'s' -> 'instagram user\'s'
     O. change praw '> 4.0' -> '>= 4.0'
     O. document all locations that the program stores files
-- --remove-all-files (or similar)
+O. --remove-all-files (or similar)
     delete all stored files (ie, uninstall)
 - change submission_queue from Queue -> database
     in case the program terminates before the queue can be processed

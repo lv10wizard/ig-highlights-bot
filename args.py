@@ -3,6 +3,8 @@ import argparse
 import os
 import re
 
+from six.moves import input
+
 from constants import (
         __DEBUG__,
         AUTHOR,
@@ -19,6 +21,7 @@ ADD_SUBREDDIT = 'add-subreddit'
 RM_SUBREDDIT  = 'rm-subreddit'
 ADD_BLACKLIST = 'add-blacklist'
 RM_BLACKLIST  = 'rm-blacklist'
+DELETE_DATA   = 'delete-data'
 DUMP          = 'dump'
 IG_DB         = 'ig-db'
 
@@ -61,6 +64,54 @@ def rm_blacklist(cfg, *names):
     blacklist = Blacklist(cfg)
     for name in names:
         blacklist.remove(name)
+
+def delete_data(cfg):
+    import shutil
+    import stat
+
+    # assumption: all data is stored under a single directory
+    base_path = os.path.dirname(database.Database.PATH_FMT)
+    resolved_path = config.resolve_path(base_path)
+
+    confirm = input('Delete all data in \'{0}\'? [Y/n] '.format(base_path))
+    # only accept 'Y' as confirmation
+    if confirm == 'Y':
+        logger.info('Deleting all data ...')
+
+        def onerr(func, path, exc):
+            """
+            https://docs.python.org/3/library/shutil.html#rmtree-example
+            """
+            # qualify the func name so that we get a better sense of which
+            # function was called
+            funcname = []
+            try:
+                funcname.append(func.__module__)
+            except AttributeError:
+                # can this happen?
+                pass
+            funcname.append(func.__name__)
+
+            logger.debug('An error occured calling {func}({path}) !'
+                    ' Attempting to clear readonly bit ...',
+                    func='.'.join(funcname),
+                    path=path,
+                    exc_info=True,
+            )
+
+            try:
+                os.chmod(path, stat.S_IWRITE)
+                func(path)
+            except (IOError, OSError):
+                logger.warn('Could not remove \'{path}\'!',
+                        path=path,
+                        exc_info=True,
+                )
+
+        shutil.rmtree(resolved_path, onerror=onerr)
+
+    else:
+        logger.info('Leaving data as is.')
 
 def do_print_database(path):
     import sqlite3
@@ -155,12 +206,18 @@ def handle(cfg, args):
     def convert(arg_str):
         return arg_str.replace('-', '_')
 
-    ignore_keys = ['config']
+    ignore_keys = [
+            'config',
+            'logging_path',
+            'logging_level',
+            'logging_no_color',
+    ]
     handlers = {
             convert(ADD_SUBREDDIT): add_subreddit,
             convert(RM_SUBREDDIT): rm_subreddit,
             convert(ADD_BLACKLIST): add_blacklist,
             convert(RM_BLACKLIST): rm_blacklist,
+            convert(DELETE_DATA): delete_data,
             convert(DUMP): print_database,
             convert(IG_DB): print_instagram_database,
     }
@@ -248,6 +305,10 @@ def parse():
                 sub=sub_example,
                 note=note,
             )
+    )
+
+    parser.add_argument('--{0}'.format(DELETE_DATA), action='store_true',
+            help='Remove all data saved by the program',
     )
 
     parser.add_argument('--{0}'.format(DUMP),
