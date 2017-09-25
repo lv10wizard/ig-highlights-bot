@@ -2,6 +2,7 @@ import abc
 
 from prawcore.exceptions import (
         RequestException,
+        ResponseException,
         ServerError,
 )
 from praw.models import util as praw_util
@@ -114,7 +115,8 @@ class StreamMixin(RedditInstanceMixin):
             try:
                 for thing in self._stream:
                     yield thing
-            except (RequestException, ServerError) as e:
+            except (RequestException, ResponseException, ServerError) as e:
+                # TODO: check error/status code & raise if fatal (403, etc)
                 logger.id(logger.exception, self,
                         'Failed to fetch stream element!',
                 )
