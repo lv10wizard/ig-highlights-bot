@@ -8,8 +8,7 @@ from src import config
 
 
 @pytest.mark.parametrize('path,expected', [
-    # XXX: this test may break if $HOME is symlinked ...
-    ('~', os.path.expanduser('~')),
+    ('~', os.path.realpath(os.environ['HOME'])),
     ('foobar', os.path.join(getcwd(), 'foobar')),
     ('', ''),
     (None, ''),
@@ -27,7 +26,9 @@ def test_resolve_path(path, expected):
     ('2M', 2 * 30 * 24 * 60 * 60),
     ('322Y', 322 * 365 * 24 * 60 * 60),
     ('10m 10s', 10 * 60 + 10),
+    ('32.2h 69.420m', 32.2 * 60 * 60 + 69.420 * 60),
     ('69m! 420s?', 69 * 60 + 420),
+    ('you are doing that too much. try again in 9 minutes.', 9 * 60),
 ])
 def test_parse_time(time_str, expected):
     assert config.parse_time(time_str) == expected
