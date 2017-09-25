@@ -20,30 +20,46 @@ except (IOError, OSError):
             ' \'{0}\''.format(EMAIL_PATH)
     )
 
-HOME = None
 if sys.platform == 'win32':
     # windows
     # XXX: just let errors terminate the program because fuck windows
     CONFIG_ROOT_DIR = os.environ['APPDATA']
-    HOME = os.environ['USERPROFILE']
-
-elif sys.platform == 'darwin':
-    # https://stackoverflow.com/a/3376074
-    CONFIG_ROOT_DIR = '~/Library/Application Support'
+    DATA_ROOT_DIR = os.environ['APPDATA']
+    RUNTIME_ROOT_DIR = os.environ['TMP']
 
 else:
-    # linux / cygwin / other
     try:
         CONFIG_ROOT_DIR = os.environ['XDG_CONFIG_HOME']
     except KeyError:
-        CONFIG_ROOT_DIR = '~/.config'
+        CONFIG_ROOT_DIR = None
+    if not CONFIG_ROOT_DIR:
+        if sys.platform == 'darwin':
+            # https://stackoverflow.com/a/5084892
+            CONFIG_ROOT_DIR = '~/Library/Preferences'
+        else:
+            CONFIG_ROOT_DIR = '~/.config'
 
-if not HOME:
-    HOME = '~'
+    try:
+        DATA_ROOT_DIR = os.environ['XDG_DATA_HOME']
+    except KeyError:
+        DATA_ROOT_DIR = None
+    if not DATA_ROOT_DIR:
+        if sys.platform == 'darwin':
+            DATA_ROOT_DIR = '~/Library/'
+        else:
+            DATA_ROOT_DIR = '~/.local/share'
+
+    try:
+        RUNTIME_ROOT_DIR = os.environ['XDG_RUNTIME_DIR']
+    except KeyError:
+        RUNTIME_ROOT_DIR = None
+    if not RUNTIME_ROOT_DIR:
+        RUNTIME_ROOT_DIR = '/tmp'
 
 DEFAULT_APP_NAME = 'igHighlightsBot'
 CONFIG_ROOT_DIR = os.path.join(CONFIG_ROOT_DIR, DEFAULT_APP_NAME)
-DATA_ROOT_DIR = os.path.join(HOME, DEFAULT_APP_NAME)
+DATA_ROOT_DIR = os.path.join(DATA_ROOT_DIR, DEFAULT_APP_NAME)
+RUNTIME_ROOT_DIR = os.path.join(RUNTIME_ROOT_DIR, DEFAULT_APP_NAME)
 
 CONFIG_DEFAULTS_PATH = os.path.join(ROOT_DIR, 'bot.cfg')
 BLACKLIST_DEFAULTS_PATH = os.path.join(ROOT_DIR, 'BLACKLIST')

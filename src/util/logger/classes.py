@@ -1,5 +1,4 @@
 from __future__ import print_function
-from errno import EEXIST
 import logging
 import multiprocessing
 import os
@@ -7,6 +6,8 @@ import sys
 import time
 
 from six import MAXSIZE
+
+from src.util import mkdirs
 
 
 __DEBUG__ = False
@@ -109,26 +110,12 @@ class ProcessFileHandler(logging.FileHandler):
     multiprocessing-safe file logging handler
     """
 
-    @staticmethod
-    def mkdirs(path):
-        # https://stackoverflow.com/a/20667049
-        try:
-            os.makedirs(path, exist_ok=True) # python > 3.2
-        except TypeError: # python <= 3.2
-            try:
-                os.makedirs(path)
-            except OSError as e: # python > 2.5
-                if e.errno == EEXIST and os.path.isdir(path):
-                    pass
-                else:
-                    raise
-
     def __init__(self, root_dir, mode='a', encoding=None, delay=False):
         # structure the logging directory by date
         # eg. root/2017/09/24.131142.log
         path = os.path.join(root_dir, time.strftime('%Y'), time.strftime('%m'))
         if not delay:
-            ProcessFileHandler.mkdirs(path)
+            mkdirs(path)
         else:
             # set the path so that the creating the directories is delayed until
             # the first emit call
@@ -139,7 +126,7 @@ class ProcessFileHandler(logging.FileHandler):
 
     def emit(self, *args, **kwargs):
         try:
-            ProcessFileHandler.mkdirs(self.__path)
+            mkdirs(self.__path)
         except AttributeError:
             pass
         else:

@@ -41,7 +41,7 @@ python 3.5+:
 
     - windows: `%APPDATA%/igHighlightsBot/bot.cfg`
 
-    - mac: `~/Library/Application Support/igHighlightsBot/bot.cfg`
+    - mac: `~/Library/Preferences/igHighlightsBot/bot.cfg`
 
 3. Enter your email in '<project root>/EMAIL'
 

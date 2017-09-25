@@ -10,6 +10,7 @@ from six import iteritems
 from six.moves import queue
 
 from constants import SUBREDDITS_DEFAULTS_PATH
+
 from src import (
         blacklist,
         comments,
@@ -29,11 +30,14 @@ from src.database import (
         SubredditsDatabase,
         UniqueConstraintFailed,
 )
-from src.mixins import StreamMixin
+from src.mixins import (
+        RunForeverMixin,
+        StreamMixin,
+)
 from src.util import logger
 
 
-class IgHighlightsBot(StreamMixin):
+class IgHighlightsBot(RunForeverMixin, StreamMixin):
     """
     Instagram Highlights reddit bot class
     """
@@ -623,10 +627,11 @@ class IgHighlightsBot(StreamMixin):
                         self.__current_subreddits = subs_from_db
         return comment_stream
 
-    def run_forever(self):
+    def _run_forever(self):
         """
         Bot comment stream parsing
         """
+
         self.ratelimit_handler.start()
         self.messages.start()
         self.mentions.start()
@@ -664,13 +669,6 @@ class IgHighlightsBot(StreamMixin):
                         color=subs,
                 )
                 raise
-
-        except:
-            logger.id(logger.exception, self, 'An uncaught exception occured!')
-            raise
-
-        finally:
-            logger.id(logger.info, self, 'Exiting ...')
 
 
 __all__ = [

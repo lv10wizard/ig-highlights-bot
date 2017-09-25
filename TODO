@@ -136,10 +136,11 @@ O. remove (all?) database paths from config
     why even allow the user to change these?
 - dynamically update config settings
     - config.reload (check mtime vs cached mtime)
-- write pids to RUNTIME_ROOT_DIR
-    - os.makedirs(RUNTIME_ROOT_DIR)
-    - check if pid file(s?) exist before starting processes
-    - modify readme: 'mac' -> 'osx' & 'Application Support' -> 'Preferences'
+O. write pids to RUNTIME_ROOT_DIR
+    O. os.makedirs(RUNTIME_ROOT_DIR)
+    O. check if pid file(s?) exist before starting processes
+    O. modify readme: 'mac' -> 'osx' & 'Application Support' -> 'Preferences'
+    X. defer reddit login
 O. initialize logger from config / args
     O. initialize immediately to streamhandler
     O. once config loaded, initialize with config settings
