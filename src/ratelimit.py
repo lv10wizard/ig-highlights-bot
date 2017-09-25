@@ -32,7 +32,7 @@ class _RateLimit(ProcessMixin):
             # wait until the rate-limit is done
             delay = self.rate_limit_time.value
             logger.id(logger.debug, self,
-                    'Rate limited! Sleeping {time} ...'
+                    'Rate limited! Sleeping {time} ...',
                     time=delay,
             )
             self._killed.wait(delay)
@@ -177,7 +177,7 @@ class RateLimitHandler(ProcessMixin, RedditInstanceMixin):
                 else:
                     # random thing inserted into queue
                     logger.id(logger.debug, self,
-                            'Unrecognized fullname: \'{fullname}\''
+                            'Unrecognized fullname: \'{fullname}\'',
                             fullname=fullname,
                     )
 
