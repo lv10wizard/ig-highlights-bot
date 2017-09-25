@@ -31,7 +31,7 @@ class Formatter(logging.Formatter):
             + list(range(22, 231+1))
             + list(range(245, 256+1))
     )
-    __LEVEL_COLORS = {
+    _LEVEL_COLORS = {
             logging.DEBUG: (15, 8),
             logging.INFO: (15, None),
             logging.WARNING: (0, 202),
@@ -67,11 +67,11 @@ class Formatter(logging.Formatter):
 
     def format(self, record):
         try:
-            level_colors = Formatter.__LEVEL_COLORS[record.levelno]
+            level_colors = self._LEVEL_COLORS[record.levelno]
         except KeyError:
             pass
         else:
-            record.levelname = Formatter.color_msg(
+            record.levelname = self.color_msg(
                     # pad space to the end so that default level names align
                     '{0:<{1}}'.format(record.levelname, len('CRITICAL')),
                     level_colors[0],
@@ -80,12 +80,12 @@ class Formatter(logging.Formatter):
 
         try:
             if record.process:
-                record.process = Formatter.get_fg_color_msg(record.process)
+                record.process = self.get_fg_color_msg(record.process)
         except AttributeError:
             pass
 
         try:
-            record.ident = Formatter.get_fg_color_msg(record.ident)
+            record.ident = self.get_fg_color_msg(record.ident)
         except AttributeError:
             record.ident = ''
         else:
@@ -111,16 +111,16 @@ class Formatter(logging.Formatter):
         # enforced, so nothing will break if multiple special keywords are
         # specified but the behavior is probably not what you will want
         # (whatever that may be).
-        handle_special_keyword('unpack', Formatter.unpack)
-        handle_special_keyword('pprint', Formatter.pprint)
+        handle_special_keyword('unpack', self.unpack)
+        handle_special_keyword('pprint', self.pprint)
         # XXX: send record.kwargs to strftime so it can try to get the passed-in
         # time instead of using the default current time
-        handle_special_keyword('strftime', Formatter.strftime, **record.kwargs)
-        handle_special_keyword('time', Formatter.readable_time)
-        handle_special_keyword('size', Formatter.readable_size)
-        handle_special_keyword('yesno', Formatter.yesno)
+        handle_special_keyword('strftime', self.strftime, **record.kwargs)
+        handle_special_keyword('time', self.readable_time)
+        handle_special_keyword('size', self.readable_size)
+        handle_special_keyword('yesno', self.yesno)
         # XXX: handle color last because it alters the text
-        handle_special_keyword('color', Formatter.get_fg_color_msg)
+        handle_special_keyword('color', self.get_fg_color_msg)
 
         msg = Formatter.__stringify(record.msg)
         try:
@@ -166,6 +166,8 @@ class Formatter(logging.Formatter):
 
                 return ''
 
+        # clear the args so that the base format() call doesn't complain about
+        # missing arguments
         record.args = tuple() # TODO: pop only used arguments
         formatted_msg = logging.Formatter.format(self, record)
 
@@ -520,8 +522,22 @@ class Formatter(logging.Formatter):
     def strftime(fmt, **kwargs):
         return Formatter.unpack(fmt, Formatter.__strftime, **kwargs)
 
+class NoColorFormatter(Formatter):
+    """
+    Color-less logging formatter
+    """
+
+    @staticmethod
+    def color_msg(msg, *args, **kwargs):
+        return msg
+
+    @staticmethod
+    def get_fg_color_msg(msg, *args, **kwargs):
+        return Formatter.unpack(msg)
+
 
 __all__ = [
         'Formatter',
+        'NoColorFormatter',
 ]
 

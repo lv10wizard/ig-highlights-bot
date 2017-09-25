@@ -46,6 +46,7 @@ INSTAGRAM_CACHE_EXPIRE_TIME     = 'instagram_cache_expire_time'
 SECTION_LOGGING                 = 'LOGGING'
 LOGGING_PATH                    = 'logging_path'
 LOGGING_LEVEL                   = 'logging_level'
+COLORFUL_LOGS                   = 'colorful_logs'
 
 # ######################################################################
 
@@ -313,7 +314,25 @@ class Config(object):
 
     @property
     def logging_level(self):
-        return self.__get(SECTION_LOGGING, LOGGING_LEVEL)
+        level = self.__get(SECTION_LOGGING, LOGGING_LEVEL)
+        if isinstance(level, string_types):
+            # test that the level name exists
+            try:
+                getattr(logger, level)
+            except AttributeError:
+                level = None
+        elif not isinstance(level, integer_types):
+            # not a valid logging level code
+            level = None
+
+        if not level:
+            level = self.__get_fallback(SECTION_LOGGING, LOGGING_LEVEL)
+
+        return level
+
+    @property
+    def colorful_logs(self):
+        return self.__get(SECTION_LOGGING, COLORFUL_LOGS, 'getboolean')
 
 
 __all__ = [

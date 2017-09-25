@@ -138,11 +138,23 @@ O. remove (all?) database paths from config
     - config.reload (check mtime vs cached mtime)
 - write pids to RUNTIME_ROOT_DIR
     - os.makedirs(RUNTIME_ROOT_DIR)
-- initialize logger from config / args
-    - initialize immediately to streamhandler
-    - once config loaded, initialize with config settings
+    - check if pid file(s?) exist before starting processes
+    - modify readme: 'mac' -> 'osx' & 'Application Support' -> 'Preferences'
+O. initialize logger from config / args
+    O. initialize immediately to streamhandler
+    O. once config loaded, initialize with config settings
+    O. no-color logging setting
+    O. check config logging level is valid
+        X. set up level lookup dictionary in logger/methods
+- fix python2 database (+more?) import
+    dies on blacklist trying to import reddit
 O. --dump: handle instagram databases
-- no-color logging setting
+- README:
+    - include section explaining config time parsing
+    - explain what EMAIL is used for (instagram user-agent string)
+    - change 'ig user\'s' -> 'instagram user\'s'
+    - change praw '> 4.0' -> '>= 4.0'
+    - document all locations that the program stores files
 - change submission_queue from Queue -> database
     in case the program terminates before the queue can be processed
 - catch UniqueConstraintFailed

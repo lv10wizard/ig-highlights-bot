@@ -190,6 +190,25 @@ def parse():
     parser.add_argument('-c', '--config', metavar='PATH',
             help='Custom config path; default: {0}'.format(config.Config.PATH),
     )
+
+    parser.add_argument('-P', '--logging-path', metavar='PATH',
+            help='Set the root directory to save logs to (this overrides the'
+            ' config setting)',
+    )
+    parser.add_argument('-L', '--logging-level',
+            choices=[
+                logger.DEBUG, 'DEBUG',
+                logger.INFO, 'INFO',
+                logger.WARNING, 'WARNING',
+                logger.ERROR, 'ERROR',
+                logger.CRITICAL, 'CRITICAL',
+            ],
+            help='Set the logging level (this overrides the config setting)',
+    )
+    parser.add_argument('-N', '--logging-no-color', action='store_true',
+            help='Turn off logging colors (this overrides the config setting)',
+    )
+
     parser.add_argument('--{0}'.format(ADD_SUBREDDIT),
             metavar='SUBREDDIT', nargs='+',
             help='Add subreddit(s) to the comment stream (these are subreddits'

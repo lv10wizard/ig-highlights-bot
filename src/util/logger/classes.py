@@ -1,7 +1,10 @@
 from __future__ import print_function
+from errno import EEXIST
 import logging
 import multiprocessing
+import os
 import sys
+import time
 
 from six import MAXSIZE
 
@@ -105,7 +108,43 @@ class ProcessFileHandler(logging.FileHandler):
     """
     multiprocessing-safe file logging handler
     """
+
+    @staticmethod
+    def mkdirs(path):
+        # https://stackoverflow.com/a/20667049
+        try:
+            os.makedirs(path, exist_ok=True) # python > 3.2
+        except TypeError: # python <= 3.2
+            try:
+                os.makedirs(path)
+            except OSError as e: # python > 2.5
+                if e.errno == EEXIST and os.path.isdir(path):
+                    pass
+                else:
+                    raise
+
+    def __init__(self, root_dir, mode='a', encoding=None, delay=False):
+        # structure the logging directory by date
+        # eg. root/2017/09/24.131142.log
+        path = os.path.join(root_dir, time.strftime('%Y'), time.strftime('%m'))
+        if not delay:
+            ProcessFileHandler.mkdirs(path)
+        else:
+            # set the path so that the creating the directories is delayed until
+            # the first emit call
+            self.__path = path
+        filename = os.path.join(path, time.strftime('%d.%H%M%S.log'))
+
+        logging.FileHandler.__init__(self, filename, mode, encoding, delay)
+
     def emit(self, *args, **kwargs):
+        try:
+            ProcessFileHandler.mkdirs(self.__path)
+        except AttributeError:
+            pass
+        else:
+            del self.__path
+
         with _lock:
             logging.FileHandler.emit(self, *args, **kwargs)
 

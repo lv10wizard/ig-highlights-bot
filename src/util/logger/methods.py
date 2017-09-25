@@ -12,6 +12,12 @@ from src.util.logger.classes import (
 from src.util.logger.formatter import Formatter
 
 
+DEBUG    = logging.DEBUG
+INFO     = logging.INFO
+WARNING  = logging.WARNING
+ERROR    = logging.ERROR
+CRITICAL = logging.CRITICAL
+
 ROOT = '__logger_ROOT__'
 # "root" _Logger instance
 # (not actually the RootLogger instance but a child of it)
@@ -163,12 +169,6 @@ def id(logger_func, __id__=None, msg=None, *args, **kwargs):
 
 # ######################################################################
 
-DEBUG    = logging.DEBUG
-INFO     = logging.INFO
-WARNING  = logging.WARNING
-ERROR    = logging.ERROR
-CRITICAL = logging.CRITICAL
-
 def set_level(level, root=True):
     """
     Sets the level for either the root logger or the calling module's logger
@@ -230,6 +230,12 @@ def clear_handlers(root=True):
 
 
 __all__ = [
+        'DEBUG',
+        'INFO',
+        'WARNING',
+        'ERROR',
+        'CRITICAL',
+
         'debug',
         'info',
         'warn',
@@ -238,11 +244,6 @@ __all__ = [
         'exception',
         'id',
 
-        'DEBUG',
-        'INFO',
-        'WARNING',
-        'ERROR',
-        'CRITICAL',
         'set_level',
         'get_level',
         'is_enabled_for',
@@ -250,5 +251,6 @@ __all__ = [
         'remove_filter',
         'add_handler',
         'remove_handler',
+        'clear_handlers',
 ]
 
