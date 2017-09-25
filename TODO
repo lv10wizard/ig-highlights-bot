@@ -161,7 +161,7 @@ O. --dump: handle instagram databases
 - catch UniqueConstraintFailed
     - grep '[.]insert('
     - grep '[.]update('
-- use logger {yesno} keyword
+O. use logger {yesno} keyword
 - reclassify logger.exceptions
 - graceful exit
     - logging.flush (or whatever the method is)

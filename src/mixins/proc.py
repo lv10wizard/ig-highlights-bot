@@ -169,8 +169,8 @@ class ProcessMixin(RunForeverMixin):
 
         else:
             logger.id(logger.debug, self,
-                    'Failed to set kill flag (is alive? {status})',
-                    status=('yes' if self.is_alive else 'no'),
+                    'Failed to set kill flag (is alive? {yesno_status})',
+                    yesno_status=self.is_alive,
             )
 
     def join(self):

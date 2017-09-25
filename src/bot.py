@@ -308,19 +308,16 @@ class IgHighlightsBot(RunForeverMixin, StreamMixin):
                             servererr = instagram.Instagram.has_server_error()
                             logger.id(logger.debug, self,
                                     'Skipping reply to {color_comment}:'
-                                    '\nis queued? {queued};'
-                                    ' rate-limit? {ratelimit};'
-                                    ' server err? {servererr}'
+                                    '\nis queued? {yesno_queued};'
+                                    ' rate-limit? {yesno_ratelimit};'
+                                    ' server err? {yesno_servererr}'
                                     '\npermalink: {permalink}'
                                     '\nusers #{num_users}: {color}'
                                     '\n#ig_list: {num_list}',
                                     color_comment=reddit.display_id(comment),
-                                    queued=('yes' if comment_queued else 'no'),
-                                    ratelimit=('yes'
-                                        if is_rate_limited
-                                        else 'no'
-                                    ),
-                                    servererr=('yes' if servererr else 'no'),
+                                    yesno_queued=comment_queued,
+                                    yesno_ratelimit=is_rate_limited,
+                                    yesno_servererr=servererr,
                                     permalink=comment.permalink(),
                                     num_users=len(ig_usernames),
                                     color=ig_usernames,
