@@ -52,7 +52,7 @@ requests user-agent field)
 
     - `./main.py --help` for commandline options
 
-##### Default config:
+##### Config:
 
 *See [bot.cfg](bot.cfg) for the default config*
 
