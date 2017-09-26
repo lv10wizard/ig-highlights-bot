@@ -56,8 +56,9 @@ class Mentions(ProcessMixin, StreamMixin):
                     with mentions_db:
                         mentions_db.insert(mention)
 
-                    data = (mention.submission, mention)
-                    self.submission_queue.put(data)
+                    data = (mention, mention.submission)
+                    with self.submission_queue:
+                        self.submission_queue.insert(*data)
 
                 if not self._killed.is_set():
                     logger.id(logger.debug, self,

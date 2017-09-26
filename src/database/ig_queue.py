@@ -19,7 +19,7 @@ class InstagramQueueDatabase(Database):
 
     def __contains__(self, comment):
         cursor = self._db.execute(
-                'SELECT FROM queue WHERE comment_id = ?',
+                'SELECT comment_id FROM queue WHERE comment_id = ?',
                 (comment.id,),
         )
         return bool(cursor.fetchone())

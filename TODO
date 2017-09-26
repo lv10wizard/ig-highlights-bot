@@ -158,7 +158,7 @@ O. README:
     O. document all locations that the program stores files
 O. --remove-all-files (or similar)
     delete all stored files (ie, uninstall)
-- change submission_queue from Queue -> database
+O. change submission_queue from Queue -> database
     in case the program terminates before the queue can be processed
 - catch UniqueConstraintFailed
     - grep '[.]insert('
@@ -168,8 +168,13 @@ O. use logger {yesno} keyword
 - graceful exit
     - logging.flush (or whatever the method is)
     - database.close? .flush?
-- target only python3?
+- refactor queue processing to separate process so that comment streams are
+  never interrupted (also in case comment streams always have new data --
+  ie, no pause in comment streams)
+? target only python3
     there's no real reason to support both
+? refactor queue databases (ig_queue, reddit_ratelimit, submission_queue) to
+  use a base QueueDatabase class?
 
 N. testing!
 

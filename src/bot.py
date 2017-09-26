@@ -27,6 +27,7 @@ from src.database import (
         PotentialSubredditsDatabase,
         RedditRateLimitQueueDatabase,
         ReplyDatabase,
+        SubmissionQueueDatabase,
         SubredditsDatabase,
         UniqueConstraintFailed,
 )
@@ -70,7 +71,7 @@ class IgHighlightsBot(RunForeverMixin, StreamMixin):
         )
         # queue of submissions to be processed (produced through separate
         # processes -- eg. summoned to post through user mention)
-        self.submission_queue = multiprocessing.JoinableQueue()
+        self.submission_queue = SubmissionQueueDatabase()
         self.mentions = mentions.Mentions(
                 cfg, rate_limited, rate_limit_time, self.submission_queue
         )
@@ -467,7 +468,13 @@ class IgHighlightsBot(RunForeverMixin, StreamMixin):
 
         try:
             for i in range(num):
-                submission, mention = self.submission_queue.get_nowait()
+                item = self.submission_queue.get()
+                if not item:
+                    break
+
+                mention_id, submission_id = item
+                mention = self._reddit.comment(mention_id)
+                submission = self._reddit.submission(submission_id)
 
                 logger.id(logger.debug, self,
                         '[{i:>{padding}}/{num}] Processing submission'
@@ -476,7 +483,7 @@ class IgHighlightsBot(RunForeverMixin, StreamMixin):
                         padding=IgHighlightsBot.get_padding(num),
                         num=num,
                         color_submission=submission,
-                        qnum=self.submission_queue.qsize(),
+                        qnum=self.submission_queue.size()-1,
                 )
 
                 reply_attempted = True
@@ -494,6 +501,11 @@ class IgHighlightsBot(RunForeverMixin, StreamMixin):
                     # OR because we want to know if the bot replied at all over
                     # the entire post
                     did_reply = comment_did_reply or did_reply
+
+                # XXX: if the program terminates before the delete is committed,
+                # the next run will retry this submission.
+                with self.submission_queue:
+                    self.submission_queue.delete(mention, submission)
 
                 if not reply_attempted:
                     self._increment_bad_actor(mention, submission.permalink)
@@ -530,8 +542,6 @@ class IgHighlightsBot(RunForeverMixin, StreamMixin):
                         # increment the to-add count for this subreddit
                         with self.potential_subreddits:
                             self.potential_subreddits.insert(submission)
-
-                self.submission_queue.task_done()
 
         except queue.Empty:
             pass
