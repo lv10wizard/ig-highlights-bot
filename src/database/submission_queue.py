@@ -37,7 +37,7 @@ class SubmissionQueueDatabase(Database):
     def _insert(self, comment, submission):
         self._db.execute(
                 'INSERT INTO queue(comment_id, submission_id, timestamp)'
-                ' VALUES(?, ?)',
+                ' VALUES(?, ?, ?)',
                 (comment.id, submission.id, time.time()),
         )
 
