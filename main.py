@@ -106,4 +106,5 @@ if __name__ == '__main__':
 
     finally:
         ig_highlights_bot.graceful_exit()
+        logger.shutdown()
 

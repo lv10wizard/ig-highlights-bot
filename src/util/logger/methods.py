@@ -228,6 +228,9 @@ def clear_handlers(root=True):
     while logger.handlers:
         logger.removeHandler(logger.handlers[-1])
 
+def shutdown():
+    logging.shutdown()
+
 
 __all__ = [
         'DEBUG',
@@ -252,5 +255,6 @@ __all__ = [
         'add_handler',
         'remove_handler',
         'clear_handlers',
+        'shutdown',
 ]
 

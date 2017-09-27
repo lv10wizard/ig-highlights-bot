@@ -85,6 +85,10 @@ class IgHighlightsBot(RunForeverMixin, StreamMixin):
 
     def graceful_exit(self, signum=None, frame=None):
         """
+        SIGINT/SIGTERM handler
+
+        This will perform an orderly shutdown of the bot and its spawned
+        processes.
         """
         # https://stackoverflow.com/a/2549950
         signames = {
@@ -120,8 +124,6 @@ class IgHighlightsBot(RunForeverMixin, StreamMixin):
         self.ratelimit_handler.join()
         self.messages.join()
         self.mentions.join()
-
-        # TODO: logger.flush, databases.flush/close
 
         # XXX: kill the main process last so that daemon processes aren't
         # killed at inconvenient times

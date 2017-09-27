@@ -164,9 +164,9 @@ O. catch UniqueConstraintFailed
     grep -iE '[.]insert\(|[.]update\(' -R *
 O. use logger {yesno} keyword
 O. reclassify logger.exceptions
-- graceful exit
-    - logging.flush (or whatever the method is)
-    - database.close? .flush?
+O. graceful exit
+    O. logging.shutdown
+    X. database.close? .flush?
 - refactor queue processing to separate process so that comment streams are
   never interrupted (also in case comment streams always have new data --
   ie, no pause in comment streams)
