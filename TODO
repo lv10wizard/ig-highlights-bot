@@ -147,7 +147,7 @@ O. initialize logger from config / args
     O. no-color logging setting
     O. check config logging level is valid
         X. set up level lookup dictionary in logger/methods
-- fix python2 database (+more?) import
+O. fix python2 database (+more?) import
     dies on blacklist trying to import reddit
 O. --dump: handle instagram databases
 O. README:

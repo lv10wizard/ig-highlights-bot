@@ -9,7 +9,6 @@ from constants import (
         BLACKLIST_DEFAULTS_PATH,
         PREFIX_USER,
 )
-from src import reddit
 from src.util import logger
 
 
@@ -244,7 +243,7 @@ class BlacklistDatabase(Database):
             logger.id(logger.debug, self,
                     '{user} temp blacklist expired {time} ago:'
                     ' {action} ...',
-                    user=reddit.prefix_user(name),
+                    user=name,
                     time=remaining,
                     action=action,
             )
