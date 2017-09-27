@@ -78,7 +78,9 @@ class Instagram(object):
     ]
     BASE_URL = BASE_URLS[0]
 
+    # https://stackoverflow.com/a/33783840
     MEDIA_ENDPOINT = 'https://www.{0}/{{0}}/media'.format(BASE_URL)
+    META_ENDPOINT = 'https://www.{0}/{{0}}/?__a=1'.format(BASE_URL)
 
     # https://stackoverflow.com/a/17087528
     # "30 symbols ... only letters, numbers, periods, and underscores"
