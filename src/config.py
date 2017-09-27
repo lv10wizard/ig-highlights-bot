@@ -74,9 +74,9 @@ def parse_time(time_str):
             return float(time_str)
 
         except (TypeError, ValueError):
-            match = re.findall(r'(\d+(?:[.]\d+)?)\s*([{0}])'.format(
-            #                    \______________/\_/\_____/
-            #                            |        |    \
+            match = re.findall(r'(\d+(?:[.]\d+)?)\s*([{0}]|$)'.format(
+            #                    \______________/\_/\_______/
+            #                            |        |      \
             #                            |        |  capture time unit
             #                            |      match any number of spaces
             #                            |          (including 0)
@@ -102,7 +102,10 @@ def parse_time(time_str):
                     )
 
                 else:
-                    result += (float(amt) * Config.TO_SECONDS[unit])
+                    multiplier = 1
+                    if unit:
+                        multiplier = Config.TO_SECONDS[unit]
+                    result += (float(amt) * multiplier)
                     seen_units.add(unit)
 
         except KeyError as e:

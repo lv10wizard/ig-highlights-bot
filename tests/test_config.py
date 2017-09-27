@@ -46,12 +46,15 @@ def test_parse_time_complex():
     )
     assert config.parse_time(time_str) == expected
 
+def test_parse_time_no_ending_unit():
+    assert config.parse_time('6h 9m 4') == (6 * 60 * 60 + 9 * 60 + 4)
+
 def test_parse_time_duplicate_unit():
     assert config.parse_time('69h 420h') == 69 * 60 * 60
 
 @pytest.mark.parametrize('time_str', [
     'foobar baz',
-    '10a2.0e5',
+    '10a2.0e5z',
     '69z',
 ])
 def test_parse_time_invalid_time(time_str):
