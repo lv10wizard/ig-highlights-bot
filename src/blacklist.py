@@ -2,7 +2,10 @@ import multiprocessing
 import os
 
 from src import reddit
-from src.database import BlacklistDatabase
+from src.database import (
+        BlacklistDatabase,
+        UniqueConstraintFailed,
+)
 from src.util import logger
 
 
@@ -109,9 +112,16 @@ class Blacklist(object):
                             color_name=name_raw,
                             tmp=('temporarily ' if tmp else ''),
                     )
-                    self.__database.insert(name_raw, name_type, tmp)
-                    # XXX: assumes insert was successful
-                    success = True
+                    try:
+                        self.__database.insert(name_raw, name_type, tmp)
+                    except UniqueConstraintFailed:
+                        logger.id(logger.warn, self,
+                                '{color_name} is already blacklisted!',
+                                color_name=name_raw,
+                                exc_info=True,
+                        )
+                    else:
+                        success = True
 
                 else:
                     logger.id(logger.debug, self,

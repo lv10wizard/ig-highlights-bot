@@ -149,10 +149,12 @@ class RateLimitHandler(ProcessMixin, RedditInstanceMixin):
                                                     thing
                                             )
                                             logger.id(logger.warn, self,
-                                                    'Could not add'
-                                                    ' {color_thing} to reply'
-                                                    ' database!',
-                                                    color_thing=display,
+                                                    'Duplicate instagram user'
+                                                    ' posted in'
+                                                    ' {color_submission}!'
+                                                    ' (users={color_users})',
+                                                    color_submission=display,
+                                                    color_users=ig_users,
                                                     exc_info=True,
                                             )
                                 handled = True

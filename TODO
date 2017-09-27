@@ -160,9 +160,8 @@ O. --remove-all-files (or similar)
     delete all stored files (ie, uninstall)
 O. change submission_queue from Queue -> database
     in case the program terminates before the queue can be processed
-- catch UniqueConstraintFailed
-    - grep '[.]insert('
-    - grep '[.]update('
+O. catch UniqueConstraintFailed
+    grep -iE '[.]insert\(|[.]update\(' -R *
 O. use logger {yesno} keyword
 - reclassify logger.exceptions
 - graceful exit

@@ -200,11 +200,7 @@ class Messages(ProcessMixin, StreamMixin):
                                 ' (\'{subject}\' from {color_from})',
                                 color_message=reddit.display_fullname(message),
                                 subject=message.subject,
-                                color_from=(
-                                    message.author.name
-                                    if bool(message.author)
-                                    else message.subreddit.display_name
-                                ),
+                                color_from=reddit.author(message),
                         )
                         break
 
@@ -219,8 +215,18 @@ class Messages(ProcessMixin, StreamMixin):
                     # this prevents random / spam messages from being processed
                     # every time; however, it also prevents failed messages from
                     # being retried.
-                    with messages_db:
-                        messages_db.insert(message)
+                    try:
+                        with messages_db:
+                            messages_db.insert(message)
+                    except database.UniqueConstraintFailed:
+                        # this means there is a bug in has_seen
+                        logger.id(logger.exception, self,
+                                'Attempted to process duplicate message:'
+                                ' {color_message} from {color_from}!',
+                                color_message=reddit.display_fullname(message),
+                                color_from=reddit.author(message),
+                        )
+                        break
 
                     # ignore comments, though I don't think it is possible that
                     # any message in the messages() inbox can be a comment.

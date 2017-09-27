@@ -32,8 +32,16 @@ def add_subreddit(cfg, *subreddits):
         # in case the user passed something like '/u/'
         if sub_name:
             if sub_name not in subreddits:
-                with subreddits:
-                    subreddits.insert(sub_name)
+                try:
+                    with subreddits:
+                        subreddits.insert(sub_name)
+                except database.UniqueConstraintFailed:
+                    # this means there is a bug in __contains__
+                    logger.warn('Failed to add \'{name}\' (already added)!',
+                            name=reddit.prefix_subreddit(sub_name),
+                            exc_info=True,
+                    )
+
             else:
                 logger.debug('Cannot add \'{sub_name}\': already added!',
                         sub_name=sub_name,

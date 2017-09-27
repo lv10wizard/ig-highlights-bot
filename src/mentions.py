@@ -36,14 +36,10 @@ class Mentions(ProcessMixin, StreamMixin):
                     if mentions_db.has_seen(mention):
                         # assumption: inbox.mentions fetches newest -> oldest
                         logger.id(logger.debug, self,
-                                'I\'ve already processed {color_post} from'
+                                'I\'ve already processed {color_mention} from'
                                 ' {color_from}!',
-                                color_post=reddit.display_fullname(mention),
-                                color_from=(
-                                    mention.author.name
-                                    if bool(mention.author)
-                                    else '[deleted/removed]'
-                                ),
+                                color_mention=reddit.display_fullname(mention),
+                                color_from=reddit.author(mention),
                         )
                         break
 
@@ -53,12 +49,34 @@ class Mentions(ProcessMixin, StreamMixin):
                     elif mention is None:
                         break
 
-                    with mentions_db:
-                        mentions_db.insert(mention)
+                    try:
+                        with mentions_db:
+                            mentions_db.insert(mention)
+                    except database.UniqueConstraintFailed:
+                        # this means there is a bug in has_seen
+                        logger.id(logger.exception, self,
+                                'Attempted to process duplicate submission:'
+                                ' {color_mention} from {color_from}!',
+                                color_mention=reddit.display_fullname(mention),
+                                color_from=reddit.author(mention),
+                        )
+                        break
 
                     data = (mention, mention.submission)
-                    with self.submission_queue:
-                        self.submission_queue.insert(*data)
+                    try:
+                        with self.submission_queue:
+                            self.submission_queue.insert(*data)
+                    except database.UniqueConstraintFailed:
+                        # this shouldn't happen
+                        logger.id(logger.exception, self,
+                                'Failed to queue submission \'{color_post}\''
+                                ' from {color_from}!',
+                                color_post=reddit.display_fullname(
+                                    mention.submission
+                                ),
+                                color_from=reddit.author(mention),
+                        )
+                        # TODO? raise
 
                 if not self._killed.is_set():
                     logger.id(logger.debug, self,

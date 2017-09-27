@@ -171,12 +171,7 @@ class IgHighlightsBot(RunForeverMixin, StreamMixin):
                     '{color_comment} ({color_author}) almost made me reply'
                     ' #{num} times: skipping.',
                     color_comment=reddit.display_id(comment),
-                    color_author=(
-                        comment.author.name.lower()
-                        if comment.author
-                        # can this happen? (no author but has body text)
-                        else '[deleted/removed]'
-                    ),
+                    color_author=reddit.author(comment),
                     num=len(reply_text_list),
             )
             # TODO? temporarily blacklist (O(days)) user? could be trying to
@@ -190,8 +185,22 @@ class IgHighlightsBot(RunForeverMixin, StreamMixin):
         did_insert = False
         for body, ig_users in reply_text_list:
             if reddit.do_reply(comment, body):
-                self.reply_history.insert(comment, ig_users)
-                did_insert = True
+                try:
+                    self.reply_history.insert(comment, ig_users)
+                except UniqueConstraintFailed:
+                    # this indicates that there is a bug in one of the can_reply
+                    # checks or in prune_already_posted_users
+                    logger.id(logger.warn, self,
+                            'Duplicate instagram user posted in'
+                            ' {color_submission}! (users={color_users})',
+                            color_submission=reddit.display_fullname(
+                                comment.submission
+                            ),
+                            color_users=ig_users,
+                            exc_info=True,
+                    )
+                finally:
+                    did_insert = True
         if did_insert:
             self.reply_history.commit()
             # XXX: only one required to succeed for method to be considered
@@ -283,9 +292,28 @@ class IgHighlightsBot(RunForeverMixin, StreamMixin):
                                     color_comment=reddit.display_id(comment),
                             )
 
-                            with self.ig_queue:
-                                self.ig_queue.insert(
-                                        ig_user, comment, ig.last_id,
+                            try:
+                                with self.ig_queue:
+                                    self.ig_queue.insert(
+                                            ig_user, comment, ig.last_id,
+                                    )
+                            except UniqueConstraintFailed:
+                                msg = [
+                                        'Attempted to enqueue instagram user'
+                                        ' \'{color_user}\' again!'
+                                        ' comment={color_comment}'
+                                ]
+                                if ig.last_id:
+                                    msg.append(', last_id={last_id}')
+
+                                logger.id(logger.warn, self,
+                                        ''.join(msg),
+                                        color_user=ig_user,
+                                        color_comment=reddit.display_id(
+                                            comment
+                                        ),
+                                        last_id=ig.last_id,
+                                        exc_info=True,
                                 )
 
                         # the comment's author may be trying to troll the bot
@@ -528,8 +556,18 @@ class IgHighlightsBot(RunForeverMixin, StreamMixin):
 
                         # add the subreddit to the permanent set of comment
                         # stream subreddits
-                        with self.subreddits:
-                            self.subreddits.insert(submission)
+                        try:
+                            with self.subreddits:
+                                self.subreddits.insert(submission)
+                        except UniqueConstraintFailed:
+                            # this shouldn't happen
+                            logger.id(logger.warn, self,
+                                    'Attempted to add duplicate subreddit'
+                                    ' ({color_name})!',
+                                    color_name=reddit.display_id(submission),
+                                    exc_info=True,
+                            )
+
                         with self.potential_subreddits:
                             self.potential_subreddits.delete(submission)
 
@@ -540,8 +578,20 @@ class IgHighlightsBot(RunForeverMixin, StreamMixin):
                                 num=to_add_count+1,
                         )
                         # increment the to-add count for this subreddit
-                        with self.potential_subreddits:
-                            self.potential_subreddits.insert(submission)
+                        try:
+                            with self.potential_subreddits:
+                                self.potential_subreddits.insert(submission)
+                        except UniqueConstraintFailed:
+                            # this shouldn't happen
+                            logger.id(logger.warn, self,
+                                    'Attempted to add {color_subreddit} to'
+                                    ' {color_db} again!',
+                                    color_subreddit=(
+                                        submission.subreddit_name_prefixed
+                                    ),
+                                    color_db=self.potential_subreddits,
+                                    exc_info=True,
+                            )
 
         except queue.Empty:
             pass

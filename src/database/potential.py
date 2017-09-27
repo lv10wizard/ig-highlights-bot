@@ -1,3 +1,5 @@
+from six import integer_types
+
 from ._database import Database
 
 
@@ -23,7 +25,8 @@ class PotentialSubredditsDatabase(Database):
 
     def _insert(self, thing):
         """
-        Increments the to-add count for the given subreddit
+        Inserts a new subreddit or increments the to-add count for the given
+        subreddit
         """
         count = self.count(thing)
         if count < 0:
@@ -34,12 +37,7 @@ class PotentialSubredditsDatabase(Database):
             )
 
         else:
-            self._db.execute(
-                    'UPDATE potential_subreddits'
-                    ' SET count = ?'
-                    ' WHERE subreddit_name = ?',
-                    (thing.subreddit.display_name, count+1),
-            )
+            self.update(thing, count)
 
     def _delete(self, thing):
         """
@@ -48,6 +46,19 @@ class PotentialSubredditsDatabase(Database):
         self._db.execute(
                 'DELETE FROM potential_subreddits WHERE subreddit_name = ?',
                 (thing.subreddit.display_name,),
+        )
+
+    def _update(self, thing, count=None):
+        """
+        Increments the to-add count of the given subreddit
+        """
+        if not isinstance(count, integer_types):
+            count = self.count(thing)
+        self._db.execute(
+                'UPDATE potential_subreddits'
+                ' SET count = ?'
+                ' WHERE subreddit_name = ?',
+                (thing.subreddit.display_name, count+1),
         )
 
     def count(self, thing):

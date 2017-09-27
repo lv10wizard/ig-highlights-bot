@@ -354,7 +354,16 @@ class Instagram(object):
                     self.__status_codes.append(response.status_code)
                     # count the network hit against the ratelimit regardless of
                     # status code
-                    self._rate_limit.insert(response.url)
+                    try:
+                        self._rate_limit.insert(response.url)
+                    except database.UniqueConstraintFailed:
+                        logger.id(logger.exception, self,
+                                'Failed to count rate-limit hit (#{num} used):'
+                                ' {url}',
+                                num=self._rate_limit.num_used(),
+                                url=response.url,
+                        )
+                        # TODO? raise
 
                     if response.status_code == 200:
                         if Instagram.has_server_error():
@@ -466,8 +475,13 @@ class Instagram(object):
                         self.__cache.insert(item)
 
                 except database.UniqueConstraintFailed:
-                    # Note: stop_at_first_duplicate skips pruning
-                    # assumption: media data is fetched newest -> oldest
+                    with self.__cache:
+                        self.__cache.update(item)
+
+                    # Note: stop_at_first_duplicate skips pruning.
+                    # assumption: media data is fetched newest -> oldest,
+                    # meaning we've already seen everything past the first
+                    # duplicate.
                     if stop_at_first_duplicate:
                         logger.id(logger.debug, self,
                                 'Already cached \'{code}\' ({id}). halting ...',

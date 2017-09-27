@@ -70,8 +70,8 @@ class InstagramRateLimitDatabase(Database):
         Returns the number of requests used (ie, stored in the database)
         """
         self.__prune()
-        cursor = self._db.execute('SELECT uid FROM ratelimit')
-        return len(cursor.fetchall())
+        cursor = self._db.execute('SELECT count(*) FROM ratelimit')
+        return cursor.fetchone()[0]
 
     def time_left(self):
         """

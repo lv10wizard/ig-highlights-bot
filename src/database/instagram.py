@@ -47,6 +47,13 @@ class InstagramDatabase(Database):
         else:
             do_delete(items)
 
+    def _update(self, item):
+        code, link, num_likes = self.__unpack(item)
+        self._db.execute(
+                'UPDATE cache SET num_likes = ? WHERE code = ? AND link = ?',
+                (num_likes, code, link),
+        )
+
     def get_all_codes(self):
         """
         Returns the set of all stored media codes
