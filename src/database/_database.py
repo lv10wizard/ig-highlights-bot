@@ -16,10 +16,12 @@ from src.util import logger
 
 
 class BaseDatabaseException(Exception): pass
+class BaseIntegrityException(sqlite3.IntegrityError, BaseDatabaseException):
+    pass
 
-class UniqueConstraintFailed(BaseDatabaseException): pass
-class NotNullConstraintFailed(BaseDatabaseException): pass
-class CheckConstraintFailed(BaseDatabaseException): pass
+class UniqueConstraintFailed(BaseIntegrityException): pass
+class NotNullConstraintFailed(BaseIntegrityException): pass
+class CheckConstraintFailed(BaseIntegrityException): pass
 
 class FailedInit(BaseDatabaseException):
     def __init__(self, error, *args, **kwargs):
