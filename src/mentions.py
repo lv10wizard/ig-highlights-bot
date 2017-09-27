@@ -54,11 +54,12 @@ class Mentions(ProcessMixin, StreamMixin):
                             mentions_db.insert(mention)
                     except database.UniqueConstraintFailed:
                         # this means there is a bug in has_seen
-                        logger.id(logger.exception, self,
+                        logger.id(logger.warn, self,
                                 'Attempted to process duplicate submission:'
                                 ' {color_mention} from {color_from}!',
                                 color_mention=reddit.display_fullname(mention),
                                 color_from=reddit.author(mention),
+                                exc_info=True,
                         )
                         break
 
@@ -68,13 +69,14 @@ class Mentions(ProcessMixin, StreamMixin):
                             self.submission_queue.insert(*data)
                     except database.UniqueConstraintFailed:
                         # this shouldn't happen
-                        logger.id(logger.exception, self,
+                        logger.id(logger.critical, self,
                                 'Failed to queue submission \'{color_post}\''
                                 ' from {color_from}!',
                                 color_post=reddit.display_fullname(
                                     mention.submission
                                 ),
                                 color_from=reddit.author(mention),
+                                exc_info=True,
                         )
                         # TODO? raise
 

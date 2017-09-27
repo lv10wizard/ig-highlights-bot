@@ -39,9 +39,10 @@ class SubredditsDatabase(Database):
 
         except OSError as e:
             # probably a permissions issue; this should be fatal
-            logger.id(logger.exception, self,
+            logger.id(logger.critical, self,
                     'Failed to stat \'{path}\'',
                     path=self.path,
+                    exc_info=True,
             )
             raise
 
@@ -82,10 +83,11 @@ class SubredditsDatabase(Database):
                     subreddits = fd.read().split('\n')
 
             except OSError as e:
-                logger.id(logger.exception, self,
+                logger.id(logger.warn, self,
                         'Failed to seed subreddits database from'
                         ' \'{path}\'!',
                         path=SUBREDDITS_DEFAULTS_PATH,
+                        exc_info=True,
                 )
 
             else:

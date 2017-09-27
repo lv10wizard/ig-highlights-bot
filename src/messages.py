@@ -55,10 +55,11 @@ class Messages(ProcessMixin, StreamMixin):
             except AttributeError as e:
                 # not sure how this would happen..
                 # maybe subreddit went private? can subreddits be deleted?
-                logger.id(logger.exception, self,
+                logger.id(logger.warn, self,
                         'Failed to get message\'s subreddit display_name'
                         ' ({color_message})',
                         color_message=message.id,
+                        exc_info=True,
                 )
             else:
                 prefix = PREFIX_SUBREDDIT
@@ -68,10 +69,11 @@ class Messages(ProcessMixin, StreamMixin):
                 name = message.author.name
             except AttributeError as e:
                 # probably account deletion (possibly suspension)
-                logger.id(logger.exception, self,
+                logger.id(logger.warn, self,
                         'Failed to get message\'s author name'
                         ' ({color_message})',
                         color_message=message.id,
+                        exc_info=True,
                 )
             else:
                 prefix = PREFIX_USER
@@ -220,11 +222,12 @@ class Messages(ProcessMixin, StreamMixin):
                             messages_db.insert(message)
                     except database.UniqueConstraintFailed:
                         # this means there is a bug in has_seen
-                        logger.id(logger.exception, self,
+                        logger.id(logger.warn, self,
                                 'Attempted to process duplicate message:'
                                 ' {color_message} from {color_from}!',
                                 color_message=reddit.display_fullname(message),
                                 color_from=reddit.author(message),
+                                exc_info=True,
                         )
                         break
 

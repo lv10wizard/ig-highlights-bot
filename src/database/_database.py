@@ -115,8 +115,9 @@ class Database(object):
         if exc_type is None and exc_value is None and traceback is None:
             self._db.commit()
         else:
-            logger.id(logger.exception, self,
+            logger.id(logger.warn, self,
                     'An error occurred! Rolling back changes ...',
+                    exc_info=True,
             )
             self._db.rollback()
             # TODO? suppress error ?
@@ -233,12 +234,13 @@ class Database(object):
         except Exception as e:
             # probably UNIQUE or CHECK constraint failed
             # or could be something more nefarious...
-            logger.id(logger.exception, self,
+            logger.id(logger.warn, self,
                     'INSERT Failed!'
                     '\n\targs={args}'
                     '\n\tkwargs={kwargs}',
                     args=args,
                     kwargs=kwargs,
+                    exc_info=True,
             )
 
     def delete(self, *args, **kwargs):
@@ -252,12 +254,13 @@ class Database(object):
             Database.reraise_integrity_error(e)
 
         except Exception as e:
-            logger.id(logger.exception, self,
+            logger.id(logger.warn, self,
                     'DELETE Failed!'
                     '\n\targs={args}'
                     '\n\tkwargs={kwargs}',
                     args=args,
                     kwargs=kwargs,
+                    exc_info=True,
             )
 
     def update(self, *args, **kwargs):
@@ -271,12 +274,13 @@ class Database(object):
             Database.reraise_integrity_error(e)
 
         except Exception as e:
-            logger.id(logger.exception, self,
+            logger.id(logger.warn, self,
                     'UPDATE Failed!'
                     '\n\targs={args}'
                     '\n\tkwargs={kwargs}',
                     args=args,
                     kwargs=kwargs,
+                    exc_info=True,
             )
 
     def _initialize_tables(self, db):

@@ -91,9 +91,10 @@ class RateLimitHandler(ProcessMixin, RedditInstanceMixin):
                     try:
                         thing_name = self._reddit._kinds[type_prefix]
                     except KeyError:
-                        logger.id(logger.exception, self,
+                        logger.id(logger.warn, self,
                                 'Unrecognized thing type: \'{type}\'',
                                 type=type_prefix,
+                                exc_info=True,
                         )
 
                     else:

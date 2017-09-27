@@ -71,7 +71,7 @@ class StreamMixin(RedditInstanceMixin):
             raise NotImplementedError('_loop_condition')
 
     def __sleep(self, delay):
-        logger.id(logger.debug, self,
+        logger.id(logger.info, self,
                 'Waiting {time} ...',
                 time=delay,
         )
@@ -117,8 +117,9 @@ class StreamMixin(RedditInstanceMixin):
                     yield thing
             except (RequestException, ResponseException, ServerError) as e:
                 # TODO: check error/status code & raise if fatal (403, etc)
-                logger.id(logger.exception, self,
+                logger.id(logger.info, self,
                         'Failed to fetch stream element!',
+                        exc_info=True,
                 )
                 self.__sleep(self.__delay)
             else:

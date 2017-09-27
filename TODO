@@ -163,7 +163,7 @@ O. change submission_queue from Queue -> database
 O. catch UniqueConstraintFailed
     grep -iE '[.]insert\(|[.]update\(' -R *
 O. use logger {yesno} keyword
-- reclassify logger.exceptions
+O. reclassify logger.exceptions
 - graceful exit
     - logging.flush (or whatever the method is)
     - database.close? .flush?

@@ -77,9 +77,10 @@ class BlacklistDatabase(Database):
                     subreddits = fd.read().split('\n')
 
             except OSError as e:
-                logger.id(logger.exception, self,
+                logger.id(logger.warn, self,
                         'Failed to seed blacklist database from \'{path}\'!',
                         path=BLACKLIST_DEFAULTS_PATH,
+                        exc_info=True,
                 )
 
             else:

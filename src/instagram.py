@@ -238,10 +238,11 @@ class Instagram(object):
                     os.remove(self.__db_path)
 
                 except OSError as e:
-                    logger.id(logger.exception, self,
+                    logger.id(logger.warn, self,
                             'Could not remove empty database file'
                             ' \'{path}\'',
                             path=self.__db_path,
+                            exc_info=True,
                     )
 
         return data
@@ -272,11 +273,12 @@ class Instagram(object):
                 cache_mtime = 0
 
             else:
-                logger.id(logger.exception, self,
+                logger.id(logger.critical, self,
                         'I cannot determine if \'{user}\' media cache is'
                         ' expired! (Could not stat \'{path}\')',
                         user=user,
                         path=self.__db_path,
+                        exc_info=True,
                 )
                 raise
 
@@ -357,11 +359,12 @@ class Instagram(object):
                     try:
                         self._rate_limit.insert(response.url)
                     except database.UniqueConstraintFailed:
-                        logger.id(logger.exception, self,
+                        logger.id(logger.critical, self,
                                 'Failed to count rate-limit hit (#{num} used):'
                                 ' {url}',
                                 num=self._rate_limit.num_used(),
                                 url=response.url,
+                                exc_info=True,
                         )
                         # TODO? raise
 
@@ -418,22 +421,29 @@ class Instagram(object):
             except KeyError as e:
                 # json structure changed
                 fatal_msg.append('(keys={color})')
-                logger.id(logger.exception, self,
+                logger.id(logger.critical, self,
                         ' '.join(fatal_msg),
                         color=data.keys(),
+                        exc_info=True,
                 )
                 raise
 
             except TypeError as e:
                 # probably tried to index None (data == None)
                 # I'm not sure if this can happen
-                logger.id(logger.exception, self, ' '.join(fatal_msg))
+                logger.id(logger.critical, self,
+                        ' '.join(fatal_msg),
+                        exc_info=True,
+                )
                 raise
 
             except ValueError as e:
                 # response not json (bad endpoint?)
                 fatal_msg.append('(bad endpoint?)')
-                logger.id(logger.exception, self, ' '.join(fatal_msg))
+                logger.id(logger.critical, self,
+                        ' '.join(fatal_msg),
+                        exc_info=True,
+                )
                 raise
 
     def __parse_data(self, data, stop_at_first_duplicate=False):
@@ -532,9 +542,10 @@ class Instagram(object):
                     os.remove(self.__db_path)
 
                 except OSError as e:
-                    logger.id(logger.exception, self,
+                    logger.id(logger.warn, self,
                             'Could not remove \'{path}\'!',
                             path=self.__db_path,
+                            exc_info=True,
                     )
 
         return last_id

@@ -87,20 +87,22 @@ class Requestor(object):
 
                 except requests.ConnectionError as e:
                     delay = self.__choose_delay()
-                    logger.id(logger.exception, self,
+                    logger.id(logger.debug, self,
                             '{method} {url}: waiting {time} ...',
                             method=method.upper(),
                             url=url,
                             time=delay,
+                            exc_info=True,
                     )
                     # assumption: all ConnectionErrors indicate internet outage
                     time.sleep(delay)
 
                 except (requests.Timeout, requests.TooManyRedirects) as e:
-                    logger.id(logger.exception, self,
+                    logger.id(logger.debug, self,
                             '{method} {url}',
                             method=method.upper(),
                             url=url,
+                            exc_info=True,
                     )
                     # TODO? worth retrying ?
                     break

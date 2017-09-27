@@ -563,10 +563,11 @@ class Reddit(praw.Reddit):
                     thing.reply(body)
 
                 except (AttributeError, TypeError) as e:
-                    logger.id(logger.exception, self,
+                    logger.id(logger.warn, self,
                             'Could not reply to {color_thing}:'
                             ' no \'reply\' method!',
                             color_thing=display_fullname(thing),
+                            exc_info=True,
                     )
 
                 except Forbidden as e:
@@ -575,9 +576,10 @@ class Reddit(praw.Reddit):
                     # - probably means bot was banned from subreddit
                     #   or blocked by user
                     # (could also mean auth failed, maybe something else?)
-                    logger.id(logger.exception, self,
+                    logger.id(logger.warn, self,
                             'Failed to reply to {color_thing}!',
                             color_thing=display_fullname(thing),
+                            exc_info=True,
                     )
                     raise
 
