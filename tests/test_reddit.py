@@ -95,6 +95,12 @@ def test_display_fullname_submission(submission):
 def test_display_fullname_subreddit(subreddit):
     assert reddit.display_fullname(subreddit).startswith('t5_3odt0')
 
+# def test_author_comment(comment):
+#     assert reddit.author(comment) == 'lv10wizard'
+
+# def test_author_submission(submission):
+#     assert reddit.author(submission) == 'lv10wizard'
+
 # TODO? test reddit.Reddit object; I think would require refactor so that
 # intermediate layer returns before calling underlying praw methods.
 

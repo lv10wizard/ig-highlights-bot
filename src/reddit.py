@@ -124,6 +124,12 @@ def display_fullname(thing):
         return '{0} ({1})'.format(thing.fullname, thing_type)
     return thing
 
+def author(thing):
+    author = '[deleted/removed]'
+    if hasattr(thing, 'author') and thing.author:
+        author = thing.author.name
+    return author
+
 def split_fullname(fullname):
     """
     Returns [type_str, id] from a {fullname} (eg. 't3_6zztml')
