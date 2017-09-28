@@ -36,22 +36,16 @@ class InstagramRateLimitDatabase(Database):
             now - max_age   > timestamp
         """
         expired = time.time() - self.max_age
-
         cursor = self._db.execute(
-                'SELECT uid FROM ratelimit WHERE timestamp < ?',
+                'DELETE FROM ratelimit WHERE timestamp < ?',
                 (expired,),
         )
-        to_prune = [(row['uid'],) for row in cursor]
-        if to_prune:
+        if cursor.rowcount > 0:
             logger.id(logger.debug, self,
-                    'Pruning #{num} entries ...',
+                    'Pruned #{num} entries ...',
                     num=len(to_prune),
             )
-            with self._db:
-                self._db.executemany(
-                        'DELETE FROM ratelimit WHERE uid = ?',
-                        to_prune,
-                )
+            self._db.commit()
 
     def _insert(self, url):
         self.__prune()
