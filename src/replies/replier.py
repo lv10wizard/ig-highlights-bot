@@ -3,7 +3,6 @@ from .formatter import Formatter
 from constants import PREFIX_USER
 from src import reddit
 from src.database import (
-        BadActorsDatabase,
         InstagramQueueDatabase,
         PotentialSubredditsDatabase,
         ReplyDatabase,
@@ -35,54 +34,11 @@ class Replier(ProcessMixin, RedditInstanceMixin):
         self.formatter = Formatter(self._reddit.username_raw)
 
         self.blacklist = blacklist
-        self.bad_actors = BadActorsDatabase()
         self.subreddits = SubredditsDatabase()
         self.potential_subreddits = PotentialSubredditsDatabase()
         self.reply_history = ReplyDatabase()
         self.reply_queue = ReplyQueueDatabase()
         self.ig_queue = InstagramQueueDatabase()
-
-    def _increment_bad_actor(self, thing, data):
-        """
-        Increments the thing.author's bad actor count.
-
-        This should be called when bad behavior is detected.
-        """
-        if hasattr(thing, 'author') and bool(thing.author):
-            logger.id(logger.debug, self,
-                    'Incrementing {color_author}\'s bad actor count ...',
-                    color_author=thing.author.name,
-            )
-
-            try:
-                with self.bad_actors:
-                    self.bad_actors.insert(thing, data)
-
-            except UniqueConstraintFailed:
-                logger.id(logger.warn, self,
-                        '{color_author} already flagged as a bad actor for'
-                        ' {color_thing}!',
-                        color_author=thing.author.name,
-                        color_thing=reddit.display_fullname(thing),
-                        exc_info=True,
-                )
-
-            else:
-                count = self.bad_actors.count(thing)
-                threshold = self.cfg.bad_actor_threshold
-                if count > threshold:
-                    logger.id(logger.debug, self,
-                            '{color_author} over bad actor threshold!'
-                            ' ({count} > {threshold})',
-                            color_author=thing.author.name,
-                            count=count,
-                            threshold=threshold,
-                    )
-                    self.blacklist.add(thing.author.name, PREFIX_USER, True)
-                    # TODO? delete (deactivate) badactor count for user
-                    # > this should already be implicitly handled but it does
-                    #   mean that any further bad behavior will attempt to
-                    #   temporarily blacklist the user again.
 
     def _enqueue_user(self, ig, comment):
         """
