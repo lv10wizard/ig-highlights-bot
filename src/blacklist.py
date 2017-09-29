@@ -280,6 +280,15 @@ class Blacklist(object):
         Increments the thing.author's bad actor count.
         """
         if hasattr(thing, 'author') and bool(thing.author):
+            if thing in self.__badactors:
+                logger.id(logger.debug, self,
+                        '{color_author} already flagged as a bad actor for'
+                        ' {color_thing}',
+                        color_author=thing.author.name,
+                        color_thing=reddit.display_fullname(thing),
+                )
+                return
+
             logger.id(logger.debug, self,
                     'Incrementing {color_author}\'s bad actor count ...',
                     color_author=thing.author.name,

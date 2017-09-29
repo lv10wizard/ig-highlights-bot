@@ -1,4 +1,7 @@
-from ._database import Database
+from ._database import (
+        Database,
+        UniqueConstraintFailed,
+)
 
 
 class BadActorsDatabase(Database):
@@ -12,6 +15,15 @@ class BadActorsDatabase(Database):
     def __init__(self, cfg):
         Database.__init__(self, BadActorsDatabase.PATH)
         self.cfg = cfg
+
+    def __contains__(self, thing):
+        """
+        Returns whether the thing has ever been flagged as a bad actor
+        """
+        query = 'SELECT * FROM {0} WHERE thing_fullname = ?'
+        active = self._db.execute(query.format('active'), (thing.fullname,))
+        inactive = self._db.execute(query.format('inactive'), (thing.fullname,))
+        return bool(active.fetchone() or inactive.fetchone())
 
     def _create_table_data(self):
         columns = [
@@ -83,12 +95,23 @@ class BadActorsDatabase(Database):
                         ' AND data = ?',
                         row,
                 )
-                self._db.execute(
-                        'INSERT INTO inactive'
-                        '(thing_fullname, created_utc, author_name, data)'
-                        ' VALUES(?, ?, ?, ?)',
-                        row,
-                )
+                try:
+                    self._db.execute(
+                            'INSERT INTO inactive'
+                            '(thing_fullname, created_utc, author_name, data)'
+                            ' VALUES(?, ?, ?, ?)',
+                            row,
+                    )
+                except UniqueConstraintFailed:
+                    # duplicate bad actor record entered
+                    logger.id(logger.warn, self,
+                            'Failed to move duplicate {color_thing}'
+                            ' (by {color_author}) to inactive table!',
+                            color_thing=row['thing_fullname'],
+                            color_author=row['author_name'],
+                            exc_info=True,
+                    )
+
                 pruned.append(row)
 
             if pruned:
