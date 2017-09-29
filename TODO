@@ -190,15 +190,15 @@ O. refactor queue processing to separate process so that comment streams are
                 (possible false positive: comment contains non-hyperlinked
                  links -- eg. 'instagram: @foo.bar')
         ? send debug pms?
-- catch "sqlite3.OperationalError: database is locked"
+O. catch "sqlite3.OperationalError: database is locked"
     this occurs when 2+ procs attempt to execute on the same database at the
     same time (thrown on timeout I think)
-    - reraise as DatabaseIsLocked or something
-    - double check any database that auto-updates (ratelimit, subreddits, more?)
-      that they are catching
-        - IntegrityError
-        - OperationalError (with _db: ...)
-            - catch on _database level (loop until successful I guess)
+    X. reraise as DatabaseIsLocked or something
+        >> just auto-retry until it gets the lock
+    O. double check any database that auto-updates is catching:
+        O. IntegrityError
+        O. OperationalError (with _db: ...)
+            O. catch on _database level (loop until successful I guess)
 - maximum depth of reply-able comment
     ie, only reply to comments where c.depth <= max_depth. typically
     very deep comments are only seen by the author & the person they were

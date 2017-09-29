@@ -30,8 +30,29 @@ class FailedInit(BaseDatabaseException):
 
 class _SqliteConnectionWrapper(object):
     """
-    SQLite Connection wrapper (for logging)
+    SQLite Connection wrapper (mainly for logging execute calls)
     """
+
+    _LOCKED_RE = re.compile(r'database is locked', flags=re.IGNORECASE)
+
+    INTEGRITY_RE_FMT = r'^{0} constraint failed:'
+    _UNIQUE_RE = re.compile(INTEGRITY_RE_FMT.format('UNIQUE'))
+    _NOTNULL_RE = re.compile(INTEGRITY_RE_FMT.format('NOT NULL'))
+    _CHECK_RE = re.compile(INTEGRITY_RE_FMT.format('CHECK'))
+
+    @staticmethod
+    def reraise_integrity_error(err):
+        if _SqliteConnectionWrapper._UNIQUE_RE.search(err.message):
+            raise UniqueConstraintFailed(err.message)
+
+        elif _SqliteConnectionWrapper._NOTNULL_RE.search(err.message):
+            raise NotNullConstraintFailed(err.message)
+
+        elif _SqliteConnectionWrapper._CHECK_RE.search(err.message):
+            raise CheckConstraintFailed(err.message)
+
+        # other (eg. 'datatype mismatch')
+        raise
 
     def __init__(self, connection, id):
         self.connection = connection
@@ -49,25 +70,42 @@ class _SqliteConnectionWrapper(object):
             msg.append('args: {args}')
         if kwargs:
             msg.append('kwargs: {kwargs}')
-        return msg
+        return '\n\t'.join(msg)
+
+    def __do_execute(self, func, sql, *args, **kwargs):
+        cursor = None
+        while not cursor:
+            logger.id(logger.debug, self,
+                    self.__construct_msg(*args, **kwargs),
+                    sql=sql,
+                    args=args,
+                    kwargs=kwargs,
+            )
+            try:
+                cursor = func(*args, **kwargs)
+
+            except sqlite3.OperationalError as e:
+                if _SqliteConnectionWrapper._LOCKED_RE.search(e.message):
+                    # a process is taking a long time with its transaction.
+                    # this will be spammy if a process holds the lock
+                    # indefinitely.
+                    logger.id(logger.debug, self,
+                            'Database is locked! retrying ...',
+                    )
+
+                else:
+                    raise
+
+            except sqlite3.IntegrityError as e:
+                _SqliteConnectionWrapper.reraise_integrity_error(e)
 
     def execute(self, sql, *args, **kwargs):
-        logger.id(logger.debug, self,
-                '\n\t'.join(self.__construct_msg(*args, **kwargs)),
-                sql=sql,
-                args=args,
-                kwargs=kwargs,
-        )
-        return self.connection.execute(sql, *args, **kwargs)
+        return self.__do_execute(self.connection.execute, sql, *args, **kwargs)
 
     def executemany(self, sql, *args, **kwargs):
-        logger.id(logger.debug, self,
-                '\n\t'.join(self.__construct_msg(*args, **kwargs)),
-                sql=sql,
-                args=args,
-                kwargs=kwargs,
+        return self.__do_execute(
+                self.connection.executemany, sql, *args, **kwargs
         )
-        return self.connection.executemany(sql, *args, **kwargs)
 
 @add_metaclass(abc.ABCMeta)
 class Database(object):
@@ -82,21 +120,6 @@ class Database(object):
         if path == ':memory:':
             return path
         return config.resolve_path(path)
-
-    @staticmethod
-    def reraise_integrity_error(err):
-        RE_FMT = r'^{0} constraint failed:'
-        if re.search(RE_FMT.format('UNIQUE'), err.message):
-            raise UniqueConstraintFailed(err.message)
-
-        elif re.search(RE_FMT.format('NOT NULL'), err.message):
-            raise NotNullConstraintFailed(err.message)
-
-        elif re.search(RE_FMT.format('CHECK'), err.message):
-            raise CheckConstraintFailed(err.message)
-
-        # passed a random error ...?
-        raise
 
     def __init__(self, path):
         self.path = path
@@ -221,67 +244,46 @@ class Database(object):
     def rollback(self):
         self._db.rollback()
 
-    def insert(self, *args, **kwargs):
+    def __wrapper(self, func, *args, **kwargs):
         """
-        Wrapper to abstract _insert method
+        Wraps the callback func in a try/except block
         """
         try:
-            self._insert(*args, **kwargs)
+            func(*args, **kwargs)
 
-        except sqlite3.IntegrityError as e:
-            Database.reraise_integrity_error(e)
+        except Database.BaseDatabaseException:
+            # just re-raise any custom database exceptions thrown
+            raise
 
-        except Exception as e:
-            # probably UNIQUE or CHECK constraint failed
-            # or could be something more nefarious...
+        except Exception:
+            # catch any other errors so the program doesn't terminate
             logger.id(logger.warn, self,
-                    'INSERT Failed!'
+                    '{ME} Failed!'
                     '\n\targs={args}'
                     '\n\tkwargs={kwargs}',
+                    ME=func.__name__.upper(),
                     args=args,
                     kwargs=kwargs,
                     exc_info=True,
             )
+
+    def insert(self, *args, **kwargs):
+        """
+        Wrapper to abstract _insert method
+        """
+        self.__wrapper(self._insert, *args, **kwargs)
 
     def delete(self, *args, **kwargs):
         """
         Wrapper to overrideable _delete method
         """
-        try:
-            self._delete(*args, **kwargs)
-
-        except sqlite3.IntegrityError as e:
-            Database.reraise_integrity_error(e)
-
-        except Exception as e:
-            logger.id(logger.warn, self,
-                    'DELETE Failed!'
-                    '\n\targs={args}'
-                    '\n\tkwargs={kwargs}',
-                    args=args,
-                    kwargs=kwargs,
-                    exc_info=True,
-            )
+        self.__wrapper(self._delete, *args, **kwargs)
 
     def update(self, *args, **kwargs):
         """
         Wrapper to overrideable _update method
         """
-        try:
-            self._update(*args, **kwargs)
-
-        except sqlite3.IntegrityError as e:
-            Database.reraise_integrity_error(e)
-
-        except Exception as e:
-            logger.id(logger.warn, self,
-                    'UPDATE Failed!'
-                    '\n\targs={args}'
-                    '\n\tkwargs={kwargs}',
-                    args=args,
-                    kwargs=kwargs,
-                    exc_info=True,
-            )
+        self.__wrapper(self._update, *args, **kwargs)
 
     def _initialize_tables(self, db):
         """
