@@ -2,6 +2,7 @@ from src import (
         config,
         database,
         reddit,
+        replies,
 )
 from src.mixins import (
         ProcessMixin,
@@ -15,15 +16,50 @@ class Mentions(ProcessMixin, StreamMixin):
     Username mentions (in comments) parser
     """
 
-    def __init__(self, cfg, rate_limited, rate_limit_time, submission_queue):
+    def __init__(self, cfg, rate_limited, rate_limit_time, blacklist):
         ProcessMixin.__init__(self)
         StreamMixin.__init__(self, cfg, rate_limited, rate_limit_time)
 
-        self.submission_queue = submission_queue
+        self.blacklist = blacklist
+        self.reply_history = database.ReplyDatabase()
+        self.reply_queue = database.ReplyQueueDatabase()
+        self.filter = replies.Filter(cfg, self._reddit.username_raw)
 
     @property
     def _stream_method(self):
         self._reddit.inbox.mentions
+
+    def _process_mention(self, mention):
+        """
+        Processes the submission the bot was summoned to by the given comment
+        """
+        submission = mention.submission
+        if not submission:
+            # this shouldn't happen
+            logger.id(logger.debug, self,
+                    '{color_mention} has no submission ?!',
+                    color_mention=reddit.display_fullname(mention),
+            )
+            return
+
+        had_replyable_comment = False
+        for comment in submission.comments.list():
+            ig_usernames = self.filter.replyable_usernames(comment)
+            if ig_usernames:
+                had_replyable_comment = True
+                self.filter.enqueue(comment)
+
+        if not had_replyable_comment:
+            # summoned to a thread where the bot attempted no replies
+            replied = self.reply_history.replied_comments_for_submission(
+                    submission
+            )
+            if not replied:
+                # the bot was summoned to a post with no replyable comments.
+                # 1) comment contains 1+ non hyperlinked urls to instagram users
+                # 2) comment with links was edited/deleted/removed
+                # 3) mention author is trolling the bot
+                self.blacklist.increment_bad_actor(mention)
 
     def _run_forever(self):
         mentions_db = database.MentionsDatabase()
@@ -63,22 +99,7 @@ class Mentions(ProcessMixin, StreamMixin):
                         )
                         break
 
-                    data = (mention, mention.submission)
-                    try:
-                        with self.submission_queue:
-                            self.submission_queue.insert(*data)
-                    except database.UniqueConstraintFailed:
-                        # this shouldn't happen
-                        logger.id(logger.critical, self,
-                                'Failed to queue submission \'{color_post}\''
-                                ' from {color_from}!',
-                                color_post=reddit.display_fullname(
-                                    mention.submission
-                                ),
-                                color_from=reddit.author(mention),
-                                exc_info=True,
-                        )
-                        # TODO? raise
+                    self._process_mention(mention)
 
                 if not self._killed.is_set():
                     logger.id(logger.debug, self,

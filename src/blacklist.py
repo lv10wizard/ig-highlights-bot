@@ -1,8 +1,11 @@
 import multiprocessing
 import os
 
+from six import string_types
+
 from src import reddit
 from src.database import (
+        BadActorsDatabase,
         BlacklistDatabase,
         UniqueConstraintFailed,
 )
@@ -17,6 +20,8 @@ class Blacklist(object):
     """
 
     def __init__(self, cfg):
+        self.cfg = cfg
+        self.__badactors = BadActorsDatabase()
         self.__database = BlacklistDatabase(cfg)
         self.__lock = multiprocessing.RLock()
 
@@ -269,6 +274,63 @@ class Blacklist(object):
 
         parsed_prefix, name_raw = reddit.split_prefixed_name(name)
         return self.__database.blacklist_time_left_seconds(name_raw)
+
+    def increment_bad_actor(self, thing):
+        """
+        Increments the thing.author's bad actor count.
+        """
+        if hasattr(thing, 'author') and bool(thing.author):
+            logger.id(logger.debug, self,
+                    'Incrementing {color_author}\'s bad actor count ...',
+                    color_author=thing.author.name,
+            )
+
+            try:
+                # comment
+                permalink = thing.permalink()
+            except TypeError:
+                # 'type' object is not callable
+                # submission
+                permalink = thing.permalink
+
+            if not isinstance(permalink, string_types):
+                logger.id(logger.debug, self,
+                        '{color_thing} has no valid permalink!'
+                        ' (permalink={permalink})',
+                        color_thing=reddit.display_fullname(thing),
+                        permalink=permalink,
+                )
+                permalink = None
+
+            try:
+                with self.__badactors:
+                    self.__badactors.insert(thing, permalink)
+
+            except UniqueConstraintFailed:
+                logger.id(logger.warn, self,
+                        '{color_author} already flagged as a bad actor for'
+                        ' {color_thing}!',
+                        color_author=thing.author.name,
+                        color_thing=reddit.display_fullname(thing),
+                        exc_info=True,
+                )
+
+            else:
+                count = self.__badactors.count(thing)
+                threshold = self.cfg.bad_actor_threshold
+                if count > threshold:
+                    logger.id(logger.debug, self,
+                            '{color_author} over bad actor threshold!'
+                            ' ({count} > {threshold})',
+                            color_author=thing.author.name,
+                            count=count,
+                            threshold=threshold,
+                    )
+                    self.add(thing.author.name, reddit.PREFIX_USER, True)
+                    # TODO? delete (deactivate) badactor count for user
+                    # > this should already be implicitly handled but it does
+                    #   mean that any further bad behavior will attempt to
+                    #   temporarily blacklist the user again.
 
 
 __all__ = [

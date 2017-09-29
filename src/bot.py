@@ -13,7 +13,6 @@ from constants import SUBREDDITS_DEFAULTS_PATH
 
 from src import (
         blacklist,
-        comments,
         instagram,
         mentions,
         messages,
@@ -22,12 +21,7 @@ from src import (
         replies,
 )
 from src.database import (
-        BadActorsDatabase,
-        InstagramQueueDatabase,
-        PotentialSubredditsDatabase,
-        RedditRateLimitQueueDatabase,
-        ReplyDatabase,
-        SubmissionQueueDatabase,
+        ReplyQueueDatabase,
         SubredditsDatabase,
         UniqueConstraintFailed,
 )
@@ -53,32 +47,28 @@ class IgHighlightsBot(RunForeverMixin, StreamMixin):
         rate_limit_time = multiprocessing.Value(ctypes.c_float, 0.0)
         StreamMixin.__init__(self, cfg, rate_limited)
 
-        self.reddit_ratelimit_queue = RedditRateLimitQueueDatabase()
         self.ratelimit_handler = ratelimit.RateLimitHandler(
                 cfg, rate_limited, rate_limit_time,
         )
 
         self._killed = False
-        self.reply_history = ReplyDatabase()
+        self.reply_queue = ReplyQueueDatabase()
         self.subreddits = SubredditsDatabase()
-        self.potential_subreddits = PotentialSubredditsDatabase()
-        self.bad_actors = BadActorsDatabase(cfg)
         self.blacklist = blacklist.Blacklist(cfg)
-        self.ig_queue = InstagramQueueDatabase()
 
         self.messages = messages.Messages(
                 cfg, rate_limited, rate_limit_time, self.blacklist
         )
-        # queue of submissions to be processed (produced through separate
-        # processes -- eg. summoned to post through user mention)
-        self.submission_queue = SubmissionQueueDatabase()
         self.mentions = mentions.Mentions(
-                cfg, rate_limited, rate_limit_time, self.submission_queue
+                cfg, rate_limited, rate_limit_time,
+        )
+        self.replier = replies.Replier(
+                cfg, rate_limited, rate_limit_time, self.blacklist,
         )
 
         # initialize stuff that requires correct credentials
         instagram.Instagram.initialize(cfg, self._reddit.username)
-        self._formatter = replies.Formatter(self._reddit.username_raw)
+        self.filter = replies.Filter(cfg, self._reddit.username_raw)
 
     def __str__(self):
         return self._reddit.username_raw
@@ -120,526 +110,16 @@ class IgHighlightsBot(RunForeverMixin, StreamMixin):
         self.ratelimit_handler.kill()
         self.messages.kill()
         self.mentions.kill()
+        self.replier.kill()
 
         self.ratelimit_handler.join()
         self.messages.join()
         self.mentions.join()
+        self.replier.join()
 
         # XXX: kill the main process last so that daemon processes aren't
         # killed at inconvenient times
         self._killed = True
-
-    def _increment_bad_actor(self, thing, data):
-        if thing.author:
-            logger.id(logger.debug, self,
-                    'Incrementing {color_author}\'s bad actor count',
-                    color_author=thing.author.name,
-            )
-
-            try:
-                with self.bad_actors:
-                    self.bad_actors.insert(thing, data)
-
-            except UniqueConstraintFailed:
-                logger.id(logger.debug, self,
-                        '{color_author} already flagged as a bad actor for'
-                        '{color_thing}!',
-                        color_author=thing.author.name,
-                        color_thing=reddit.display_id(thing),
-                )
-
-    def _reply(self, comment, ig_list, callback_depth=0):
-        """
-        Reply to a single comment with (potentially) multiple instagram user
-        highlights
-
-        Returns True if successfully replied one or more times
-        """
-        success = False
-
-        logger.id(logger.debug, self,
-                '{depth}Replying to {color_comment}: {color}',
-                depth=(
-                    '[#{0}] '.format(callback_depth)
-                    if callback_depth > 0 else ''
-                ),
-                color_comment=reddit.display_id(comment),
-                color=ig_list,
-        )
-
-        reply_text_list = self._formatter.format(ig_list)
-        if len(reply_text_list) > self.cfg.max_replies_per_comment:
-            logger.id(logger.debug, self,
-                    '{color_comment} ({color_author}) almost made me reply'
-                    ' #{num} times: skipping.',
-                    color_comment=reddit.display_id(comment),
-                    color_author=reddit.author(comment),
-                    num=len(reply_text_list),
-            )
-            # TODO? temporarily blacklist (O(days)) user? could be trying to
-            # break the bot. or could just be a comment with a lot of instagram
-            # profile links.
-            #   - store comment.permalink()
-            #       ie, self.bad_actors.insert(comment, comment.permalink())
-            #       (.permalink() may be a network hit)
-            return
-
-        did_insert = False
-        for body, ig_users in reply_text_list:
-            if reddit.do_reply(comment, body):
-                try:
-                    self.reply_history.insert(comment, ig_users)
-                except UniqueConstraintFailed:
-                    # this indicates that there is a bug in one of the can_reply
-                    # checks or in prune_already_posted_users
-                    logger.id(logger.warn, self,
-                            'Duplicate instagram user posted in'
-                            ' {color_submission}! (users={color_users})',
-                            color_submission=reddit.display_fullname(
-                                comment.submission
-                            ),
-                            color_users=ig_users,
-                            exc_info=True,
-                    )
-                finally:
-                    did_insert = True
-        if did_insert:
-            self.reply_history.commit()
-            # XXX: only one required to succeed for method to be considered
-            # success
-            success = True
-
-        return success
-
-    def reply(self, comment):
-        """
-        Attempts to reply to a comment with instagram user highlights.
-        This will only reply if enough conditions are met (eg. hasn't replied to
-        the specific post too many times, isn't in a blacklisted subreddit or
-        comment not made by a blacklisted user, etc)
-
-        Returns (reply_attempted, did_reply), a tuple of bools
-                reply_attempted = lenient "success" flag; this indicates that
-                        the reply did not explicitly fail
-                did_reply = explicit success flag (a reply was made)
-        """
-
-        reply_attempted = True
-        did_reply = False
-        if comment and self.can_reply(comment):
-            parsed_comment = comments.Parser(comment)
-            ig_usernames = self.prune_already_posted_users(
-                    comment.submission,
-                    parsed_comment.ig_usernames,
-            )
-            if ig_usernames:
-                ancestor_tree = reddit.get_ancestor_tree(comment)
-                author_tree = [
-                        c.author.name.lower()
-                        # XXX: specifically insert None for comments
-                        # missing authors (deleted/removed)
-                        if bool(c.author) else None
-                        for c in ancestor_tree
-                ]
-
-                logger.id(logger.debug, self,
-                        '{color_comment} author tree:'
-                        ' [#{num}] {color}',
-                        color_comment=reddit.display_id(comment),
-                        num=len(author_tree),
-                        color=author_tree,
-                )
-
-                num_comments_by_me = author_tree.count(
-                        self._reddit.username_raw.lower()
-                )
-                if num_comments_by_me > self.cfg.max_replies_in_comment_thread:
-                    logger.id(logger.debug, self,
-                            'I\'ve made too many replies in'
-                            ' {color_comment}\'s thread: skipping.',
-                            color_comment=reddit.display_id(comment),
-                    )
-
-                else:
-                    ig_list = []
-                    queued_ig_data = self.ig_queue.get_ig_data_for(comment)
-                    for ig_user in ig_usernames:
-                        is_rate_limited = instagram.Instagram.is_rate_limited()
-                        if is_rate_limited:
-                            # drop the ig_list so that no reply attempt is made
-                            ig_list = []
-                            break
-
-                        if ig_user in queued_ig_data:
-                            last_id = queued_ig_data[ig_user]
-                        ig = instagram.Instagram(ig_user, last_id)
-                        if ig.valid:
-                            ig_list.append(ig)
-
-                        if (
-                                ig.do_enqueue
-                                # don't try to requeue a duplicate entry
-                                and not self.ig_queue.is_queued(
-                                    ig_user, comment
-                                )
-                        ):
-                            msg = ['Queueing \'{user}\'']
-                            if ig.last_id:
-                                msg.append('(@ {last_id})')
-                            msg.append('from {color_comment}')
-                            logger.id(logger.debug, self,
-                                    ' '.join(msg),
-                                    user=ig_user,
-                                    last_id=ig.last_id,
-                                    color_comment=reddit.display_id(comment),
-                            )
-
-                            try:
-                                with self.ig_queue:
-                                    self.ig_queue.insert(
-                                            ig_user, comment, ig.last_id,
-                                    )
-                            except UniqueConstraintFailed:
-                                msg = [
-                                        'Attempted to enqueue instagram user'
-                                        ' \'{color_user}\' again!'
-                                        ' comment={color_comment}'
-                                ]
-                                if ig.last_id:
-                                    msg.append(', last_id={last_id}')
-
-                                logger.id(logger.warn, self,
-                                        ''.join(msg),
-                                        color_user=ig_user,
-                                        color_comment=reddit.display_id(
-                                            comment
-                                        ),
-                                        last_id=ig.last_id,
-                                        exc_info=True,
-                                )
-
-                        # the comment's author may be trying to troll the bot
-                        if 404 in ig.status_codes:
-                            self._increment_bad_actor(
-                                    comment,
-                                    comment.permalink(),
-                            )
-
-                    comment_queued = comment in self.ig_queue
-                    # don't reply if any ig user was queued to be fetched
-                    # (ie, don't reply with partial highlights)
-                    if not comment_queued:
-                        if len(ig_list) == len(ig_usernames):
-                            did_reply = self._reply(comment, ig_list)
-
-                        # don't count the reply as not attempted if we ran into
-                        # either the rate-limit or server issues
-                        elif not is_rate_limited:
-                            reply_attempted = False
-                            servererr = instagram.Instagram.has_server_error()
-                            logger.id(logger.debug, self,
-                                    'Skipping reply to {color_comment}:'
-                                    '\nis queued? {yesno_queued};'
-                                    ' rate-limit? {yesno_ratelimit};'
-                                    ' server err? {yesno_servererr}'
-                                    '\npermalink: {permalink}'
-                                    '\nusers #{num_users}: {color}'
-                                    '\n#ig_list: {num_list}',
-                                    color_comment=reddit.display_id(comment),
-                                    yesno_queued=comment_queued,
-                                    yesno_ratelimit=is_rate_limited,
-                                    yesno_servererr=servererr,
-                                    permalink=comment.permalink(),
-                                    num_users=len(ig_usernames),
-                                    color=ig_usernames,
-                                    num_list=len(ig_list),
-                            )
-
-        return reply_attempted, did_reply
-
-    def by_me(self, comment):
-        """
-        Returns True if the comment was posted by the bot
-        """
-        result = False
-        # author may be None if deleted/removed
-        if bool(comment.author):
-            author = comment.author.name.lower()
-            result = author == self._reddit.username_raw.lower()
-        return result
-
-    def can_reply(self, comment):
-        """
-        Returns True if
-            - comment not already replied to by the bot
-            - comment is not in the rate-limit queue
-            - the bot has not replied too many times to the submission (too many
-              defined in config)
-            - comment not archived (too old)
-            - comment not itself posted by the bot
-            - comment not in a blacklisted subreddit or posted by a blacklisted
-              user
-        """
-        # XXX: the code is fully written out instead of being a simple boolean
-        # (eg. return not (a or b or c)) so that appropriate logging calls can
-        # be made
-
-        # check the database first (guaranteed to incur no network request)
-        already_replied = self.reply_history.has_replied(comment)
-        if already_replied:
-            logger.id(logger.debug, self,
-                    'I already replied to {color_comment}: skipping.',
-                    color_comment=reddit.display_id(comment),
-            )
-            return False
-
-        if comment in self.reddit_ratelimit_queue:
-            # will be handled by the RateLimitHandler
-            logger.id(logger.debug, self,
-                    '{color_comment} is rate-limit queued: skipping.',
-                    color_comment=reddit.display_id(comment),
-            )
-            return False
-
-        replied = self.reply_history.replied_comments_for_submission(
-                comment.submission
-        )
-        if len(replied) > self.cfg.max_replies_per_post:
-            logger.id(logger.debug, self,
-                    'I\'ve made too many replies (#{num}) to {color_post}:'
-                    ' skipping.',
-                    num=self.cfg.max_replies_per_post,
-                    color_post=reddit.display_id(comment.submission),
-            )
-            return False
-
-        # potentially spammy
-        if comment.archived:
-            logger.id(logger.debug, self,
-                    '{color_comment} is too old: skipping.',
-                    color_comment=reddit.display_id(comment),
-            )
-
-        by_me = self.by_me(comment)
-        if by_me:
-            logger.id(logger.debug, self,
-                    'I posted {color_comment}: skipping.',
-                    color_comment=reddit.display_id(comment),
-            )
-            return False
-
-        # XXX: there is the possibility that the blacklist check fails just as
-        # that account/subreddit becomes blacklisted
-        #   eg. 1. user requests to be blacklisted
-        #       2. bot finds comment & sees not blacklisted
-        #       3. messages process adds user to blacklist
-        #       4. bot replies to comment
-        # .. should only cause one erroneous reply post-blacklist (and only in
-        # this rare situation)
-        prefixed_name = self.blacklist.is_blacklisted_thing(comment)
-        if prefixed_name:
-            time_left = self.blacklist.time_left_seconds_name(prefixed_name)
-
-            msg = []
-            msg.append('{color_name} is blacklisted')
-            if time_left > 0:
-                msg.append('for {time}')
-            msg.append('({color_comment}):')
-            msg.append('skipping.')
-
-            # potentially spammy (for subreddits)
-            # TODO? don't log if is_subreddit
-            logger.id(logger.debug, self,
-                    ' '.join(msg),
-                    color_name=prefixed_name,
-                    time=time_left,
-                    color_comment=reddit.display_id(comment),
-            )
-            return False
-        return True
-
-    def prune_already_posted_users(self, submission, ig_usernames):
-        """
-        """
-        already_posted = self.reply_history.replied_ig_users_for_submission(
-                submission
-        )
-        pruned = ig_username.intersection(already_posted)
-        ig_usernames -= already_posted
-        if pruned:
-            logger.id(logger.debug, self,
-                    'Pruned #{num_posted} usernames: {color_posted}'
-                    '\n\t#{num_users}: {color_users}',
-                    num_posted=len(pruned),
-                    color_posted=pruned,
-                    num_users=len(ig_usernames),
-                    color_users=ig_usernames,
-            )
-        return ig_usernames
-
-    @staticmethod
-    def get_padding(num):
-        # TODO: move to util or something
-        padding = 0
-        while num > 0:
-            padding += 1
-            num //= 10
-        return padding if padding > 0 else 1
-
-    def process_submission_queue(self, num=5):
-        """
-        Tries to process num elements in the submission_queue
-
-        num (int, optional) - number of elements to process (halts if the queue
-                is empty regardless of number of elements processed).
-        """
-        if not isinstance(num, int) or num < 0:
-            num = 5
-
-        try:
-            for i in range(num):
-                item = self.submission_queue.get()
-                if not item:
-                    break
-
-                mention_id, submission_id = item
-                mention = self._reddit.comment(mention_id)
-                submission = self._reddit.submission(submission_id)
-
-                logger.id(logger.debug, self,
-                        '[{i:>{padding}}/{num}] Processing submission'
-                        ' {color_submission} (#{qnum} remaining) ...',
-                        i=i+1,
-                        padding=IgHighlightsBot.get_padding(num),
-                        num=num,
-                        color_submission=submission,
-                        qnum=self.submission_queue.size()-1,
-                )
-
-                reply_attempted = True
-                did_reply = False
-                for comment in submission.comments.list():
-                    comment_reply_attempted, comment_did_reply = \
-                            self.reply(comment)
-
-                    # AND because we want to know if the post had no replyable
-                    # comments
-                    reply_attempted = (
-                            comment_reply_attempted and reply_attempted
-                    )
-
-                    # OR because we want to know if the bot replied at all over
-                    # the entire post
-                    did_reply = comment_did_reply or did_reply
-
-                # XXX: if the program terminates before the delete is committed,
-                # the next run will retry this submission.
-                with self.submission_queue:
-                    self.submission_queue.delete(mention, submission)
-
-                if not reply_attempted:
-                    self._increment_bad_actor(mention, submission.permalink)
-
-                if (
-                        self.cfg.add_subreddit_threshold >= 0
-                        and did_reply
-                        and submission not in self.subreddits
-                ):
-                    to_add_count = self.potential_subreddits.count(submission)
-                    prefixed_subreddit = reddit.prefix_subreddit(
-                            submission.subreddit.display_name
-                    )
-                    if to_add_count + 1 > self.cfg.add_subreddit_threshold:
-                        logger.id(logger.debug, self,
-                                'Adding {color_subreddit} to permanent'
-                                ' subreddits',
-                                color_subreddit=prefixed_subreddit,
-                        )
-
-                        # add the subreddit to the permanent set of comment
-                        # stream subreddits
-                        try:
-                            with self.subreddits:
-                                self.subreddits.insert(submission)
-                        except UniqueConstraintFailed:
-                            # this shouldn't happen
-                            logger.id(logger.warn, self,
-                                    'Attempted to add duplicate subreddit'
-                                    ' ({color_name})!',
-                                    color_name=reddit.display_id(submission),
-                                    exc_info=True,
-                            )
-
-                        with self.potential_subreddits:
-                            self.potential_subreddits.delete(submission)
-
-                    else:
-                        logger.id(logger.debug, self,
-                                '{color_subreddit} to-add count: {num}',
-                                color_subreddit=prefixed_subreddit,
-                                num=to_add_count+1,
-                        )
-                        # increment the to-add count for this subreddit
-                        try:
-                            with self.potential_subreddits:
-                                self.potential_subreddits.insert(submission)
-                        except UniqueConstraintFailed:
-                            # this shouldn't happen
-                            logger.id(logger.warn, self,
-                                    'Attempted to add {color_subreddit} to'
-                                    ' {color_db} again!',
-                                    color_subreddit=(
-                                        submission.subreddit_name_prefixed
-                                    ),
-                                    color_db=self.potential_subreddits,
-                                    exc_info=True,
-                            )
-
-        except queue.Empty:
-            pass
-
-    def process_instagram_queue(self, num=5):
-        """
-        Tries to process num elements from the instagram queue (does nothing
-        if instagram rate-limited).
-        """
-        if instagram.Instagram.is_rate_limited():
-            return
-
-        if not isinstance(num, int) or num < 0:
-            num = 5
-
-        for i in range(num):
-            comment_id = self.ig_queue.get()
-            if not comment_id:
-                # queue empty
-                break
-
-            logger.id(logger.debug, self,
-                    '[{i:>{padding}}/{num}] Processing ig queue:'
-                    ' {color_comment} (#{qsize} remaining) ...',
-                    i=i,
-                    padding=IgHighlightsBot.get_padding(num),
-                    num=num,
-                    color_comment=comment_id,
-                    # -1 because get() doesn't remove the element
-                    qsize=self.ig_queue.size()-1,
-            )
-
-            comment = self._reddit.comment(comment_id)
-            reply_attempted, did_reply = self.reply(comment)
-
-            if did_reply:
-                logger.id(logger.debug, self,
-                        'Removing {color_comment} from queue ...',
-                        color_comment=reddit.display_id(comment),
-                )
-                with self.ig_queue:
-                    self.ig_queue.delete(comment)
-
-            if instagram.Instagram.is_rate_limited():
-                # no point in continuing if we're rate-limited
-                break
 
     @property
     def _stream(self):
@@ -694,6 +174,7 @@ class IgHighlightsBot(RunForeverMixin, StreamMixin):
         self.ratelimit_handler.start()
         self.messages.start()
         self.mentions.start()
+        self.replier.start()
 
         try:
             while not self._killed:
@@ -703,14 +184,12 @@ class IgHighlightsBot(RunForeverMixin, StreamMixin):
                         if not comment:
                             break
 
-                        self.reply(comment)
+                        ig_usernames = self.filter.replyable_usernames(comment)
+                        if ig_usernames:
+                            self.filter.enqueue(comment)
 
-                # these should usually be empty but may cause comments to be
-                # missed if they take a long time or stream contains a lot of
-                # active subreddits
-                self.process_submission_queue()
-                self.process_instagram_queue()
-                time.sleep(1)
+                if not self._killed:
+                    time.sleep(1)
 
         except Redirect as e:
             if re.search(r'/subreddits/search', e.message):

@@ -56,7 +56,6 @@ class Formatter(object):
                 contact_url=CONTACT_URL,
                 source_url=REPO_URL,
                 blacklist_url=BLACKLIST_URL_FMT.format(
-                    # XXX: does not verify that this is even set
                     to=username,
                 ),
                 help_url=HELP_URL,

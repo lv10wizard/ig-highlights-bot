@@ -167,9 +167,44 @@ O. reclassify logger.exceptions
 O. graceful exit
     O. logging.shutdown
     X. database.close? .flush?
-- refactor queue processing to separate process so that comment streams are
+O. refactor queue processing to separate process so that comment streams are
   never interrupted (also in case comment streams always have new data --
   ie, no pause in comment streams)
+    O. turn bot, mentions processes into queue producers which filter comments
+      that we want to reply to (ie, that have instagram user links & can_reply)
+        O. refactor can_reply logic to separate module/class
+            O. pass/instantiate reply_history db in mentions proc
+                ... or maybe in whatever houses can_reply
+            O. make enqueue() method (called by bot and mentions)
+            O. make get() method (called by consumer)
+        O. refactor submission_queue (probably no longer needed)
+    O. create new process which consumes queue:
+      (this process should be the only one handling outbound replies so that
+       the inbound streams are never interrupted)
+        O. do_reply
+        X. process ig_queue if reply_queue empty
+        O. dynamically add subreddits
+        O. temporarily ban bad actors
+            O. mentions process needs to increment bad actors if summoned to
+              post with no instagram links
+                (possible false positive: comment contains non-hyperlinked
+                 links -- eg. 'instagram: @foo.bar')
+        ? send debug pms?
+- catch "sqlite3.OperationalError: database is locked"
+    this occurs when 2+ procs attempt to execute on the same database at the
+    same time (thrown on timeout I think)
+    - reraise as DatabaseIsLocked or something
+    - double check any database that auto-updates (ratelimit, subreddits, more?)
+      that they are catching
+        - IntegrityError
+        - OperationalError (with _db: ...)
+            - catch on _database level (loop until successful I guess)
+- maximum depth of reply-able comment
+    ie, only reply to comments where c.depth <= max_depth. typically
+    very deep comments are only seen by the author & the person they were
+    replying to (and maybe a handful of others); bot replies are probably not
+    welcome unless specifically summoned.
+- remove try/catch in mentions/messages _run_forever
 ? target only python3
     there's no real reason to support both
 ? refactor queue databases (ig_queue, reddit_ratelimit, submission_queue) to

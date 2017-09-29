@@ -283,7 +283,7 @@ class Messages(ProcessMixin, StreamMixin):
                         pm_subject, pm_body = self._debug_pm(
                                 message, name, prefix, blacklist_re,
                         )
-                        reddit_obj.send_debug_pm(
+                        self._reddit.send_debug_pm(
                                 subject=pm_subject,
                                 body=pm_body,
                         )
@@ -296,7 +296,7 @@ class Messages(ProcessMixin, StreamMixin):
                                 prefix=prefix,
                         )
                         if reply_text:
-                            reddit_obj.do_reply(message, reply_text)
+                            self._reddit.do_reply(message, reply_text)
 
                 if not self._killed.is_set():
                     logger.id(logger.debug, self,

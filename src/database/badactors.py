@@ -18,6 +18,8 @@ class BadActorsDatabase(Database):
                 'thing_fullname TEXT PRIMARY KEY NOT NULL',
                 'created_utc REAL NOT NULL',
                 'author_name TEXT NOT NULL COLLATE NOCASE',
+                # store some optional data for debugging purposes
+                # (eg. comment.permalink)
                 'data TEXT',
         ]
 
@@ -33,7 +35,7 @@ class BadActorsDatabase(Database):
 
     def _insert(self, thing, data):
         self.__prune(thing)
-        if thing.author:
+        if hasattr(thing, 'author') and bool(thing.author):
             self._db.execute(
                     'INSERT INTO'
                     ' active(thing_fullname, created_utc, author_name, data)'
@@ -114,7 +116,7 @@ class BadActorsDatabase(Database):
                 -1 if thing has no author (deleted/removed)
         """
         self.__prune(thing)
-        if thing.author:
+        if hasattr(thing, 'author') and bool(thing.author):
             cursor = self._db.execute(
                     'SELECT created_utc FROM active WHERE author_name = ?',
                     (thing.author.name,),

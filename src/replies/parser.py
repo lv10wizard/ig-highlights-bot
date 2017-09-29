@@ -13,6 +13,7 @@ from src.util import logger
 
 class Parser(object):
     """
+    Parses reddit comments for instagram user links
     """
 
     def __init__(self, comment):
@@ -43,6 +44,8 @@ class Parser(object):
                 except FeatureNotFound:
                     soup = BeautifulSoup(comment.body_html, 'html.parser')
 
+                # Note: this only considers valid links in the body's text
+                # TODO? regex search for anything that looks like a link
                 self.__ig_links = set(
                         a['href']
                         for a in soup.find_all('a', href=Instagram.IG_REGEX)

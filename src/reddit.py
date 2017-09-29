@@ -434,7 +434,7 @@ class Reddit(praw.Reddit):
 
         return success
 
-    def send_debug_pm(self, subject, body, callback_depth=0):
+    def send_debug_pm(self, subject, body):
         """
         Sends a pm to the AUTHOR reddit account
         """
@@ -501,7 +501,7 @@ class Reddit(praw.Reddit):
                 else:
                     self.__handle_api_exception(e)
 
-    def do_reply(self, thing, body, callback_depth=0):
+    def do_reply(self, thing, body):
         """
         thing.reply(body) wrapper
         See: https://github.com/praw-dev/praw/blob/master/praw/models/reddit/mixins/replyable.py

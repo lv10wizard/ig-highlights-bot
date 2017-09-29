@@ -2,6 +2,13 @@ from errno import EEXIST
 import os
 
 
+def get_padding(num):
+    padding = 0
+    while num > 0:
+        padding += 1
+        num //= 10
+    return padding if padding > 0 else 1
+
 def mkdirs(path):
     # https://stackoverflow.com/a/20667049
     try:
