@@ -218,11 +218,13 @@ O. persistent reddit ratelimit time
 - check comment's immediate replies in Filter to guarantee that the bot does not
     make duplicate replies regardless of database state
 - reclassify some debug logging -> info (info is far too quiet)
-- quiet spammy logging
-    - reddit-queue.db
-        - SELECT * FROM queue ORDER BY ratelimit_reset ASC
-        - Sleeping timeout=...
-    - reply-queue.db SELECT count(*)
+O. quiet spammy logging
+    X. reddit-queue.db
+        X. SELECT * FROM queue ORDER BY ratelimit_reset ASC
+        X. Sleeping timeout=...
+    X. reply-queue.db SELECT count(*)
+    >> handled at base Database level by limiting the elapsed time between
+        the same logged query.
 - write help post & link appropriately in code (formatter.py)
 ? include version in FOOTER? (probably just the {major}.{minor} if yes)
 ? push to github

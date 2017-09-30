@@ -131,14 +131,11 @@ class RedditRateLimitQueueDatabase(Database):
         row = self._db.execute(query).fetchone()
         if not row:
             if block:
-                msg = ['Waiting for elements']
-                if timeout and timeout > 0:
-                    msg.append('(timeout={time})')
-                msg.append('...')
-                logger.id(logger.debug, self,
-                        ' '.join(msg),
-                        time=timeout,
-                )
+                # don't log if a timeout exists to prevent potential log spam
+                if timeout is None or timeout < 0:
+                    logger.id(logger.debug, self,
+                            'Waiting for elements ...'.join(msg),
+                    )
 
                 start = time.time()
                 RedditRateLimitQueueDatabase.__has_elements.wait(timeout)

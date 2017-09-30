@@ -4,6 +4,7 @@ import pprint
 import re
 import sqlite3
 import sys
+import time
 
 from six import (
         add_metaclass,
@@ -85,15 +86,43 @@ class _SqliteConnectionWrapper(object):
             msg.append('kwargs: {func_kwargs}')
         return '\n\t'.join(msg)
 
-    def __do_execute(self, func, sql, *args, **kwargs):
-        cursor = None
-        while not cursor:
+    def __log_execute(self, sql, *args, **kwargs):
+        """
+        Logs the execute call with some "rate-limiting" to prevent very spammy
+        calls from flooding the logs
+
+        Note: the limiting is per-process so 2+ processes logging the same query
+        will still be logged once per process.
+        """
+        last_log_time = 0
+
+        try:
+            log_times = self.__log_times
+        except AttributeError:
+            log_times = {}
+            self.__log_times = log_times
+
+        try:
+            last_log_time = log_times[sql]
+        except KeyError:
+            pass
+
+        elapsed = time.time() - last_log_time
+        # limit how often queries that are called rapidly are logged
+        # TODO? config setting for time threshold?
+        if elapsed > 60:
             logger.id(logger.debug, self,
                     self.__construct_msg(*args, **kwargs),
                     sql=sql,
                     func_args=args,
                     func_kwargs=kwargs,
             )
+            log_times[sql] = time.time()
+
+    def __do_execute(self, func, sql, *args, **kwargs):
+        cursor = None
+        while not cursor:
+            self.__log_execute(sql, *args, **kwargs)
             try:
                 cursor = func(sql, *args, **kwargs)
 
