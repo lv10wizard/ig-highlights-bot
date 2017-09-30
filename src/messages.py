@@ -189,127 +189,119 @@ class Messages(ProcessMixin, StreamMixin):
         # fashion.
         delay = 15 # too long?
 
-        try:
-            while not self._killed.is_set():
-                logger.id(logger.debug, self, 'Processing messages ...')
-                for message in self.stream:
-                    # don't rely on read/unread flag in case someone logs in
-                    # to the bot account and reads all the messages
-                    # assumption: inbox.messages() fetches newest -> oldest
-                    if messages_db.has_seen(message):
-                        logger.id(logger.debug, self,
-                                'I\'ve already read {color_message}!'
-                                ' (\'{subject}\' from {color_from})',
-                                color_message=reddit.display_fullname(message),
-                                subject=message.subject,
-                                color_from=reddit.author(message),
-                        )
-                        break
+        while not self._killed.is_set():
+            logger.id(logger.debug, self, 'Processing messages ...')
+            for message in self.stream:
+                if message is None or self._killed.is_set():
+                    break
 
-                    elif self._killed.is_set():
-                        logger.id(logger.debug, self, 'Killed!')
-                        break
-
-                    elif message is None:
-                        break
-
-                    # blindly mark messages as seen even if processing fails.
-                    # this prevents random / spam messages from being processed
-                    # every time; however, it also prevents failed messages from
-                    # being retried.
-                    try:
-                        with messages_db:
-                            messages_db.insert(message)
-                    except database.UniqueConstraintFailed:
-                        # this means there is a bug in has_seen
-                        logger.id(logger.warn, self,
-                                'Attempted to process duplicate message:'
-                                ' {color_message} from {color_from}!',
-                                color_message=reddit.display_fullname(message),
-                                color_from=reddit.author(message),
-                                exc_info=True,
-                        )
-                        break
-
-                    # ignore comments, though I don't think it is possible that
-                    # any message in the messages() inbox can be a comment.
-                    if message.was_comment:
-                        continue
-
-                    subject = message.subject.strip()
-                    match = blacklist_re.search(subject)
-                    # ignore random messages
-                    if not match:
-                        logger.id(logger.debug, self,
-                                'Ignoring {color_message}: \'{subject}\'',
-                                color_message=message.id,
-                                subject=subject,
-                        )
-                        continue
-
-                    # need to blacklist a subreddit or user
-                    prefix, name = self._get_prefix_name(message)
-                    if not name:
-                        logger.id(logger.debug, self,
-                                'Message ({color_message}) \'{subject}\':'
-                                ' could not find name! skipping ...',
-                                color_message=message.id,
-                                subject=subject,
-                        )
-                        continue
-
-                    do_reply = False
-                    if self._is_add(match.group(1)):
-                        do_reply = self.blacklist.add(name, prefix)
-
-                    elif self._is_remove(match.group(1)):
-                        do_reply = self.blacklist.remove(name, prefix)
-
-                    else:
-                        # subject regex updated but no code to handle ...
-                        # XXX: flagging the message as unseen may not
-                        # necessarily do anything if it does not remain the
-                        # newest message
-
-                        logger.id(logger.debug, self,
-                                'Unhandled subject: \'{subject}\'!'
-                                '\nmatch: \'{match}\'',
-                                subject=subject,
-                                match=match.group(1),
-                        )
-
-                        # send a pm to the maintainer in case logs aren't being
-                        # monitored closely
-                        pm_subject, pm_body = self._debug_pm(
-                                message, name, prefix, blacklist_re,
-                        )
-                        self._reddit.send_debug_pm(
-                                subject=pm_subject,
-                                body=pm_body,
-                        )
-
-                    if do_reply:
-                        reply_text = self._format_reply(
-                                message=message,
-                                subject=match.group(1),
-                                name=name,
-                                prefix=prefix,
-                        )
-                        if reply_text:
-                            self._reddit.do_reply(message, reply_text)
-
-                if not self._killed.is_set():
+                # don't rely on read/unread flag in case someone logs in
+                # to the bot account and reads all the messages
+                # assumption: inbox.messages() fetches newest -> oldest
+                elif messages_db.has_seen(message):
                     logger.id(logger.debug, self,
-                            'Waiting {time} before checking messages again ...',
-                            time=delay,
+                            'I\'ve already read {color_message}!'
+                            ' (\'{subject}\' from {color_from})',
+                            color_message=reddit.display_fullname(message),
+                            subject=message.subject,
+                            color_from=reddit.author(message),
                     )
-                self._killed.wait(delay)
+                    break
 
-        except Exception as e:
-            # TODO? only catch praw errors
-            logger.id(logger.exception, self,
-                    'Something went wrong! Message processing terminated.',
-            )
+                # blindly mark messages as seen even if processing fails.
+                # this prevents random / spam messages from being processed
+                # every time; however, it also prevents failed messages from
+                # being retried.
+                try:
+                    with messages_db:
+                        messages_db.insert(message)
+                except database.UniqueConstraintFailed:
+                    # this means there is a bug in has_seen
+                    logger.id(logger.warn, self,
+                            'Attempted to process duplicate message:'
+                            ' {color_message} from {color_from}!',
+                            color_message=reddit.display_fullname(message),
+                            color_from=reddit.author(message),
+                            exc_info=True,
+                    )
+                    break
+
+                # ignore comments, though I don't think it is possible that
+                # any message in the messages() inbox can be a comment.
+                if message.was_comment:
+                    continue
+
+                subject = message.subject.strip()
+                match = blacklist_re.search(subject)
+                # ignore random messages
+                if not match:
+                    logger.id(logger.debug, self,
+                            'Ignoring {color_message}: \'{subject}\'',
+                            color_message=message.id,
+                            subject=subject,
+                    )
+                    continue
+
+                # need to blacklist a subreddit or user
+                prefix, name = self._get_prefix_name(message)
+                if not name:
+                    logger.id(logger.debug, self,
+                            'Message ({color_message}) \'{subject}\':'
+                            ' could not find name! skipping ...',
+                            color_message=message.id,
+                            subject=subject,
+                    )
+                    continue
+
+                do_reply = False
+                if self._is_add(match.group(1)):
+                    do_reply = self.blacklist.add(name, prefix)
+
+                elif self._is_remove(match.group(1)):
+                    do_reply = self.blacklist.remove(name, prefix)
+
+                else:
+                    # subject regex updated but no code to handle ...
+                    # XXX: flagging the message as unseen may not
+                    # necessarily do anything if it does not remain the
+                    # newest message
+
+                    logger.id(logger.debug, self,
+                            'Unhandled subject: \'{subject}\'!'
+                            '\nmatch: \'{match}\'',
+                            subject=subject,
+                            match=match.group(1),
+                    )
+
+                    # send a pm to the maintainer in case logs aren't being
+                    # monitored closely
+                    pm_subject, pm_body = self._debug_pm(
+                            message, name, prefix, blacklist_re,
+                    )
+                    self._reddit.send_debug_pm(
+                            subject=pm_subject,
+                            body=pm_body,
+                    )
+
+                if do_reply:
+                    reply_text = self._format_reply(
+                            message=message,
+                            subject=match.group(1),
+                            name=name,
+                            prefix=prefix,
+                    )
+                    if reply_text:
+                        self._reddit.do_reply(message, reply_text)
+
+            if not self._killed.is_set():
+                logger.id(logger.debug, self,
+                        'Waiting {time} before checking messages again ...',
+                        time=delay,
+                )
+            self._killed.wait(delay)
+
+        if self._killed.is_set():
+            logger.id(logger.debug, self, 'Killed!')
 
 
 __all__ = [

@@ -204,7 +204,7 @@ O. catch "sqlite3.OperationalError: database is locked"
     very deep comments are only seen by the author & the person they were
     replying to (and maybe a handful of others); bot replies are probably not
     welcome unless specifically summoned.
-- remove try/catch in mentions/messages _run_forever
+O. remove try/catch in mentions/messages _run_forever
 ? target only python3
     there's no real reason to support both
 ? refactor queue databases (ig_queue, reddit_ratelimit, submission_queue) to

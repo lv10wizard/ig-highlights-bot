@@ -65,54 +65,47 @@ class Mentions(ProcessMixin, StreamMixin):
         mentions_db = database.MentionsDatabase()
         delay = 15 # too long?
 
-        try:
-            while not self._killed.is_set():
-                logger.id(logger.debug, self, 'Processing mentions ...')
-                for mention in self.stream:
-                    if mentions_db.has_seen(mention):
-                        # assumption: inbox.mentions fetches newest -> oldest
-                        logger.id(logger.debug, self,
-                                'I\'ve already processed {color_mention} from'
-                                ' {color_from}!',
-                                color_mention=reddit.display_fullname(mention),
-                                color_from=reddit.author(mention),
-                        )
-                        break
+        while not self._killed.is_set():
+            logger.id(logger.debug, self, 'Processing mentions ...')
+            for mention in self.stream:
+                if mention is None or self._killed.is_set():
+                    break
 
-                    elif self._killed.is_set():
-                        logger.id(logger.debug, self, 'Killed!')
-
-                    elif mention is None:
-                        break
-
-                    try:
-                        with mentions_db:
-                            mentions_db.insert(mention)
-                    except database.UniqueConstraintFailed:
-                        # this means there is a bug in has_seen
-                        logger.id(logger.warn, self,
-                                'Attempted to process duplicate submission:'
-                                ' {color_mention} from {color_from}!',
-                                color_mention=reddit.display_fullname(mention),
-                                color_from=reddit.author(mention),
-                                exc_info=True,
-                        )
-                        break
-
-                    self._process_mention(mention)
-
-                if not self._killed.is_set():
+                elif mentions_db.has_seen(mention):
+                    # assumption: inbox.mentions fetches newest -> oldest
                     logger.id(logger.debug, self,
-                            'Waiting {time} before checking messages again ...',
-                            time=delay,
+                            'I\'ve already processed {color_mention} from'
+                            ' {color_from}!',
+                            color_mention=reddit.display_fullname(mention),
+                            color_from=reddit.author(mention),
                     )
-                self._killed.wait(delay)
+                    break
 
-        except Exception as e:
-            # TODO? only catch praw errors
-            logger.id(logger.exception, self,
-                    'Something went wrong! Message processing terminated.',
-            )
+                try:
+                    with mentions_db:
+                        mentions_db.insert(mention)
+                except database.UniqueConstraintFailed:
+                    # this means there is a bug in has_seen
+                    logger.id(logger.warn, self,
+                            'Attempted to process duplicate submission:'
+                            ' {color_mention} from {color_from}!',
+                            color_mention=reddit.display_fullname(mention),
+                            color_from=reddit.author(mention),
+                            exc_info=True,
+                    )
+                    break
+
+                self._process_mention(mention)
+
+            if not self._killed.is_set():
+                logger.id(logger.debug, self,
+                        'Waiting {time} before checking messages again ...',
+                        time=delay,
+                )
+            self._killed.wait(delay)
+
+        if self._killed.is_set():
+            logger.id(logger.debug, self, 'Killed!')
 
 
 __all__ = [
