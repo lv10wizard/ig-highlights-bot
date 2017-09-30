@@ -50,9 +50,9 @@ class IgHighlightsBot(RunForeverMixin, StreamMixin):
         self.subreddits = SubredditsDatabase()
         self.blacklist = blacklist.Blacklist(cfg)
 
-        self.messages = messages.Messages(cfg, rate_limited self.blacklist)
-        self.mentions = mentions.Mentions(cfg, rate_limited self.blacklist)
-        self.replier = replies.Replier(cfg, rate_limited self.blacklist)
+        self.messages = messages.Messages(cfg, rate_limited, self.blacklist)
+        self.mentions = mentions.Mentions(cfg, rate_limited, self.blacklist)
+        self.replier = replies.Replier(cfg, rate_limited, self.blacklist)
 
         # initialize stuff that requires correct credentials
         instagram.Instagram.initialize(cfg, self._reddit.username)
