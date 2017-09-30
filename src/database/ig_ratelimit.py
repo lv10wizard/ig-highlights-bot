@@ -44,7 +44,7 @@ class InstagramRateLimitDatabase(Database):
         if cursor.rowcount > 0:
             logger.id(logger.debug, self,
                     'Pruned #{num} entries ...',
-                    num=len(to_prune),
+                    num=cursor.rowcount,
             )
             self._db.commit()
 
