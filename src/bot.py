@@ -38,30 +38,21 @@ class IgHighlightsBot(RunForeverMixin, StreamMixin):
     """
 
     def __init__(self, cfg):
-        # rate-limited flag. this is created here so that any process can
-        # flag that the account is rate-limited.
-        rate_limited = multiprocessing.Event()
-        rate_limit_time = multiprocessing.Value(ctypes.c_float, 0.0)
-        StreamMixin.__init__(self, cfg, rate_limited, rate_limit_time)
+        # this is created here so that any process can flag that the account
+        # is rate-limited.
+        rate_limited = ratelimit.Flag()
+        StreamMixin.__init__(self, cfg, rate_limited)
 
-        self.ratelimit_handler = ratelimit.RateLimitHandler(
-                cfg, rate_limited, rate_limit_time,
-        )
+        self.ratelimit_handler = ratelimit.RateLimitHandler(cfg, rate_limited)
 
         self._killed = False
         self.reply_queue = ReplyQueueDatabase()
         self.subreddits = SubredditsDatabase()
         self.blacklist = blacklist.Blacklist(cfg)
 
-        self.messages = messages.Messages(
-                cfg, rate_limited, rate_limit_time, self.blacklist
-        )
-        self.mentions = mentions.Mentions(
-                cfg, rate_limited, rate_limit_time, self.blacklist,
-        )
-        self.replier = replies.Replier(
-                cfg, rate_limited, rate_limit_time, self.blacklist,
-        )
+        self.messages = messages.Messages(cfg, rate_limited self.blacklist)
+        self.mentions = mentions.Mentions(cfg, rate_limited self.blacklist)
+        self.replier = replies.Replier(cfg, rate_limited self.blacklist)
 
         # initialize stuff that requires correct credentials
         instagram.Instagram.initialize(cfg, self._reddit.username)

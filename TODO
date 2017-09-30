@@ -206,9 +206,9 @@ O. why do reddit's rate_limit_time.value and ratelimit's rate_limit_time.value
     >> ratelimit time remaining calculation was backwards
 
 O. instantiate reddit instances in separate process (for debugging)
-- persistent reddit ratelimit time
-    - write end time to file and read in on init
-    - if time.time() > value => remove file
+O. persistent reddit ratelimit time
+    O. write end time to file and read in on init
+    O. if time.time() > value => remove file
       else set rate_limit_time.value
 - maximum depth of reply-able comment
     ie, only reply to comments where c.depth <= max_depth. typically

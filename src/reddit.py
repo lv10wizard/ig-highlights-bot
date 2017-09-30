@@ -180,11 +180,10 @@ class Reddit(praw.Reddit):
 
     _kinds = {}
 
-    def __init__(self, cfg, rate_limited, rate_limit_time, *args, **kwargs):
+    def __init__(self, cfg, rate_limited, *args, **kwargs):
         self.__cfg = cfg
         self.__rate_limit_queue = database.RedditRateLimitQueueDatabase()
         self.__rate_limited = rate_limited
-        self.__rate_limit_time = rate_limit_time
 
         praw.Reddit.__init__(self,
                 site_name=cfg.praw_sitename,
@@ -375,21 +374,15 @@ class Reddit(praw.Reddit):
                 # not precise)
                 delay += 90
 
-            self.__rate_limit_time.value = time.time() + delay
+            self.__rate_limited.value = time.time() + delay
             logger.id(logger.debug, self,
-                    'Flagging rate-limit: {time} ({strftime})'
-                    '\n(message: {msg})',
-                    time=delay,
-                    strftime='%H:%M:%S',
-                    strf_time=self.__rate_limit_time.value,
+                    'Flagging rate-limit: \'{msg}\'',
                     msg=err_msg,
             )
 
-            self.__rate_limited.set()
-
         else:
             # another process hit the rate-limit (probably)
-            delay = self.__rate_limit_time.value - time.time()
+            delay = self.__rate_limited.remaining
             if delay > 0:
                 logger.id(logger.debug, self,
                         'Attempted to flag rate-limit again: \'{msg}\''
@@ -397,7 +390,7 @@ class Reddit(praw.Reddit):
                         msg=err_msg,
                         time=delay,
                         strftime='%H:%M:%S',
-                        strf_time=self.__rate_limit_time.value,
+                        strf_time=self.__rate_limited.value,
                 )
 
             else:
@@ -407,7 +400,7 @@ class Reddit(praw.Reddit):
                         '\n(message: {msg})',
                         time=delay,
                         strftime='%H:%M:%S',
-                        strf_time=self.__rate_limit_time.value,
+                        strf_time=self.__rate_limited.value,
                         msg=err_msg,
                 )
 
@@ -425,7 +418,7 @@ class Reddit(praw.Reddit):
                 None if rate-limit is over
         """
         success = False
-        delay = self.__rate_limit_time.value - time.time()
+        delay = self.__rate_limited.remaining
         if delay > 0 or force:
             try:
                 logger.id(logger.debug, self,
@@ -557,7 +550,6 @@ class Reddit(praw.Reddit):
                 num_attempts += 1
                 if num_attempts > 1:
                     # very spammy if this somehow gets stuck looping
-                    remaining = self.__rate_limit_time.value - time.time()
                     logger.id(logger.debug, self,
                             '[#{num}] Attempting to queue {color_thing}'
                             ' (rate-limited? {yesno_ratelimit};'
@@ -565,9 +557,9 @@ class Reddit(praw.Reddit):
                             num=num_attempts,
                             color_thing=display_fullname(thing),
                             yesno_ratelimit=self.is_rate_limited,
-                            time=remaining,
+                            time=self.__rate_limited.remaining,
                             strftime='%H:%M:%S',
-                            strf_time=self.__rate_limit_time.value,
+                            strf_time=self.__rate_limited.value,
                     )
 
                 queued = self.__queue_reply(thing, body)

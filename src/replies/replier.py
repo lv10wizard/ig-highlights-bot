@@ -26,9 +26,9 @@ class Replier(ProcessMixin, RedditInstanceMixin):
     separate process so that stream fetching processes are never interrupted.
     """
 
-    def __init__(self, cfg, rate_limited, rate_limit_time, blacklist):
+    def __init__(self, cfg, rate_limited, blacklist):
         ProcessMixin.__init__(self)
-        RedditInstanceMixin.__init__(self, cfg, rate_limited, rate_limit_time)
+        RedditInstanceMixin.__init__(self, cfg, rate_limited)
 
         self.blacklist = blacklist
         self.subreddits = SubredditsDatabase()
