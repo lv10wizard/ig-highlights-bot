@@ -8,6 +8,7 @@ from six import (
 )
 
 import args
+from constants import __DEBUG__
 from src import config
 from src.util import logger
 
@@ -80,7 +81,8 @@ def init_logger(cfg=None, options=None):
     else:
         # set up any initial logging to stdout
         handler = logger.ProcessStreamHandler(stream=sys.stdout)
-        handler.setLevel(logger.DEBUG)
+        level = logger.DEBUG if __DEBUG__ else logger.INFO
+        handler.setLevel(level)
         handler.setFormatter(
                 logger.Formatter(fmt=logger.Formatter.FORMAT_NO_DATE)
         )
@@ -90,8 +92,6 @@ def init_logger(cfg=None, options=None):
 if __name__ == '__main__':
     init_logger()
     options = args.parse()
-
-    sys.exit(0)
 
     cfg = config.Config(options['config'])
     if args.handle(cfg, options):
@@ -104,7 +104,13 @@ if __name__ == '__main__':
     try:
         ig_highlights_bot.run_forever()
 
+    except Exception:
+        logger.critical('An uncaught exception occured!',
+                exc_info=True,
+        )
+
     finally:
         ig_highlights_bot.graceful_exit()
+        logger.info('Exiting ...')
         logger.shutdown()
 

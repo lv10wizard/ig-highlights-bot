@@ -156,7 +156,7 @@ class Config(object):
         if not os.path.exists(os.path.dirname(self._resolved_path)):
             logger.id(logger.debug, self,
                     'Creating directories in \'{path}\' ...',
-                    path=path,
+                    path=self.path,
             )
             try:
                 os.makedirs(os.path.dirname(self._resolved_path))

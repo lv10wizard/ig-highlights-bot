@@ -1,13 +1,9 @@
-import abc
-
 from prawcore.exceptions import (
         RequestException,
         ResponseException,
         ServerError,
 )
 from praw.models import util as praw_util
-from six import add_metaclass
-
 
 from .redditinstance import RedditInstanceMixin
 from src.util import (
@@ -16,7 +12,6 @@ from src.util import (
 )
 
 
-@add_metaclass(abc.ABCMeta)
 class StreamMixin(RedditInstanceMixin):
     """
     Provides Reddit.stream_generator fetching through the .stream property.
@@ -24,7 +19,7 @@ class StreamMixin(RedditInstanceMixin):
     ServerError is thrown (internet hiccup, reddit down).
     """
 
-    @abc.abstractproperty
+    @property
     def _stream_method(self):
         """
         The stream method (eg. inbox.messages) used in the default _stream
@@ -36,7 +31,7 @@ class StreamMixin(RedditInstanceMixin):
         #  one)
         raise NotImplementedError('_stream_method')
 
-    @abc.abstractproperty
+    @property
     def _stream(self):
         """
         The Reddit stream_generator to fetch data from. This should be cached.
@@ -50,14 +45,14 @@ class StreamMixin(RedditInstanceMixin):
             )
             return self._cached_stream
 
-    @abc.abstractproperty
+    @property
     def _pause_after(self):
         """
         This is passed to pause_after argument of stream_generator
         """
         return 0
 
-    @abc.abstractproperty
+    @property
     def _loop_condition(self):
         """
         This should return True to continue looping; False to stop.

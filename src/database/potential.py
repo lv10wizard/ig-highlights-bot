@@ -15,6 +15,7 @@ class PotentialSubredditsDatabase(Database):
     def __init__(self):
         Database.__init__( self, PotentialSubredditsDatabase.PATH)
 
+    @property
     def _create_table_data(self):
         return (
                 'potential_subreddits('

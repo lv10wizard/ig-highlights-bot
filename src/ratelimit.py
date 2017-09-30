@@ -21,16 +21,25 @@ class _RateLimit(ProcessMixin):
     """
 
     def __init__(self, rate_limited, rate_limit_time):
+        ProcessMixin.__init__(self)
+
         self.rate_limited = rate_limited
         self.rate_limit_time = rate_limit_time
 
     def _run_forever(self):
+        import time
+
+        delay = 1
         while not self._killed.is_set():
             # wait until we've been rate-limited
-            self.rate_limited.wait()
+            # (set a timeout so that killed events can be handled)
+            self.rate_limited.wait(delay)
+            if not self.rate_limited.is_set():
+                # timed out
+                continue
 
             # wait until the rate-limit is done
-            delay = self.rate_limit_time.value
+            delay = time.time() - self.rate_limit_time.value
             logger.id(logger.debug, self,
                     'Rate limited! Sleeping {time} ...',
                     time=delay,
@@ -70,9 +79,15 @@ class RateLimitHandler(ProcessMixin, RedditInstanceMixin):
         self.__rate_limit_proc.kill(block)
         ProcessMixin.kill(self, block)
 
-    def _run_forever(self):
-        self.__rate_limit_proc.start()
+    def join(self):
+        self.__rate_limit_proc.join()
+        ProcessMixin.join(self)
 
+    def start(self):
+        self.__rate_limit_proc.start()
+        ProcessMixin.start(self)
+
+    def _run_forever(self):
         while not self._killed.is_set():
             handled = False
             try:

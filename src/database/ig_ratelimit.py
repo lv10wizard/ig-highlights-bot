@@ -16,6 +16,7 @@ class InstagramRateLimitDatabase(Database):
         Database.__init__(self, InstagramRateLimitDatabase.PATH)
         self.max_age = parse_time(max_age)
 
+    @property
     def _create_table_data(self):
         return (
                 'ratelimit('

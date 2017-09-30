@@ -11,8 +11,9 @@ class Filter(object):
     Filters comments that the bot should make replies to
     """
 
-    def __init__(self, cfg, username):
+    def __init__(self, cfg, username, blacklist):
         self.cfg = cfg
+        self.blacklist = blacklist
         # username should be the raw username string (ie, no 'u/')
         self.username = username
         self.reply_history = database.ReplyDatabase()
@@ -197,19 +198,24 @@ class Filter(object):
             too_many_replies = True
         return too_many_replies
 
-    def replyable_usernames(self, comment, check_thread=True):
+    def replyable_usernames(
+            self, comment, prelim_check=True, check_thread=True
+    ):
         """
         Returns a set of instagram usernames contained in the comment that the
         bot can reply to or an empty set if the bot cannot reply to the comment
         for any reason.
 
+        prelim_check (bool, optional) - whether preliminary comment checks
+                should be preformed. If this is False, the comment will be
+                parsed for usernames without first checking _can_reply.
         check_thread (bool, optional) - whether the comment thread should be
                 checked for too many bot replies (this is an expensive operation
                 in terms of reddit's ratelimit)
         """
         usernames = set()
         # filter out comments that the bot cannot reply to
-        if comment and self._can_reply(comment):
+        if comment and (not prelim_check or self._can_reply(comment)):
             parsed_comment = Parser(comment)
             comment_usernames = parsed_comment.ig_usernames
             # filter out comments that contain no instagram usernames

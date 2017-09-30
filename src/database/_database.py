@@ -41,15 +41,28 @@ class _SqliteConnectionWrapper(object):
     _CHECK_RE = re.compile(INTEGRITY_RE_FMT.format('CHECK'))
 
     @staticmethod
+    def get_err_msg(err):
+        try:
+            return err.message
+        except AttributeError:
+            try:
+                return err.args[0]
+
+            except (AttributeError, IndexError):
+                # passed some random error?
+                raise
+
+    @staticmethod
     def reraise_integrity_error(err):
-        if _SqliteConnectionWrapper._UNIQUE_RE.search(err.message):
-            raise UniqueConstraintFailed(err.message)
+        message = _SqliteConnectionWrapper.get_err_msg(err)
+        if _SqliteConnectionWrapper._UNIQUE_RE.search(message):
+            raise UniqueConstraintFailed(message)
 
-        elif _SqliteConnectionWrapper._NOTNULL_RE.search(err.message):
-            raise NotNullConstraintFailed(err.message)
+        elif _SqliteConnectionWrapper._NOTNULL_RE.search(message):
+            raise NotNullConstraintFailed(message)
 
-        elif _SqliteConnectionWrapper._CHECK_RE.search(err.message):
-            raise CheckConstraintFailed(err.message)
+        elif _SqliteConnectionWrapper._CHECK_RE.search(message):
+            raise CheckConstraintFailed(message)
 
         # other (eg. 'datatype mismatch')
         raise
@@ -67,9 +80,9 @@ class _SqliteConnectionWrapper(object):
     def __construct_msg(self, *args, **kwargs):
         msg = ['{sql}']
         if args:
-            msg.append('args: {args}')
+            msg.append('args: {func_args}')
         if kwargs:
-            msg.append('kwargs: {kwargs}')
+            msg.append('kwargs: {func_kwargs}')
         return '\n\t'.join(msg)
 
     def __do_execute(self, func, sql, *args, **kwargs):
@@ -78,14 +91,15 @@ class _SqliteConnectionWrapper(object):
             logger.id(logger.debug, self,
                     self.__construct_msg(*args, **kwargs),
                     sql=sql,
-                    args=args,
-                    kwargs=kwargs,
+                    func_args=args,
+                    func_kwargs=kwargs,
             )
             try:
-                cursor = func(*args, **kwargs)
+                cursor = func(sql, *args, **kwargs)
 
             except sqlite3.OperationalError as e:
-                if _SqliteConnectionWrapper._LOCKED_RE.search(e.message):
+                message = _SqliteConnectionWrapper.get_err_msg(err)
+                if _SqliteConnectionWrapper._LOCKED_RE.search(message):
                     # a process is taking a long time with its transaction.
                     # this will be spammy if a process holds the lock
                     # indefinitely.
@@ -98,6 +112,7 @@ class _SqliteConnectionWrapper(object):
 
             except sqlite3.IntegrityError as e:
                 _SqliteConnectionWrapper.reraise_integrity_error(e)
+        return cursor
 
     def execute(self, sql, *args, **kwargs):
         return self.__do_execute(self.connection.execute, sql, *args, **kwargs)
@@ -251,7 +266,7 @@ class Database(object):
         try:
             func(*args, **kwargs)
 
-        except Database.BaseDatabaseException:
+        except BaseDatabaseException:
             # just re-raise any custom database exceptions thrown
             raise
 
@@ -259,11 +274,11 @@ class Database(object):
             # catch any other errors so the program doesn't terminate
             logger.id(logger.warn, self,
                     '{ME} Failed!'
-                    '\n\targs={args}'
-                    '\n\tkwargs={kwargs}',
+                    '\n\targs={func_args}'
+                    '\n\tkwargs={func_kwargs}',
                     ME=func.__name__.upper(),
-                    args=args,
-                    kwargs=kwargs,
+                    func_args=args,
+                    func_kwargs=kwargs,
                     exc_info=True,
             )
 

@@ -3,6 +3,7 @@ import argparse
 import os
 import re
 
+from six import iteritems
 from six.moves import input
 
 from constants import (
@@ -37,8 +38,8 @@ def add_subreddit(cfg, *subreddits):
                         subreddits.insert(sub_name)
                 except database.UniqueConstraintFailed:
                     # this means there is a bug in __contains__
-                    logger.warn('Failed to add \'{name}\' (already added)!',
-                            name=reddit.prefix_subreddit(sub_name),
+                    logger.warn('Failed to add \'{sub_name}\' (already added)!',
+                            sub_name=reddit.prefix_subreddit(sub_name),
                             exc_info=True,
                     )
 
@@ -73,13 +74,20 @@ def rm_blacklist(cfg, *names):
     for name in names:
         blacklist.remove(name)
 
-def delete_data(cfg):
+def delete_data(cfg, do_delete=True):
     import shutil
     import stat
+
+    if not do_delete:
+        return
 
     # assumption: all data is stored under a single directory
     base_path = os.path.dirname(database.Database.PATH_FMT)
     resolved_path = config.resolve_path(base_path)
+
+    if not os.path.exists(resolved_path):
+        logger.info('No program data found in \'{0}\'', resolved_path)
+        return
 
     confirm = input('Delete all data in \'{0}\'? [Y/n] '.format(base_path))
     # only accept 'Y' as confirmation
@@ -100,36 +108,39 @@ def delete_data(cfg):
                 pass
             funcname.append(func.__name__)
 
-            logger.debug('An error occured calling {func}({path}) !'
-                    ' Attempting to clear readonly bit ...',
-                    func='.'.join(funcname),
+            logger.debug('An error occured calling {funcname}({path}) !',
+                    funcname='.'.join(funcname),
                     path=path,
                     exc_info=True,
             )
 
-            try:
-                os.chmod(path, stat.S_IWRITE)
-                func(path)
-            except (IOError, OSError):
-                logger.warn('Could not remove \'{path}\'!',
-                        path=path,
-                        exc_info=True,
-                )
+            if not os.access(path, os.W_OK):
+                logger.debug('Attempting to clear readonly bit ...')
+                try:
+                    os.chmod(path, stat.S_IWRITE)
+                    func(path)
+                except (IOError, OSError):
+                    logger.warn('Could not remove \'{path}\'!',
+                            path=path,
+                            exc_info=True,
+                    )
 
         shutil.rmtree(resolved_path, onerror=onerr)
 
     else:
         logger.info('Leaving data as is.')
 
-def do_print_database(path):
+def do_print_database(path, query=''):
     import sqlite3
 
+    logger.info('Dumping \'{path}\' ...', path=path)
+
     connection = sqlite3.connect(path)
-    connection.row_factory = Row
+    connection.row_factory = sqlite3.Row
     try:
         # https://stackoverflow.com/a/305639
         tables = connection.execute(
-                'SELECT name FROM sqlite_master WHERE name = \'table\''
+                'SELECT name FROM sqlite_master WHERE type = \'table\''
         )
     except sqlite3.DatabaseError as e:
         # eg. not a database
@@ -137,18 +148,21 @@ def do_print_database(path):
                 path=path,
         )
     else:
-        print('{0}:'.format(os.path.basename(path)))
+        print('{0}:'.format(os.path.basename(path)), end='\n\n')
         # https://stackoverflow.com/a/13335514
         #    [('foo',), ('bar',), ('baz',)]
         # -> ('foo', 'bar', 'baz')
-        tables = zip(*tables)[0]
+        tables = [name[0] for name in tables]
         cursors = {
-                name: connection.execute('SELECT * FROM {0}'.format(name))
+                name: connection.execute(
+                    'SELECT * FROM {0} {1}'.format(name, query)
+                )
                 for name in tables
         }
 
         sep = ' | '
         horiz_sep = '-' * 72
+        end = 'number of rows:'
         for name in cursors:
             print(horiz_sep)
             print('table \'{0}\':'.format(name))
@@ -166,17 +180,22 @@ def do_print_database(path):
                         # of each column to avoid reading the entire database
                         # into memory (this may mean that some rows are not
                         # formatted correctly)
-                        padding[k] = max(len(row[k]), len(k))
+                        padding[k] = max(len(str(row[k])), len(k))
                         columns.append('{0:^{1}}'.format(k, padding[k]))
                     # print out the columns
                     print(*columns, sep=sep)
                     print(horiz_sep)
                 # print out each row
-                row_str = ['{0:<{1}}'.format(row[k]) for k in keys]
+                row_str = [
+                        '{0:<{1}}'.format(str(row[k]), padding[k])
+                        for k in keys
+                ]
                 print(*row_str, sep=sep)
                 num += 1
-            print('number of rows:', num)
-        print(horiz_sep, end='\n\n')
+
+            end_out_len = len(end) + len(str(num)) + 1 # +1 for space
+            end_sep = ' ' + horiz_sep[end_out_len + 1:] # +1 for space
+            print(end, num, end=end_sep + '\n\n')
 
 def print_database(cfg, *databases):
     for db_name in databases:
@@ -194,15 +213,16 @@ def print_database(cfg, *databases):
                     db_name=db_name,
             )
         else:
-            if os.path.exists(db_class.PATH):
-                do_print_database(db_class.PATH)
+            resolved_path = database.Database.resolve_path(db_class.PATH)
+            if os.path.exists(resolved_path):
+                do_print_database(resolved_path)
 
 def print_instagram_database(cfg, *user_databases):
     resolved_igdb_path = config.resolve_path(database.InstagramDatabase.PATH)
     for user_db in user_databases:
         path = os.path.join(resolved_igdb_path, user_db)
         if os.path.exists(path):
-            do_print_database(path)
+            do_print_database(path, 'ORDER BY num_likes DESC')
 
         else:
             path_raw = os.path.join(database.InstagramDatabase.PATH, user_db)
@@ -231,17 +251,23 @@ def handle(cfg, args):
     }
 
     had_handleable_opt = False
-    for opt in args:
-        if opt not in ignore_keys and opt is not None:
+    for opt, opt_val in iteritems(args):
+        # XXX: options should evaluate to true if they are to be handled
+        if opt not in ignore_keys and bool(opt_val):
             had_handleable_opt = True
             opt_key = convert(opt)
-            opt_val = args[opt]
             try:
-                handlers[opt_key](cfg, *opt_val)
+                handler_func = handlers[opt_key]
             except KeyError as e:
                 logger.exception('No option handler defined for \'{opt}\'!',
                         opt=opt,
                 )
+            else:
+                try:
+                    handler_func(cfg, *opt_val)
+                except TypeError:
+                    # opt_val not iterable
+                    handler_func(cfg, opt_val)
 
     return had_handleable_opt
 
@@ -320,7 +346,7 @@ def parse():
     )
 
     parser.add_argument('--{0}'.format(DUMP),
-            metavar='NAME', nargs='+', choices=database.SUBCLASSES.keys(),
+            metavar='NAME', nargs='+', choices=list(database.SUBCLASSES.keys()),
             help='Dump the specified databases to stdout',
     )
 

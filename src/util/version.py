@@ -1,6 +1,9 @@
+import os
 import shlex
 import subprocess
+import sys
 
+from six import string_types
 from six.moves import getcwd
 
 from constants import ROOT_DIR
@@ -20,10 +23,12 @@ def run_cmd(cmd_str, fail_msg):
     except (OSError, ValueError) as e:
         logger.warn(fail_msg, exc_info=True)
     else:
-        output = proc.stdout.read().strip()
+        output = proc.stdout.read()
         if not output:
             logger.debug('{0} ({1})', fail_msg, proc.stderr.read().strip())
-    return output
+        elif not isinstance(output, string_types):
+            output = output.decode(sys.getfilesystemencoding())
+    return output.strip()
 
 def get_version():
     """
@@ -37,7 +42,7 @@ def get_version():
     if __VERSION__:
         return __VERSION__
 
-    stock_version = '0.1.0'
+    stock_version = 'v0.1.0'
 
     cwd = getcwd()
     try:

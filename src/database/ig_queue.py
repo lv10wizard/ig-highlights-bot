@@ -24,6 +24,7 @@ class InstagramQueueDatabase(Database):
         )
         return bool(cursor.fetchone())
 
+    @property
     def _create_table_data(self):
         return (
                 'queue('

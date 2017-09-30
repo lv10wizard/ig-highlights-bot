@@ -54,7 +54,7 @@ class Requestor(object):
         self.__last_delay = delay
         return delay
 
-    def request(url, method='get', *args, **kwargs):
+    def request(self, url, method='get', *args, **kwargs):
         response = None
 
         try:
@@ -70,15 +70,15 @@ class Requestor(object):
         else:
             msg = ['{method} {url}']
             if args:
-                msg.append('args: {args}')
+                msg.append('args: {func_args}')
             if kwargs:
-                msg.append('kwargs: {kwargs}')
+                msg.append('kwargs: {func_kwargs}')
             logger.id(logger.debug, self,
                     '\n\t'.join(msg),
                     method=method.upper(),
                     url=url,
-                    args=args,
-                    kwargs=kwargs,
+                    func_args=args,
+                    func_kwargs=kwargs,
             )
 
             while not response:

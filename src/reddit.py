@@ -255,7 +255,7 @@ class Reddit(praw.Reddit):
     @property
     def username_raw(self):
         raw = self.config.username
-        return raw if not isinstance(raw, NOTSET_TYPE) else None
+        return raw if not isinstance(raw, Reddit.NOTSET_TYPE) else None
 
     @property
     def username(self):
@@ -291,7 +291,7 @@ class Reddit(praw.Reddit):
         praw.ini
         """
         did_set = False
-        if isinstance(self.config.username, NOTSET_TYPE):
+        if isinstance(self.config.username, Reddit.NOTSET_TYPE):
             self.config.username = input('bot account username: ')
             self.__warn_if_wrong_praw_version()
             self._prepare_prawcore()
@@ -304,7 +304,7 @@ class Reddit(praw.Reddit):
         in praw.ini
         """
         did_set = False
-        while isinstance(self.config.password, NOTSET_TYPE):
+        while isinstance(self.config.password, Reddit.NOTSET_TYPE):
             first = getpass('{0} password: '.format(self.username))
             second = getpass('Re-enter password: ')
             if first == second:
@@ -370,13 +370,19 @@ class Reddit(praw.Reddit):
                         ' using {time}',
                         time=delay,
                 )
+            else:
+                # fudge the ratelimit time a bit (the time given by reddit does
+                # not seem to be accurate)
+                delay += 2 * 60
 
             reset_time = time.time() + delay
             logger.id(logger.debug, self,
-                    'Flagging rate-limit: {time} ({stftime})',
+                    'Flagging rate-limit: {time} ({strftime})'
+                    '\nmessage: {msg}',
                     time=delay,
                     strftime='%H:%M:%S',
                     strf_time=reset_time,
+                    msg=err_msg,
             )
 
             self.__rate_limit_time.value = reset_time
@@ -481,8 +487,8 @@ class Reddit(praw.Reddit):
             except Forbidden as e:
                 # failed to log in? bot account suspended?
                 logger.id(logger.exception, self,
-                        'Failed to send debug pm to \'{name}\'!',
-                        name=maintainer.name,
+                        'Failed to send debug pm to \'{author_name}\'!',
+                        author_name=maintainer.name,
                 )
 
             except praw.exceptions.APIException as e:
@@ -490,9 +496,9 @@ class Reddit(praw.Reddit):
                     # deleted, banned, or otherwise doesn't exist
                     # (is AUTHOR spelled correctly?)
                     logger.id(logger.debug, self,
-                            'Could not send debug pm to \'{name}\':'
+                            'Could not send debug pm to \'{author_name}\':'
                             ' does not exist.',
-                            name=maintainer.name,
+                            author_name=maintainer.name,
                     )
                     # flag that we shouldn't try to send any more debug pms
                     # Note: this is NOT persistent
@@ -538,6 +544,7 @@ class Reddit(praw.Reddit):
                             ' (rate-limited? {yesno_ratelimit};'
                             ' time left: {time} = {strftime})',
                             num=num_attempts,
+                            color_thing=display_fullname(thing),
                             yesno_ratelimit=self.is_rate_limited,
                             time=remaining,
                             strftime='%H:%M:%S',

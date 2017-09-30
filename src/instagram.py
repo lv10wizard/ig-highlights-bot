@@ -125,7 +125,8 @@ class Instagram(object):
         Returns the number requests remaining for the current period
         """
         if Instagram._rate_limit:
-            return RATE_LIMIT_THRESHOLD - Instagram._rate_limit.num_used()
+            num_used = Instagram._rate_limit.num_used()
+            return Instagram.RATE_LIMIT_THRESHOLD - num_used
         return -1
 
     @staticmethod
@@ -143,8 +144,8 @@ class Instagram(object):
             Instagram.cfg = cfg
         if not Instagram.user_agent:
             Instagram.user_agent = (
-                    '{name} reddit bot {version} ({email})'.format(
-                        name=bot_username,
+                    '{username} reddit bot {version} ({email})'.format(
+                        username=bot_username,
                         version=get_version(),
                         email=EMAIL,
                     )
@@ -252,10 +253,11 @@ class Instagram(object):
     @property
     def __db_path(self):
         if self.user:
-            return os.path.join(
-                    InstagramDatabase.PATH,
+            path = os.path.join(
+                    database.InstagramDatabase.PATH,
                     '{0}.db'.format(self.user),
             )
+            return database.Database.resolve_path(path)
         return ''
 
     @property
@@ -369,6 +371,8 @@ class Instagram(object):
                                 exc_info=True,
                         )
                         # TODO? raise
+                    else:
+                        self._rate_limit.commit()
 
                     if response.status_code == 200:
                         if Instagram.has_server_error():
@@ -481,14 +485,15 @@ class Instagram(object):
                 seen = set()
                 self.__seen = seen
 
-            for item in data['items']:
-                try:
-                    with self.__cache:
+            with self.__cache:
+                for item in data['items']:
+                    code = item['code']
+                    try:
                         self.__cache.insert(item)
 
-                except database.UniqueConstraintFailed:
-                    with self.__cache:
-                        self.__cache.update(item)
+                    except database.UniqueConstraintFailed:
+                        with self.__cache:
+                            self.__cache.update(item)
 
                     # Note: stop_at_first_duplicate skips pruning.
                     # assumption: media data is fetched newest -> oldest,
@@ -502,9 +507,9 @@ class Instagram(object):
                         )
                         return None
 
-                # cache which codes have been seen so that we can prune missing
-                # (probably deleted) entries
-                seen.add(code)
+                    # cache which codes have been seen so that we can prune missing
+                    # (probably deleted) entries
+                    seen.add(code)
 
             if not data['more_available']:
                 # prune any rows in the cache db that we did not see

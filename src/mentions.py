@@ -23,11 +23,11 @@ class Mentions(ProcessMixin, StreamMixin):
         self.blacklist = blacklist
         self.reply_history = database.ReplyDatabase()
         self.reply_queue = database.ReplyQueueDatabase()
-        self.filter = replies.Filter(cfg, self._reddit.username_raw)
+        self.filter = replies.Filter(cfg, self._reddit.username_raw, blacklist)
 
     @property
     def _stream_method(self):
-        self._reddit.inbox.mentions
+        return self._reddit.inbox.mentions
 
     def _process_mention(self, mention):
         """
@@ -47,7 +47,7 @@ class Mentions(ProcessMixin, StreamMixin):
             ig_usernames = self.filter.replyable_usernames(comment)
             if ig_usernames:
                 had_replyable_comment = True
-                self.filter.enqueue(comment)
+                self.filter.enqueue(comment, ig_usernames)
 
         if not had_replyable_comment:
             # summoned to a thread where the bot attempted no replies

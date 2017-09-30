@@ -1,5 +1,7 @@
 import os
 
+from six import string_types
+
 from ._database import Database
 
 
@@ -10,6 +12,7 @@ class InstagramDatabase(Database):
 
     PATH = Database.PATH_FMT.format('instagram')
 
+    @property
     def _create_table_data(self):
         return (
                 'cache('
@@ -29,23 +32,19 @@ class InstagramDatabase(Database):
                 (code, link, num_likes),
         )
 
-    def _delete(self, items):
-        def do_delete(item):
-            code, link, num_likes = self.__unpack(item)
+    def _delete(self, codes):
+        def do_delete(code):
             self._db.execute(
-                    'DELETE FROM cache'
-                    ' WHERE code = ?'
-                    ' AND link = ?'
-                    ' AND num_likes = ?',
-                    (code, link, num_likes),
+                    'DELETE FROM cache WHERE code = ?'
+                    (code,),
             )
 
-        if hasattr(items, '__iter__'):
-            for item in items:
-                do_delete(item)
+        if hasattr(codes, '__iter__') and not isinstance(codes, string_types):
+            for code in codes:
+                do_delete(code)
 
         else:
-            do_delete(items)
+            do_delete(codes)
 
     def _update(self, item):
         code, link, num_likes = self.__unpack(item)
@@ -67,7 +66,9 @@ class InstagramDatabase(Database):
                 (may return a list with len < num if the database does not
                  contain enough links to populate the list)
         """
-        curor = self._db.execute('SELECT link FROM cache ORDER BY likes DESC')
+        cursor = self._db.execute(
+                'SELECT link FROM cache ORDER BY num_likes DESC'
+        )
         media = []
         for row in cursor:
             if len(media) == num:

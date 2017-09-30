@@ -34,7 +34,15 @@ class SubredditsDatabase(Database):
         else:
             self.do_seed = bool(do_seed)
         Database.__init__(self, SubredditsDatabase.PATH)
+
+    @property
+    def _db(self):
+        db = Database._db.fget(self)
         try:
+            # test if we've cached the file's mtime
+            self.__mtime
+
+        except AttributeError:
             self.__mtime = os.stat(self._resolved_path).st_mtime
 
         except OSError as e:
@@ -45,6 +53,7 @@ class SubredditsDatabase(Database):
                     exc_info=True,
             )
             raise
+        return db
 
     def __contains__(self, thing):
         name = SubredditsDatabase.get_subreddit_name(thing)
@@ -63,11 +72,12 @@ class SubredditsDatabase(Database):
         )
         return bool(cursor.fetchone())
 
+    @property
     def _create_table_data(self):
         return (
                 'subreddits('
                 '   subreddit_name TEXT PRIMARY KEY NOT NULL COLLATE NOCASE,'
-                '   added_utc REAL NOT NULL,'
+                '   added_utc REAL NOT NULL'
                 ')'
         )
 
@@ -95,6 +105,12 @@ class SubredditsDatabase(Database):
                         (name.strip(), time.time())
                         for name in subreddits if bool(name.strip())
                 ]
+
+                logger.id(logger.debug, self,
+                        'Seeding with: {color_subreddits}',
+                        color_subreddits=subreddits,
+                )
+
                 if subreddits:
                     with db:
                         db.executemany(

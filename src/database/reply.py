@@ -54,7 +54,7 @@ class ReplyDatabase(Database):
                     )
             ]
 
-        connection.executemany(
+        self._db.executemany(
                 'INSERT INTO comments('
                 '   comment_fullname, submission_fullname, ig_user'
                 ') VALUES(?, ?, ?)', values,

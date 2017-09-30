@@ -38,14 +38,11 @@ class IgHighlightsBot(RunForeverMixin, StreamMixin):
     """
 
     def __init__(self, cfg):
-        signal.signal(signal.SIGINT, self.graceful_exit)
-        signal.signal(signal.SIGTERM, self.graceful_exit)
-
         # rate-limited flag. this is created here so that any process can
         # flag that the account is rate-limited.
         rate_limited = multiprocessing.Event()
         rate_limit_time = multiprocessing.Value(ctypes.c_float, 0.0)
-        StreamMixin.__init__(self, cfg, rate_limited)
+        StreamMixin.__init__(self, cfg, rate_limited, rate_limit_time)
 
         self.ratelimit_handler = ratelimit.RateLimitHandler(
                 cfg, rate_limited, rate_limit_time,
@@ -60,7 +57,7 @@ class IgHighlightsBot(RunForeverMixin, StreamMixin):
                 cfg, rate_limited, rate_limit_time, self.blacklist
         )
         self.mentions = mentions.Mentions(
-                cfg, rate_limited, rate_limit_time,
+                cfg, rate_limited, rate_limit_time, self.blacklist,
         )
         self.replier = replies.Replier(
                 cfg, rate_limited, rate_limit_time, self.blacklist,
@@ -68,7 +65,9 @@ class IgHighlightsBot(RunForeverMixin, StreamMixin):
 
         # initialize stuff that requires correct credentials
         instagram.Instagram.initialize(cfg, self._reddit.username)
-        self.filter = replies.Filter(cfg, self._reddit.username_raw)
+        self.filter = replies.Filter(
+                cfg, self._reddit.username_raw, self.blacklist
+        )
 
     def __str__(self):
         return self._reddit.username_raw
@@ -89,13 +88,13 @@ class IgHighlightsBot(RunForeverMixin, StreamMixin):
 
         msg = []
         if signum:
-            msg.append('Caught {name} ({num})!')
+            msg.append('Caught {signame} ({num})!')
         msg.append('Shutting down ...')
 
         try:
             logger.id(logger.debug, self,
                     ' '.join(msg),
-                    name=signames[signum] if signum is not None else '???',
+                    signame=signames[signum] if signum is not None else '???',
                     num=signum,
             )
         except KeyError as e:
@@ -103,7 +102,7 @@ class IgHighlightsBot(RunForeverMixin, StreamMixin):
             # this is probably not possible
             logger.id(logger.debug, self,
                     ' '.join(msg),
-                    name='???',
+                    signame='???',
                     num=signum,
             )
 
@@ -171,10 +170,18 @@ class IgHighlightsBot(RunForeverMixin, StreamMixin):
         Bot comment stream parsing
         """
 
+        # make child processes ignore the signals that the main process handles
+        signal.signal(signal.SIGINT, signal.SIG_IGN)
+        signal.signal(signal.SIGTERM, signal.SIG_IGN)
+
         self.ratelimit_handler.start()
         self.messages.start()
         self.mentions.start()
         self.replier.start()
+
+        # gracefully handle exit signals
+        signal.signal(signal.SIGINT, self.graceful_exit)
+        signal.signal(signal.SIGTERM, self.graceful_exit)
 
         try:
             while not self._killed:
@@ -186,7 +193,7 @@ class IgHighlightsBot(RunForeverMixin, StreamMixin):
 
                         ig_usernames = self.filter.replyable_usernames(comment)
                         if ig_usernames:
-                            self.filter.enqueue(comment)
+                            self.filter.enqueue(comment, ig_usernames)
 
                 if not self._killed:
                     time.sleep(1)

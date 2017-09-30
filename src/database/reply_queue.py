@@ -20,6 +20,7 @@ class ReplyQueueDatabase(Database):
         )
         return bool(cursor.fetchone())
 
+    @property
     def _create_table_data(self):
         return (
                 'queue('
@@ -57,7 +58,7 @@ class ReplyQueueDatabase(Database):
         Returns (comment_id, mention_id) of the oldest record in the database
                 or None if the queue is empty
         """
-        cusor = self._db.execute(
+        cursor = self._db.execute(
                 'SELECT comment_id, mention_id FROM queue'
                 ' ORDER BY timestamp ASC'
         )

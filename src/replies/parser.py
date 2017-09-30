@@ -40,9 +40,9 @@ class Parser(object):
                 logger.id(logger.debug, self, 'Parsing comment ...')
 
                 try:
-                    soup = BeautifulSoup(comment.body_html, 'lxml')
+                    soup = BeautifulSoup(self.comment.body_html, 'lxml')
                 except FeatureNotFound:
-                    soup = BeautifulSoup(comment.body_html, 'html.parser')
+                    soup = BeautifulSoup(self.comment.body_html, 'html.parser')
 
                 # Note: this only considers valid links in the body's text
                 # TODO? regex search for anything that looks like a link

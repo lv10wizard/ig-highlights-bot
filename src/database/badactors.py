@@ -25,6 +25,7 @@ class BadActorsDatabase(Database):
         inactive = self._db.execute(query.format('inactive'), (thing.fullname,))
         return bool(active.fetchone() or inactive.fetchone())
 
+    @property
     def _create_table_data(self):
         columns = [
                 'thing_fullname TEXT PRIMARY KEY NOT NULL',

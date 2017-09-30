@@ -30,7 +30,7 @@ class Replier(ProcessMixin, RedditInstanceMixin):
         ProcessMixin.__init__(self)
         RedditInstanceMixin.__init__(self, cfg, rate_limited, rate_limit_time)
 
-        self.filter = Filter(cfg, self._reddit.username_raw)
+        self.filter = Filter(cfg, self._reddit.username_raw, blacklist)
         self.formatter = Formatter(self._reddit.username_raw)
 
         self.blacklist = blacklist
@@ -72,7 +72,7 @@ class Replier(ProcessMixin, RedditInstanceMixin):
             msg.append('from {color_comment}')
 
             logger.id(logger.warn, self,
-                    ' '.join(msg)
+                    ' '.join(msg),
                     color_user=ig.user,
                     last_id=ig.last_id,
                     color_comment=reddit.display_id(comment),
@@ -100,6 +100,9 @@ class Replier(ProcessMixin, RedditInstanceMixin):
         #  are responded to)
         ig_usernames = self.filter.replyable_usernames(
                 comment,
+                # don't bother with preliminary checks; they should have already
+                # passed
+                prelim_check=False,
                 # no need to check the comment thread for too many bot
                 # replies because it should have already been checked
                 check_thread=False,
@@ -123,6 +126,7 @@ class Replier(ProcessMixin, RedditInstanceMixin):
                 ig_list = []
                 break
 
+            last_id = None
             if ig_user in queued_ig_data:
                 # handle a previously queued instagram user
                 last_id = queued_ig_data[ig_user]

@@ -11,6 +11,7 @@ class MentionsDatabase(Database):
     def __init__(self):
         Database.__init__(self, MentionsDatabase.PATH)
 
+    @property
     def _create_table_data(self):
         return (
                 'mentions('
@@ -22,7 +23,7 @@ class MentionsDatabase(Database):
         )
 
     def _insert(self, mention):
-        connection.execute(
+        self._db.execute(
                 'INSERT INTO mentions(submission_fullname, comment_author)'
                 ' VALUES(?, ?)',
                 # assumption: mention cannot itself be a submission

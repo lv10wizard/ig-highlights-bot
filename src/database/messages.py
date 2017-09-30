@@ -15,6 +15,7 @@ class MessagesDatabase(Database):
     def __init__(self):
         Database.__init__(self, MessagesDatabase.PATH)
 
+    @property
     def _create_table_data(self):
         return (
                 'messages('
@@ -23,7 +24,7 @@ class MessagesDatabase(Database):
         )
 
     def _insert(self, message):
-        connection.execute(
+        self._db.execute(
                 'INSERT INTO messages(message_fullname) VALUES(?)',
                 (message.fullname,),
         )

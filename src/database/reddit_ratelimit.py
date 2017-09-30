@@ -35,13 +35,15 @@ class RedditRateLimitQueueDatabase(Database):
         )
         return bool(cursor.fetchone())
 
+    @property
     def _create_table_data(self):
         return (
                 'queue('
                 '   uid INTEGER PRIMARY KEY NOT NULL,'
                 '   fullname TEXT NOT NULL COLLATE NOCASE,'
                 '   body TEXT NOT NULL,'
-                '   ratelimit_reset REAL NOT NULL'
+                '   ratelimit_reset REAL NOT NULL,'
+                '   UNIQUE(fullname, body)'
                 ')'
         )
 

@@ -4,7 +4,10 @@ from constants import (
         HELP_URL,
         REPO_URL,
 )
-from src.util import logger
+from src.util import (
+        get_padding,
+        logger,
+)
 
 
 class Formatter(object):
@@ -52,19 +55,19 @@ class Formatter(object):
 
     def __init__(self, username):
         # wrap the string in a list so it is easier to work with
-        self.FOOTER = list(Formatter.FOOTER_FMT.format(
+        self.FOOTER = [Formatter.FOOTER_FMT.format(
                 contact_url=CONTACT_URL,
                 source_url=REPO_URL,
                 blacklist_url=BLACKLIST_URL_FMT.format(
                     to=username,
                 ),
                 help_url=HELP_URL,
-        ))
+        )]
 
     def __str__(self):
         return self.__class__.__name__
 
-    def format(ig_list):
+    def format(self, ig_list):
         """
         Formats the data into one or more reddit comment reply strings
 
@@ -80,7 +83,16 @@ class Formatter(object):
         for ig in ig_list:
             header = Formatter.HEADER_FMT.format(user=ig.user, link=ig.url)
             highlights = []
-            for media_link in ig.top_media:
+            media = ig.top_media
+            for i, media_link in enumerate(media):
+                logger.id(logger.debug, self,
+                        '[{i:>{pad}}/{num}] {color_user}: adding {link}',
+                        i=i+1,
+                        pad=get_padding(len(media)),
+                        num=len(media),
+                        color_user=ig.user,
+                        link=media_link,
+                )
                 highlights.append(Formatter.HIGHLIGHT_FMT.format(
                     i=i, # could do i+1 to start at 1 but whatever
                     link=media_link,

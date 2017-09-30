@@ -123,49 +123,49 @@ def _empty(logger, level):
                     if handler in formatters:
                         handler.setFormatter(formatters[handler])
 
-def _log(level, msg, *args, **kwargs):
+def _log(__level__, __msg__, *__args__, **__kwargs__):
     logger = _get(_module_name())
-    if msg is None:
-        _empty(logger, level)
+    if __msg__ is None:
+        _empty(logger, __level__)
     else:
-        logger.log(level, msg, *args, **kwargs)
-        if 'exc_info' in kwargs and kwargs['exc_info']:
+        logger.log(__level__, __msg__, *__args__, **__kwargs__)
+        if 'exc_info' in __kwargs__ and __kwargs__['exc_info']:
             # log an empty line to help highlight exceptions
-            _empty(logger, level)
+            _empty(logger, __level__)
 
-def debug(msg=None, *args, **kwargs):
-    _log(logging.DEBUG, msg, *args, **kwargs)
+def debug(__msg__=None, *__args__, **__kwargs__):
+    _log(logging.DEBUG, __msg__, *__args__, **__kwargs__)
 
-def info(msg=None, *args, **kwargs):
-    _log(logging.INFO, msg, *args, **kwargs)
+def info(__msg__=None, *__args__, **__kwargs__):
+    _log(logging.INFO, __msg__, *__args__, **__kwargs__)
 
-def warn(msg=None, *args, **kwargs):
-    _log(logging.WARNING, msg, *args, **kwargs)
+def warn(__msg__=None, *__args__, **__kwargs__):
+    _log(logging.WARNING, __msg__, *__args__, **__kwargs__)
 
-def error(msg=None, *args, **kwargs):
-    _log(logging.ERROR, msg, *args, **kwargs)
+def error(__msg__=None, *__args__, **__kwargs__):
+    _log(logging.ERROR, __msg__, *__args__, **__kwargs__)
 
-def critical(msg=None, *args, **kwargs):
-    _log(logging.CRITICAL, msg, *args, **kwargs)
+def critical(__msg__=None, *__args__, **__kwargs__):
+    _log(logging.CRITICAL, __msg__, *__args__, **__kwargs__)
 
-def exception(msg=None, *args, **kwargs):
-    if 'exc_info' not in kwargs:
-        kwargs['exc_info'] = True
-    error(msg, *args, **kwargs)
+def exception(__msg__=None, *__args__, **__kwargs__):
+    if 'exc_info' not in __kwargs__:
+        __kwargs__['exc_info'] = True
+    error(__msg__, *__args__, **__kwargs__)
 
-def id(logger_func, __id__=None, msg=None, *args, **kwargs):
+def id(__logger_func__, __id__=None, __msg__=None, *__args__, **__kwargs__):
     """
     Prepends an id to the message
     """
-    if __id__ and msg:
+    if __id__ and __msg__:
         extra = {'ident': __id__}
-        if 'extra' in kwargs and isinstance(kwargs['extra'], dict):
-            kwargs['extra'].update(extra)
+        if 'extra' in __kwargs__ and isinstance(__kwargs__['extra'], dict):
+            __kwargs__['extra'].update(extra)
         else:
             # this will squash 'extra' keywords that are not dictionaries
-            kwargs['extra'] = extra
+            __kwargs__['extra'] = extra
 
-    logger_func(msg, *args, **kwargs)
+    __logger_func__(__msg__, *__args__, **__kwargs__)
 
 # ######################################################################
 

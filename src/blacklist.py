@@ -21,7 +21,7 @@ class Blacklist(object):
 
     def __init__(self, cfg):
         self.cfg = cfg
-        self.__badactors = BadActorsDatabase()
+        self.__badactors = BadActorsDatabase(cfg)
         self.__database = BlacklistDatabase(cfg)
         self.__lock = multiprocessing.RLock()
 
@@ -72,9 +72,9 @@ class Blacklist(object):
             logger.id(logger.debug, self,
                     'Could not add {color_name} to blacklist:'
                     ' failed to determine blacklist type'
-                    ' (name=\'{name}\', prefix=\'{prefix}\')',
+                    ' (name=\'{name_arg}\', prefix=\'{prefix}\')',
                     color_name=name,
-                    name=name,
+                    name_arg=name,
                     prefix=prefix,
             )
 
@@ -157,9 +157,9 @@ class Blacklist(object):
             logger.id(logger.debug, self,
                     'Could not remove {color_name} from blacklist:'
                     ' failed to determine blacklist type'
-                    ' (name=\'{name}\', prefix=\'{prefix}\')',
+                    ' (name=\'{name_arg}\', prefix=\'{prefix}\')',
                     color_name=name,
-                    name=name,
+                    name_arg=name,
                     prefix=prefix,
             )
 
@@ -232,9 +232,9 @@ class Blacklist(object):
             logger.id(logger.debug, self,
                     'Could not determine if {color_name} is blacklisted:'
                     ' failed to determine blacklist type'
-                    ' (name=\'{name}\', prefix=\'{prefix}\')',
+                    ' (name=\'{name_arg}\', prefix=\'{prefix}\')',
                     color_name=name,
-                    name=name,
+                    name_arg=name,
                     prefix=prefix,
             )
             return False
@@ -265,9 +265,9 @@ class Blacklist(object):
             logger.id(logger.debug, self,
                     'Could not determine time remaining on {color_name}\'s'
                     ' blacklisted: failed to determine blacklist type'
-                    ' (name=\'{name}\', prefix=\'{prefix}\')',
+                    ' (name=\'{name_arg}\', prefix=\'{prefix}\')',
                     color_name=name,
-                    name=name,
+                    name_arg=name,
                     prefix=prefix,
             )
             return 0

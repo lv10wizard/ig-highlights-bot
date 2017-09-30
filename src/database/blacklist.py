@@ -117,21 +117,21 @@ class BlacklistDatabase(Database):
         """
         now = time.time() if is_tmp else BlacklistDatabase.PERMANENT
         name = self.__sanitize(name, name_type)
-        connection.execute(
+        self._db.execute(
                 'INSERT INTO blacklist(name, type, start) VALUES(?, ?, ?)',
                 (name, name_type, now),
         )
 
     def _delete(self, name, name_type):
         name = self.__sanitize(name, name_type)
-        connection.execute(
+        self._db.execute(
                 'DELETE FROM blacklist WHERE name = ? AND type = ?',
                 (name, name_type),
         )
 
     def set_make_permanent(self, name, name_type, value=True):
         flag = 1 if value else 0
-        connection.execute(
+        self._db.execute(
                 'UPDATE blacklist'
                 ' SET make_permanent = ?'
                 ' WHERE name = ? AND type = ?',
@@ -139,7 +139,7 @@ class BlacklistDatabase(Database):
         )
 
     def clear_make_permanent(self, name, name_type):
-        connection.execute(
+        self._db.execute(
                 'UPDATE blacklist'
                 ' SET make_permanent = ?'
                 ' WHERE name = ? AND type = ?',

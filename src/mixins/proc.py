@@ -93,7 +93,7 @@ class RunForeverMixin(object):
             pid = None
             try:
                 with open(pid_file, 'r') as fd:
-                    pid = pid_file.read()
+                    pid = fd.read()
             except (IOError, OSError):
                 logger.id(logger.debug, self,
                         'Failed to read pid @ \'{path}\'',
@@ -136,7 +136,6 @@ class RunForeverMixin(object):
 
             logger.id(logger.info, self, 'Exiting ...')
 
-@add_metaclass(abc.ABCMeta)
 class ProcessMixin(RunForeverMixin):
     """
     Provides multiprocessing functionality through the abstract method
@@ -146,11 +145,12 @@ class ProcessMixin(RunForeverMixin):
     def __init__(self, daemon=True):
         self.__proc = multiprocessing.Process(target=self.run_forever)
         self.__proc.daemon = daemon
+        self._killed = multiprocessing.Event()
 
     def __str__(self):
         result = [self.__class__.__name__]
         if self.__proc.pid:
-            result.append(self.__proc.pid)
+            result.append(str(self.__proc.pid))
         return ':'.join(result)
 
     @property
@@ -161,25 +161,21 @@ class ProcessMixin(RunForeverMixin):
         """
         Sets the kill flag for the process. Blocks if block==True.
         """
-        if hasattr(self, '_killed') and hasattr(self._killed, 'set'):
+        if self.is_alive:
             logger.id(logger.debug, self, 'Setting kill flag ...')
             self._killed.set()
             if block:
                 self.join()
 
-        else:
-            logger.id(logger.debug, self,
-                    'Failed to set kill flag (is alive? {yesno_status})',
-                    yesno_status=self.is_alive,
-            )
-
     def join(self):
-        return self.__proc.join()
+        try:
+            self.__proc.join()
+        except AssertionError:
+            # can only join a started process
+            pass
 
     def start(self):
         logger.id(logger.debug, self, 'Starting process ...')
-        if not hasattr(self, '_killed'):
-            self._killed = multiprocessing.Event()
 
         try:
             self.__proc.start()
