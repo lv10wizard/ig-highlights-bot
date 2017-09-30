@@ -39,12 +39,13 @@ class _RateLimit(ProcessMixin):
                 continue
 
             # wait until the rate-limit is done
-            delay = time.time() - self.rate_limit_time.value
-            logger.id(logger.debug, self,
-                    'Rate limited! Sleeping {time} ...',
-                    time=delay,
-            )
-            self._killed.wait(delay)
+            delay = self.rate_limit_time.value - time.time()
+            if delay > 0:
+                logger.id(logger.debug, self,
+                        'Rate limited! Sleeping {time} ...',
+                        time=delay,
+                )
+                self._killed.wait(delay)
 
             # don't postpone shutdown to set some variables that are about to
             # be discarded
@@ -140,7 +141,9 @@ class RateLimitHandler(ProcessMixin, RedditInstanceMixin):
                             # only handle specific types of things
                             if isinstance(thing, RateLimitHandler.VALID_THINGS):
                                 # Note: we may be rate-limited again
-                                if self._reddit.do_reply(thing, body):
+                                if self._reddit.do_reply(
+                                        thing, body, self._killed,
+                                ):
                                     # remove the element from the queue database
                                     with self.rate_limit_queue:
                                         self.rate_limit_queue.delete(

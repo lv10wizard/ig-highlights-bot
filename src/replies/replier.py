@@ -255,7 +255,7 @@ class Replier(ProcessMixin, RedditInstanceMixin):
             return
 
         for body, ig_users in reply_list:
-            if self._reddit.do_reply(comment, body):
+            if self._reddit.do_reply(comment, body, self._killed):
                 # only require a single reply to succeed to consider this method
                 # a success
                 success = True
@@ -290,7 +290,7 @@ class Replier(ProcessMixin, RedditInstanceMixin):
                 self.ig_queue.delete(comment)
 
     def _process_reply_queue(self):
-        while self.reply_queue.size() > 0:
+        while not self._killed.is_set() and self.reply_queue.size() > 0:
             data = self.reply_queue.get()
             if not data:
                 # queue is empty

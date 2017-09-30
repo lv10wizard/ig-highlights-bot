@@ -291,7 +291,7 @@ class Messages(ProcessMixin, StreamMixin):
                             prefix=prefix,
                     )
                     if reply_text:
-                        self._reddit.do_reply(message, reply_text)
+                        self._reddit.do_reply(message, reply_text, self._killed)
 
             if not self._killed.is_set():
                 logger.id(logger.debug, self,

@@ -371,34 +371,45 @@ class Reddit(praw.Reddit):
                         time=delay,
                 )
             else:
-                # fudge the ratelimit time a bit (the time given by reddit does
-                # not seem to be accurate)
-                delay += 2 * 60
+                # fudge the ratelimit time a bit (the time given by reddit is
+                # not precise)
+                delay += 90
 
-            reset_time = time.time() + delay
+            self.__rate_limit_time.value = time.time() + delay
             logger.id(logger.debug, self,
                     'Flagging rate-limit: {time} ({strftime})'
-                    '\nmessage: {msg}',
+                    '\n(message: {msg})',
                     time=delay,
                     strftime='%H:%M:%S',
-                    strf_time=reset_time,
+                    strf_time=self.__rate_limit_time.value,
                     msg=err_msg,
             )
 
-            self.__rate_limit_time.value = reset_time
             self.__rate_limited.set()
 
         else:
             # another process hit the rate-limit (probably)
             delay = self.__rate_limit_time.value - time.time()
-            logger.id(logger.debug, self,
-                    'Attempted to flag rate-limit again: \'{msg}\''
-                    ' (time left: {time} = {strftime})',
-                    msg=err_msg,
-                    time=delay,
-                    strftime='%H:%M:%S',
-                    strf_time=self.__rate_limit_time.value,
-            )
+            if delay > 0:
+                logger.id(logger.debug, self,
+                        'Attempted to flag rate-limit again: \'{msg}\''
+                        ' (time left: {time} = {strftime})',
+                        msg=err_msg,
+                        time=delay,
+                        strftime='%H:%M:%S',
+                        strf_time=self.__rate_limit_time.value,
+                )
+
+            else:
+                # this shouldn't happen
+                logger.id(logger.warn, self,
+                        'Invalid rate-limit time left ({time} = {strftime})!'
+                        '\n(message: {msg})',
+                        time=delay,
+                        strftime='%H:%M:%S',
+                        strf_time=self.__rate_limit_time.value,
+                        msg=err_msg,
+                )
 
     def __queue_reply(self, thing, body, force=False):
         """
@@ -507,10 +518,14 @@ class Reddit(praw.Reddit):
                 else:
                     self.__handle_api_exception(e)
 
-    def do_reply(self, thing, body):
+    def do_reply(self, thing, body, killed=None):
         """
         thing.reply(body) wrapper
         See: https://github.com/praw-dev/praw/blob/master/praw/models/reddit/mixins/replyable.py
+
+        killed (multiprocessing.Event, optional) - process loop condition used
+                to gracefully exit from this method in case it gets stuck
+                attempting to queue the reply from a rogue ratelimit.
         """
         success = False
         # TODO: do all thing.reply methods require a non-empty body?
@@ -524,12 +539,16 @@ class Reddit(praw.Reddit):
             )
 
         else:
+            # this is to prevent the queue while-loop from infinitely looping
+            def was_killed(killed):
+                return hasattr(killed, 'is_set') and killed.is_set()
+
             num_attempts = 0
             queued = None
             # XXX: try to queue in a loop in case the rate-limit ends while
             # attempting to queue the reply but starts again from a different
             # process
-            while self.is_rate_limited:
+            while self.is_rate_limited and not was_killed(killed):
                 # num_attempts should not grow > 2
                 # 1  = rate-limited do_reply entry
                 # 2  = was not rate-limited during __queue_reply but became
@@ -555,7 +574,7 @@ class Reddit(praw.Reddit):
                 if queued is not None:
                     break
 
-            if queued is None:
+            if queued is None and not was_killed(killed):
                 logger.id(logger.debug, self,
                         'Replying to {color_thing}:'
                         '\n{sep}'

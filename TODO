@@ -200,9 +200,12 @@ O. catch "sqlite3.OperationalError: database is locked"
         O. OperationalError (with _db: ...)
             O. catch on _database level (loop until successful I guess)
 
-* why do reddit's rate_limit_time.value and ratelimit's rate_limit_time.value
+O. why do reddit's rate_limit_time.value and ratelimit's rate_limit_time.value
     differ?
+    > reddit kept trying to queue the reply => (value - now) <= 0
+    >> ratelimit time remaining calculation was backwards
 
+- instantiate reddit instances in separate process (for debugging)
 - persistent reddit ratelimit time
     - write end time to file and read in on init
     - if time.time() > value => remove file
@@ -220,6 +223,10 @@ O. catch "sqlite3.OperationalError: database is locked"
         - SELECT * FROM queue ORDER BY ratelimit_reset ASC
         - Sleeping timeout=...
     - reply-queue.db SELECT count(*)
+- write help post & link appropriately in code (formatter.py)
+? include version in FOOTER? (probably just the {major}.{minor} if yes)
+? push to github
+    - if no: remove [Source](...) from FOOTER
 ? fetch instagram data in a separate process
     - poll? callback? in replier to see if data is ready
 O. remove try/catch in mentions/messages _run_forever
