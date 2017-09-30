@@ -188,11 +188,10 @@ class _RateLimit(ProcessMixin):
         self.rate_limited = rate_limited
 
     def _run_forever(self):
-        delay = 1
         while not self._killed.is_set():
             # wait until we've been rate-limited
             # (set a timeout so that killed events can be handled)
-            self.rate_limited.wait(delay)
+            self.rate_limited.wait(1)
             if not self.rate_limited.is_set():
                 # timed out
                 continue
