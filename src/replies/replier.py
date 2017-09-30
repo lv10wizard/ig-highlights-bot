@@ -30,9 +30,6 @@ class Replier(ProcessMixin, RedditInstanceMixin):
         ProcessMixin.__init__(self)
         RedditInstanceMixin.__init__(self, cfg, rate_limited, rate_limit_time)
 
-        self.filter = Filter(cfg, self._reddit.username_raw, blacklist)
-        self.formatter = Formatter(self._reddit.username_raw)
-
         self.blacklist = blacklist
         self.subreddits = SubredditsDatabase()
         self.potential_subreddits = PotentialSubredditsDatabase()
@@ -336,6 +333,13 @@ class Replier(ProcessMixin, RedditInstanceMixin):
                 break
 
     def _run_forever(self):
+        # XXX: instantiated here so that the _reddit instance is constructed
+        # in the child process
+        self.filter = Filter(
+                self.cfg, self._reddit.username_raw, self.blacklist,
+        )
+        self.formatter = Formatter(self._reddit.username_raw)
+
         delay = 1
         while not self._killed.is_set():
             self._process_reply_queue()

@@ -20,7 +20,23 @@ class RedditInstanceMixin(object):
                 the rate-limit will last
         """
         self.cfg = cfg
-        self._reddit = reddit.Reddit(cfg, rate_limited, rate_limit_time)
+        self.__rate_limited = rate_limited
+        self.__rate_limit_time = rate_limit_time
+
+    @property
+    def _reddit(self):
+        """
+        Lazy-loaded reddit instance
+        """
+        try:
+            instance = self.__reddit_instance
+        except AttributeError:
+            instance = reddit.Reddit(
+                    self.cfg, self.__rate_limited, self.__rate_limit_time,
+            )
+            self.__reddit_instance = instance
+
+        return instance
 
 
 __all__ = [

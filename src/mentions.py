@@ -23,7 +23,6 @@ class Mentions(ProcessMixin, StreamMixin):
         self.blacklist = blacklist
         self.reply_history = database.ReplyDatabase()
         self.reply_queue = database.ReplyQueueDatabase()
-        self.filter = replies.Filter(cfg, self._reddit.username_raw, blacklist)
 
     @property
     def _stream_method(self):
@@ -62,6 +61,12 @@ class Mentions(ProcessMixin, StreamMixin):
                 self.blacklist.increment_bad_actor(mention)
 
     def _run_forever(self):
+        # XXX: instantiated here so that the _reddit instance is constructed
+        # in the child process
+        self.filter = replies.Filter(
+                self.cfg, self._reddit.username_raw, self.blacklist
+        )
+
         mentions_db = database.MentionsDatabase()
         delay = 15 # too long?
 

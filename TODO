@@ -205,7 +205,7 @@ O. why do reddit's rate_limit_time.value and ratelimit's rate_limit_time.value
     > reddit kept trying to queue the reply => (value - now) <= 0
     >> ratelimit time remaining calculation was backwards
 
-- instantiate reddit instances in separate process (for debugging)
+O. instantiate reddit instances in separate process (for debugging)
 - persistent reddit ratelimit time
     - write end time to file and read in on init
     - if time.time() > value => remove file
