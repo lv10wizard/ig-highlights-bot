@@ -35,10 +35,7 @@ class BlacklistDatabase(Database):
     def _create_table_data(self):
         return (
                 'blacklist('
-                '   uid INTEGER PRIMARY KEY'
-                # case-insensitive
-                # https://stackoverflow.com/a/973785
-                '   name TEXT NOT NULL COLLATE NOCASE,'
+                '   uid INTEGER PRIMARY KEY,'
                 '   type TEXT NOT NULL CHECK(type IN (\'{0}\')),'
                 '   start REAL,'
                 # flag indicating that a temporary ban should be made permanent
@@ -51,6 +48,9 @@ class BlacklistDatabase(Database):
                 # XXX: there is no check that the record is temporary (ie, that
                 # start is not None) at this level.
                 '   make_permanent INTEGER DEFAULT 0,'
+                # case-insensitive
+                # https://stackoverflow.com/a/973785
+                '   name TEXT NOT NULL COLLATE NOCASE,'
                 # TODO? blacklist trigger
                 #   (eg. comment.fullname, message.fullname, etc)
                 '   UNIQUE(name, type)'

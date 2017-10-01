@@ -42,20 +42,8 @@ class _SqliteConnectionWrapper(object):
     _CHECK_RE = re.compile(INTEGRITY_RE_FMT.format('CHECK'))
 
     @staticmethod
-    def get_err_msg(err):
-        try:
-            return err.message
-        except AttributeError:
-            try:
-                return err.args[0]
-
-            except (AttributeError, IndexError):
-                # passed some random error?
-                raise
-
-    @staticmethod
     def reraise_integrity_error(err):
-        message = _SqliteConnectionWrapper.get_err_msg(err)
+        message = Database.get_err_msg(err)
         if _SqliteConnectionWrapper._UNIQUE_RE.search(message):
             raise UniqueConstraintFailed(message)
 
@@ -99,7 +87,7 @@ class _SqliteConnectionWrapper(object):
                 cursor = func(sql, *args, **kwargs)
 
             except sqlite3.OperationalError as e:
-                message = _SqliteConnectionWrapper.get_err_msg(err)
+                message = Database.get_err_msg(err)
                 if _SqliteConnectionWrapper._LOCKED_RE.search(message):
                     # a process is taking a long time with its transaction.
                     # this will be spammy if a process holds the lock
@@ -136,6 +124,18 @@ class Database(object):
         if path == ':memory:':
             return path
         return config.resolve_path(path)
+
+    @staticmethod
+    def get_err_msg(err):
+        try:
+            return err.message
+        except AttributeError:
+            try:
+                return err.args[0]
+
+            except (AttributeError, IndexError):
+                # passed some random error?
+                raise
 
     def __init__(self, path):
         self.path = path
@@ -242,7 +242,7 @@ class Database(object):
             try:
                 os.makedirs(self._resolved_dirname)
             except OSError as e:
-                raise FailedInit(e, e.message)
+                raise FailedInit(e, Database.get_err_msg(e))
 
         logger.id(logger.debug, self,
                 'Opening connection to \'{path}\' ...',
@@ -253,7 +253,7 @@ class Database(object):
             db = sqlite3.connect(self._resolved_path)
 
         except sqlite3.OperationalError as e:
-            raise FailedInit(e, e.message, self._resolved_path)
+            raise FailedInit(e, Database.get_err_msg(e), self._resolved_path)
 
         else:
 
@@ -295,7 +295,7 @@ class Database(object):
 
             except sqlite3.DatabaseError as e:
                 db.close()
-                raise FailedInit(e, e.message)
+                raise FailedInit(e, Database.get_err_msg(e))
 
             else:
                 # https://docs.python.org/2/library/sqlite3.html#row-objects

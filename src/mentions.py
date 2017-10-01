@@ -55,9 +55,10 @@ class Mentions(ProcessMixin, StreamMixin):
             )
             if not replied:
                 # the bot was summoned to a post with no replyable comments.
-                # 1) comment contains 1+ non hyperlinked urls to instagram users
-                # 2) comment with links was edited/deleted/removed
-                # 3) mention author is trolling the bot
+                # - comment contains 1+ non hyperlinked urls to instagram users
+                # - comment with links was edited/deleted/removed
+                # - subreddit/comment with links is blacklisted
+                # - mention author is trolling the bot
                 self.blacklist.increment_bad_actor(mention)
 
     def _run_forever(self):

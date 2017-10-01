@@ -40,9 +40,9 @@ class Blacklist(object):
         def get_type(prefix):
             if prefix:
                 if reddit.is_subreddit_prefix(prefix):
-                    name_type = BlacklistDatabase.TYPE_SUBREDDIT
+                    return BlacklistDatabase.TYPE_SUBREDDIT
                 elif reddit.is_user_prefix(prefix):
-                    name_type = BlacklistDatabase.TYPE_USER
+                    return BlacklistDatabase.TYPE_USER
 
         name_type = get_type(prefix)
         if not name_type:

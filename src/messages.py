@@ -114,7 +114,10 @@ class Messages(ProcessMixin, StreamMixin):
 
         else:
             if self._is_add(subject):
-                reply_text = 'I should no longer reply to {0}'.format(you)
+                reply_text = (
+                        'I should no longer reply to {0}. Sorry for any'
+                        ' inconvenience.'.format(you)
+                )
 
             elif self._is_remove(subject):
                 reply_text = 'I should start replying to {0} again'.format(you)
@@ -169,10 +172,12 @@ class Messages(ProcessMixin, StreamMixin):
         return subject, body
 
     def _is_add(self, subject):
-        return BLACKLIST_SUBJECT in subject
+        return bool(re.search(r'^{0}$'.format(BLACKLIST_SUBJECT), subject))
 
     def _is_remove(self, subject):
-        return REMOVE_BLACKLIST_SUBJECT in subject
+        return bool(
+                re.search(r'^{0}$'.format(REMOVE_BLACKLIST_SUBJECT), subject)
+        )
 
     @property
     def _stream_method(self):
