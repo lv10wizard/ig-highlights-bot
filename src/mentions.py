@@ -69,6 +69,7 @@ class Mentions(ProcessMixin, StreamMixin):
 
         mentions_db = database.MentionsDatabase()
         delay = 15 # too long?
+        first_run = True
 
         while not self._killed.is_set():
             logger.id(logger.debug, self, 'Processing mentions ...')
@@ -77,14 +78,16 @@ class Mentions(ProcessMixin, StreamMixin):
                     break
 
                 elif mentions_db.has_seen(mention):
-                    # assumption: inbox.mentions fetches newest -> oldest
                     logger.id(logger.debug, self,
                             'I\'ve already processed {color_mention} from'
                             ' {color_from}!',
                             color_mention=reddit.display_fullname(mention),
                             color_from=reddit.author(mention),
                     )
-                    break
+                    if first_run:
+                        continue
+                    else:
+                        break
 
                 try:
                     with mentions_db:
@@ -102,9 +105,11 @@ class Mentions(ProcessMixin, StreamMixin):
 
                 self._process_mention(mention)
 
+            first_run = False
+
             if not self._killed.is_set():
                 logger.id(logger.debug, self,
-                        'Waiting {time} before checking messages again ...',
+                        'Waiting {time} before checking mentions again ...',
                         time=delay,
                 )
             self._killed.wait(delay)

@@ -62,7 +62,7 @@ class Messages(ProcessMixin, StreamMixin):
                         exc_info=True,
                 )
             else:
-                prefix = PREFIX_SUBREDDIT
+                prefix = reddit.PREFIX_SUBREDDIT
 
         elif isinstance(message, Message):
             try:
@@ -76,7 +76,7 @@ class Messages(ProcessMixin, StreamMixin):
                         exc_info=True,
                 )
             else:
-                prefix = PREFIX_USER
+                prefix = reddit.PREFIX_USER
 
         else:
             logger.id(logger.debug, self,
@@ -188,6 +188,9 @@ class Messages(ProcessMixin, StreamMixin):
         # delay so that external shutdown events can be received in a timely
         # fashion.
         delay = 15 # too long?
+        # check all items on the first run since stream_generator will fetch
+        # the first 100 newest items (all of which may or may not be duplicates)
+        first_run = True
 
         while not self._killed.is_set():
             logger.id(logger.debug, self, 'Processing messages ...')
@@ -197,7 +200,6 @@ class Messages(ProcessMixin, StreamMixin):
 
                 # don't rely on read/unread flag in case someone logs in
                 # to the bot account and reads all the messages
-                # assumption: inbox.messages() fetches newest -> oldest
                 elif messages_db.has_seen(message):
                     logger.id(logger.debug, self,
                             'I\'ve already read {color_message}!'
@@ -206,7 +208,12 @@ class Messages(ProcessMixin, StreamMixin):
                             subject=message.subject,
                             color_from=reddit.author(message),
                     )
-                    break
+                    if first_run:
+                        # read through all old items in the stream
+                        # (stream_generator yields items oldest -> newest)
+                        continue
+                    else:
+                        break
 
                 # blindly mark messages as seen even if processing fails.
                 # this prevents random / spam messages from being processed
@@ -292,6 +299,9 @@ class Messages(ProcessMixin, StreamMixin):
                     )
                     if reply_text:
                         self._reddit.do_reply(message, reply_text, self._killed)
+
+            # flag that duplicate items should now break out of the stream
+            first_run = False
 
             if not self._killed.is_set():
                 logger.id(logger.debug, self,

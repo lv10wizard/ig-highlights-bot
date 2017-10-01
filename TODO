@@ -210,13 +210,16 @@ O. persistent reddit ratelimit time
     O. write end time to file and read in on init
     O. if time.time() > value => remove file
       else set rate_limit_time.value
-- maximum depth of reply-able comment
+? maximum depth of reply-able comment
     ie, only reply to comments where c.depth <= max_depth. typically
     very deep comments are only seen by the author & the person they were
     replying to (and maybe a handful of others); bot replies are probably not
     welcome unless specifically summoned.
 ? check comment's immediate replies in Filter to guarantee that the bot does not
     make duplicate replies regardless of database state
+? gracefully exit instagram fetch
+    - pass _killed flag to Instagram class? __init__?
+    - in fetch, if _killed.is_set() => set do_enqueue
 - reclassify some debug logging -> info (info is far too quiet)
 O. quiet spammy logging
     X. reddit-queue.db
@@ -225,6 +228,8 @@ O. quiet spammy logging
     X. reply-queue.db SELECT count(*)
     >> handled at base Database level by limiting the elapsed time between
         the same logged query.
+- Fetch all(?) messages/mentions on first run and stop on first duplicate
+    (to prevent missing older items)
 - delete negative threshold comments (ie, downvote to remove bot comments)
     - fetch bot's comments:
         _reddit.user.me().comments.controversial(time_filter='month')
@@ -234,6 +239,7 @@ O. quiet spammy logging
     - dynamically change delay based on if any comments had negative score
         - saw non-deleted negative: delay = lower =>  O(minutes) ?
         - all comment.scores > 0:   delay = higher => O(hours) ?
+    ! DO NOT modify reply database (don't want to reply again)
 - write help post & link appropriately in code (formatter.py)
 ? include version in FOOTER? (probably just the {major}.{minor} if yes)
 ? push to github
