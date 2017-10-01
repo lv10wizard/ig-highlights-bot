@@ -27,7 +27,9 @@ class BlacklistDatabase(Database):
     TYPE_USER      = '__user__'
 
     def __init__(self, cfg):
-        self.do_seed = not bool(os.path.exists(BlacklistDatabase.PATH))
+        self.do_seed = not bool(
+                Database.resolve_path(os.path.exists(BlacklistDatabase.PATH))
+        )
         Database.__init__(self, BlacklistDatabase.PATH)
         self.cfg = cfg
 
