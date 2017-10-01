@@ -87,7 +87,7 @@ class _SqliteConnectionWrapper(object):
                 cursor = func(sql, *args, **kwargs)
 
             except sqlite3.OperationalError as e:
-                message = Database.get_err_msg(err)
+                message = Database.get_err_msg(e)
                 if _SqliteConnectionWrapper._LOCKED_RE.search(message):
                     # a process is taking a long time with its transaction.
                     # this will be spammy if a process holds the lock
