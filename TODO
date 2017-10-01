@@ -215,7 +215,7 @@ O. persistent reddit ratelimit time
     very deep comments are only seen by the author & the person they were
     replying to (and maybe a handful of others); bot replies are probably not
     welcome unless specifically summoned.
-- check comment's immediate replies in Filter to guarantee that the bot does not
+? check comment's immediate replies in Filter to guarantee that the bot does not
     make duplicate replies regardless of database state
 - reclassify some debug logging -> info (info is far too quiet)
 O. quiet spammy logging
@@ -225,6 +225,15 @@ O. quiet spammy logging
     X. reply-queue.db SELECT count(*)
     >> handled at base Database level by limiting the elapsed time between
         the same logged query.
+- delete negative threshold comments (ie, downvote to remove bot comments)
+    - fetch bot's comments:
+        _reddit.user.me().comments.controversial(time_filter='month')
+        .. maybe time_filter='week'
+    - call comment.delete() if comment.score < threshold
+    - define delete threshold in config
+    - dynamically change delay based on if any comments had negative score
+        - saw non-deleted negative: delay = lower =>  O(minutes) ?
+        - all comment.scores > 0:   delay = higher => O(hours) ?
 - write help post & link appropriately in code (formatter.py)
 ? include version in FOOTER? (probably just the {major}.{minor} if yes)
 ? push to github

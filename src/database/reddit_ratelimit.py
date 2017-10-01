@@ -152,21 +152,26 @@ class RedditRateLimitQueueDatabase(Database):
 
         if row:
             delay = row['ratelimit_reset'] - time.time()
-            logger.id(logger.debug, self,
-                    '{color_fullname}: {time} until rate-limit reset',
-                    color_fullname=row['fullname'],
-                    time=delay,
-            )
-
             if delay > 0:
+
+                # prevent ratelimit logging spam
+                self.do_log(logger.info,
+                        '{color_fullname}: {time} until rate-limit reset',
+                        _force=(delay <= 3),
+                        color_fullname=row['fullname'],
+                        time=delay,
+                )
+
                 # still rate-limited
                 if block:
                     if timeout is not None and delay > timeout:
-                        # wait out the rest of the timeout
-                        logger.id(logger.debug, self,
+                        # prevent possibly flooding the logs when ratelimited
+                        self.do_log(logger.debug,
                                 'Sleeping timeout={time} ...',
                                 time=timeout,
                         )
+
+                        # wait out the rest of the timeout
                         if timeout > 0:
                             time.sleep(timeout)
                         # delay exceeds timeout => still rate-limited
@@ -174,6 +179,8 @@ class RedditRateLimitQueueDatabase(Database):
 
                     else:
                         # wait out the remaining ratelimit time
+                        # XXX: don't bother limiting this output since it should
+                        # not ever be spammy (I think?)
                         logger.id(logger.debug, self,
                                 'Sleeping delay={time} ...',
                                 time=delay,

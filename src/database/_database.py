@@ -68,61 +68,33 @@ class _SqliteConnectionWrapper(object):
         # other (eg. 'datatype mismatch')
         raise
 
-    def __init__(self, connection, id):
+    def __init__(self, connection, parent):
         self.connection = connection
-        self.id = id
+        self.parent = parent
 
     def __str__(self):
-        return self.id
+        return str(self.parent)
 
     def __getattr__(self, attr):
         return getattr(self.connection, attr)
 
-    def __construct_msg(self, *args, **kwargs):
-        msg = ['{sql}']
+    def __construct_msg(self, sql, *args, **kwargs):
+        msg = ['{0}'.format(sql)]
         if args:
             msg.append('args: {func_args}')
         if kwargs:
             msg.append('kwargs: {func_kwargs}')
         return '\n\t'.join(msg)
 
-    def __log_execute(self, sql, *args, **kwargs):
-        """
-        Logs the execute call with some "rate-limiting" to prevent very spammy
-        calls from flooding the logs
-
-        Note: the limiting is per-process so 2+ processes logging the same query
-        will still be logged once per process.
-        """
-        last_log_time = 0
-
-        try:
-            log_times = self.__log_times
-        except AttributeError:
-            log_times = {}
-            self.__log_times = log_times
-
-        try:
-            last_log_time = log_times[sql]
-        except KeyError:
-            pass
-
-        elapsed = time.time() - last_log_time
-        # limit how often queries that are called rapidly are logged
-        # TODO? config setting for time threshold?
-        if elapsed > 60:
-            logger.id(logger.debug, self,
-                    self.__construct_msg(*args, **kwargs),
-                    sql=sql,
-                    func_args=args,
-                    func_kwargs=kwargs,
-            )
-            log_times[sql] = time.time()
-
     def __do_execute(self, func, sql, *args, **kwargs):
         cursor = None
         while not cursor:
-            self.__log_execute(sql, *args, **kwargs)
+            self.parent.do_log(logger.debug,
+                    self.__construct_msg(sql, *args, **kwargs),
+                    func_args=args,
+                    func_kwargs=kwargs,
+            )
+
             try:
                 cursor = func(sql, *args, **kwargs)
 
@@ -190,6 +162,54 @@ class Database(object):
             # TODO? suppress error ?
             # return True
 
+    def do_log(
+            self, logger_func, _msg, _min_threshold=60, _force=False,
+            *_args, **_kwargs
+    ):
+        """
+        This method time-gates logging calls to prevent flooding the logs if
+        _min_threshold > 0.
+
+        logger_func (function) - the logger method to call (eg. logger.debug)
+        _msg (str) - the format message to pass to the logger
+                Note: this string is used as a key to gauge the elapsed interval
+                of the last logging output. so if the _msg string changes
+                dynamically, then logging may still be spammed.
+        _min_threshold (int, float; optional) - the minimum elapsed time before
+                the given _msg can be logged again
+        _force (bool; optional) - whether logging should be output regardless
+                of the elapsed time since the last output of _msg. this has no
+                effect if _min_threshold <= 0 (logging is always output if
+                _min_threshold <= 0).
+        """
+        did_log = False
+
+        last_log_time = 0
+        # don't bother checking/creating caches if we're just going to log
+        # anyway
+        if _min_threshold > 0 or _force:
+            try:
+                log_times = self.__last_log_time
+            except AttributeError:
+                log_times = {}
+                self.__last_log_time = log_times
+
+            try:
+                last_log_time = log_times[_msg]
+            except KeyError:
+                pass
+
+        elapsed = time.time() - last_log_time
+        # limit how often messages are logged
+        # TODO? config setting for time threshold?
+        if elapsed > _min_threshold or _force:
+            logger.id(logger_func, self, _msg, *_args, **_kwargs)
+            if _min_threshold > 0:
+                log_times[_msg] = time.time()
+            did_log = True
+
+        return did_log
+
     @property
     def _db(self):
         """
@@ -202,7 +222,7 @@ class Database(object):
         except AttributeError:
             self.__the_connection = _SqliteConnectionWrapper(
                     connection=self.__init_db(),
-                    id=self._basename,
+                    parent=self,
             )
             db = self.__the_connection
 
