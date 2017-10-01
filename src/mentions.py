@@ -46,7 +46,7 @@ class Mentions(ProcessMixin, StreamMixin):
             ig_usernames = self.filter.replyable_usernames(comment)
             if ig_usernames:
                 had_replyable_comment = True
-                self.filter.enqueue(comment, ig_usernames)
+                self.filter.enqueue(comment, ig_usernames, mention)
 
         # XXX: flagging bad actors from failed mentions temporarily(?) turned
         # off because there are too many false positive cases. further, I doubt

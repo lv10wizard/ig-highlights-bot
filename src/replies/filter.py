@@ -240,7 +240,7 @@ class Filter(object):
         return usernames
 
     # TODO? move; this doesn't really belong here ...
-    def enqueue(self, comment, ig_usernames):
+    def enqueue(self, comment, ig_usernames, mention=None):
         """
         Enqueues a comment for the bot to reply to
 
@@ -249,7 +249,7 @@ class Filter(object):
         success = False
         try:
             with self.reply_queue:
-                self.reply_queue.insert(comment)
+                self.reply_queue.insert(comment, mention)
 
         except database.UniqueConstraintFailed:
             logger.id(logger.warn, self,
