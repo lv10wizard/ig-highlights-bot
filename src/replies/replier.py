@@ -301,18 +301,19 @@ class Replier(ProcessMixin, RedditInstanceMixin):
 
             ig_list = self._get_instagram_data(comment)
             if ig_list:
-                if self._reply(comment, ig_list):
-                    # comment successfully replied to
-                    if mention:
-                        # successfully summoned to a subreddit
-                        submission = comment.submission
-                        if (
-                                # don't try to add if the threshold is negative
-                                self.cfg.add_subreddit_threshold >= 0
-                                # don't add a duplicate subreddit
-                                and submission not in self.subreddits
-                        ):
-                            self._add_potential_subreddit(submission)
+                if mention:
+                    # successfully summoned to a subreddit (ie, found an
+                    # instagram user page link)
+                    submission = comment.submission
+                    if (
+                            # don't try to add if the threshold is negative
+                            self.cfg.add_subreddit_threshold >= 0
+                            # don't add a duplicate subreddit
+                            and submission not in self.subreddits
+                    ):
+                        self._add_potential_subreddit(submission)
+
+                self._reply(comment, ig_list)
 
                 # don't remove only on successful reply since the bot may be
                 # ratelimited from sending replies (in which case the ratelimit
