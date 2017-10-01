@@ -38,13 +38,22 @@ class Blacklist(object):
         """
         name_type = None
         def get_type(prefix):
+            result = None
             if prefix:
                 if reddit.is_subreddit_prefix(prefix):
-                    return BlacklistDatabase.TYPE_SUBREDDIT
+                    result = BlacklistDatabase.TYPE_SUBREDDIT
                 elif reddit.is_user_prefix(prefix):
-                    return BlacklistDatabase.TYPE_USER
+                    result = BlacklistDatabase.TYPE_USER
+
+                logger.id(logger.debug, __name__,
+                        'name_type={color_nametype} for prefix=\'{prefix}\'',
+                        color_nametype=result,
+                        prefix=prefix,
+                )
+            return result
 
         name_type = get_type(prefix)
+
         if not name_type:
             prefix, name = reddit.split_prefixed_name(name)
             name_type = get_type(prefix)
@@ -66,6 +75,18 @@ class Blacklist(object):
 
         Returns True if name was successfully added to the database
         """
+
+        msg = ['Adding {thing_name}; tmp=\'{tmp}\'']
+        if prefix:
+            msg.append(', prefix=\'{prefix}\'')
+        msg.append(' ...')
+        logger.id(logger.debug, self,
+                ''.join(msg),
+                thing_name=name,
+                tmp=tmp,
+                prefix=prefix,
+        )
+
         success = False
         name_type = Blacklist.__get_blacklist_type(name, prefix)
         if not name_type:
@@ -151,6 +172,17 @@ class Blacklist(object):
             if name is not prefixed and no prefix is specified, then remove will
             fail.
         """
+
+        msg = ['Removing {thing_name}']
+        if prefix:
+            msg.append(', prefix=\'{prefix}\'')
+        msg.append(' ...')
+        logger.id(logger.debug, self,
+                ''.join(msg),
+                thing_name=name,
+                prefix=prefix,
+        )
+
         success = False
         name_type = Blacklist.__get_blacklist_type(name, prefix)
         if not name_type:
@@ -169,27 +201,42 @@ class Blacklist(object):
             # I'm not 100% certain this requires locking.. maybe in extremely
             # rare situations.
             with self.__lock:
-                time_left = self.__database.blacklist_time_left_seconds(
-                        name_raw
-                )
-                if time_left < 0:
-                    logger.id(logger.debug, self,
-                            'Removing {color_name} from blacklist',
-                            color_name=name_raw,
+                if self.__database.is_blacklisted(name_raw, name_type):
+                    time_left = self.__database.blacklist_time_left_seconds(
+                            name_raw
                     )
-                    self.__database.delete(name_raw, name_type)
-                    # XXX: assumes delete was successful
-                    success = True
 
-                elif time_left > 0:
+                    if time_left <= 0:
+                        # permanent ban (user or subreddit)
+                        logger.id(logger.debug, self,
+                                'Removing {color_name} ({color_nametype})'
+                                ' from blacklist',
+                                color_name=name_raw,
+                                color_nametype=name_type,
+                        )
+                        self.__database.delete(name_raw, name_type)
+                        # XXX: assumes delete was successful
+                        success = True
+
+                    elif time_left > 0:
+                        # temp ban
+                        logger.id(logger.debug, self,
+                                'Clearing flag to make {color_name}\'s ban'
+                                ' permanent ({time} remaining)',
+                                color_name=name_raw,
+                                time=time_left,
+                        )
+                        self.__database.clear_make_permanent(
+                                name_raw, name_type
+                        )
+                        success = True
+
+                else:
                     logger.id(logger.debug, self,
-                            'Clearing flag to make {color_name}\'s ban'
-                            ' permanent ({time} remaining)',
+                            '{color_name} ({name_type}) is not blacklisted!',
                             color_name=name_raw,
-                            time=time_left,
+                            name_type=name_type,
                     )
-                    self.__database.clear_make_permanent(name_raw, name_type)
-                    success = True
 
                 if success:
                     self.__database.commit()

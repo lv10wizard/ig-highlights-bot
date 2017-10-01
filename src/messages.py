@@ -84,6 +84,14 @@ class Messages(ProcessMixin, StreamMixin):
                     mtype=type(message),
             )
 
+        if prefix:
+            logger.id(logger.debug, self,
+                    'Using prefix=\'{prefix}\' for {author_name} ({msgobj})',
+                    prefix=prefix,
+                    author_name=name,
+                    msgobj=message,
+            )
+
         return prefix, name
 
     def _format_reply(self, message, subject, name, prefix):

@@ -220,6 +220,8 @@ O. persistent reddit ratelimit time
 ? gracefully exit instagram fetch
     - pass _killed flag to Instagram class? __init__?
     - in fetch, if _killed.is_set() => set do_enqueue
+- figure out why messages stream sleeps upon fetching items
+    is it only if #items < 100?
 - reclassify some debug logging -> info (info is far too quiet)
 O. quiet spammy logging
     X. reddit-queue.db
