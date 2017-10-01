@@ -83,6 +83,7 @@ BLACKLIST_URL_FMT = (
         COMPOSE_MESSAGE_BASE_URL
         + '?to={to}&subject='
         + quote(BLACKLIST_SUBJECT)
+        + '&message=.'
 )
 REPO_URL = 'https://github.com/lv10wizard/ig-highlights-bot'
 HELP_URL = '' # TODO
