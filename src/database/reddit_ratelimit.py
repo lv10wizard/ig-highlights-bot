@@ -31,7 +31,7 @@ class RedditRateLimitQueueDatabase(Database):
     def __contains__(self, thing):
         cursor = self._db.execute(
                 'SELECT fullname FROM queue WHERE fullname = ?',
-                (thing.fullname,),
+                (RedditRateLimitQueueDatabase.fullname(thing),),
         )
         return bool(cursor.fetchone())
 
@@ -40,19 +40,22 @@ class RedditRateLimitQueueDatabase(Database):
         return (
                 'queue('
                 '   uid INTEGER PRIMARY KEY NOT NULL,'
-                '   fullname TEXT NOT NULL COLLATE NOCASE,'
+                '   fullname TEXT NOT NULL,'
+                '   submission_fullname TEXT,'
                 '   body TEXT NOT NULL,'
                 '   ratelimit_reset REAL NOT NULL,'
                 '   UNIQUE(fullname, body)'
                 ')'
         )
 
-    def _insert(self, thing, body, ratelimit_delay):
+    def _insert(self, thing, body, ratelimit_delay, submission=None):
         self._db.execute(
-                'INSERT INTO queue(fullname, body, ratelimit_reset)'
-                ' VALUES(?, ?, ?)',
+                'INSERT INTO'
+                ' queue(fullname, submission_fullname, body, ratelimit_reset)'
+                ' VALUES(?, ?, ?, ?)',
                 (
                     RedditRateLimitQueueDatabase.fullname(thing),
+                    RedditRateLimitQueueDatabase.fullname(submission),
                     body,
                     time.time() + ratelimit_delay,
                 ),
@@ -93,6 +96,39 @@ class RedditRateLimitQueueDatabase(Database):
             if RedditRateLimitQueueDatabase.__has_elements.is_set():
                 logger.id(logger.debug, self, 'queue is empty')
             RedditRateLimitQueueDatabase.__has_elements.clear()
+
+    def ig_users_for(self, submission):
+        """
+        Returns the set of instagram users queued to be posted to thing
+                or an empty set if no
+        """
+        from src.replies import Formatter
+
+        try:
+            submission.fullname
+        except AttributeError:
+            # don't accidentally match a random non-submission record
+            return set()
+
+        cursor = self._db.execute(
+            'SELECT fullname, body FROM queue WHERE submission_fullname = ?',
+            (submission.fullname,),
+        )
+
+        ig_users = set()
+        row = cursor.fetchone()
+        if row:
+            ig_users = set(Formatter.ig_users_in(row['body']))
+            if not ig_users:
+                # this probably indicates the reply format changed
+                # significantly
+                logger.id(logger.debug, self,
+                        'No instagram users found in body of \'{color_thing}\''
+                        '. body:\n{body}\n\n',
+                        color_thing=row['fullname'],
+                        body=row['body'],
+                )
+        return ig_users
 
     def size(self):
         """

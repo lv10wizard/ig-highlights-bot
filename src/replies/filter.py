@@ -142,7 +142,8 @@ class Filter(object):
     def _prune_already_posted_users(self, submission, ig_usernames):
         """
         Removes instagram usernames that the bot has already posted to the
-        given submission.
+        given submission (or usernames that are currently queued to be posted
+        in the submission).
 
         Returns a subset of the passed-in instagram usernames (the returned
                 set will be less than or equal to the passed-in set)
@@ -150,8 +151,11 @@ class Filter(object):
         already_posted = self.reply_history.replied_ig_users_for_submission(
                 submission
         )
-        pruned = ig_usernames.intersection(already_posted)
-        ig_usernames -= already_posted
+        currently_queued = self.reddit_ratelimit_queue.ig_users_for(submission)
+        orig_usernames = ig_usernames.copy()
+        ig_usernames -= (already_posted | currently_queued)
+
+        pruned = orig_usernames - ig_usernames
         if pruned:
             logger.id(logger.debug, self,
                     'Pruned #{num_posted} usernames: {color_posted}'
@@ -221,8 +225,7 @@ class Filter(object):
             # filter out comments that contain no instagram usernames
             if comment_usernames:
                 new_usernames = self._prune_already_posted_users(
-                        comment.submission,
-                        comment_usernames,
+                        comment.submission, comment_usernames,
                 )
                 # filter out instagram usernames that the bot has already
                 # replied to in this submission

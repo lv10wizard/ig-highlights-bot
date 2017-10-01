@@ -420,13 +420,21 @@ class Reddit(praw.Reddit):
         success = False
         delay = self.__rate_limited.remaining
         if delay > 0 or force:
+            submission = None
+            try:
+                submission = thing.submission
+            except AttributeError:
+                pass
+
             try:
                 logger.id(logger.debug, self,
                         'Rate limited! Queueing {color_thing} ...',
                         color_thing=display_fullname(thing),
                 )
                 with self.__rate_limit_queue:
-                    self.__rate_limit_queue.insert(thing, body, delay)
+                    self.__rate_limit_queue.insert(
+                            thing, body, delay, submission,
+                    )
             except database.UniqueConstraintFailed:
                 logger.id(logger.warn, self,
                         'Attempted to enqueue duplicate {color_thing}',
