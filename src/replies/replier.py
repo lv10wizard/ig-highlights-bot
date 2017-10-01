@@ -320,11 +320,17 @@ class Replier(ProcessMixin, RedditInstanceMixin):
                 self._task_done(comment)
 
             elif not comment in self.ig_queue:
+                # XXX: bad-actor flagging from mentions temporarily(?) turned
+                # off because linking to an invalid instagram page is not
+                # necessarily indicative of bad behavior. plus, trolling the bot
+                # doesn't really have any sort of feedback for the offending
+                # user so I doubt it'll be (much of) an issue.
+
                 # all linked instagram users were invalid
-                if mention and not Instagram.is_rate_limited():
-                    # summoned to a submission with comment(s) linking to
-                    # invalid instagram users
-                    self.blacklist.increment_bad_actor(mention)
+                # if mention and not Instagram.is_rate_limited():
+                #     # summoned to a submission with comment(s) linking to
+                #     # invalid instagram users
+                #     self.blacklist.increment_bad_actor(mention)
 
                 self._task_done(comment)
 

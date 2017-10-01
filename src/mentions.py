@@ -48,18 +48,23 @@ class Mentions(ProcessMixin, StreamMixin):
                 had_replyable_comment = True
                 self.filter.enqueue(comment, ig_usernames)
 
-        if not had_replyable_comment:
-            # summoned to a thread where the bot attempted no replies
-            replied = self.reply_history.replied_comments_for_submission(
-                    submission
-            )
-            if not replied:
-                # the bot was summoned to a post with no replyable comments.
-                # - comment contains 1+ non hyperlinked urls to instagram users
-                # - comment with links was edited/deleted/removed
-                # - subreddit/comment with links is blacklisted
-                # - mention author is trolling the bot
-                self.blacklist.increment_bad_actor(mention)
+        # XXX: flagging bad actors from failed mentions temporarily(?) turned
+        # off because there are too many false positive cases. further, I doubt
+        # trolling through mentions will be that big of an issue since there
+        # really is no visible effect for the offending user.
+
+        # if not had_replyable_comment:
+        #     # summoned to a thread where the bot attempted no replies
+        #     replied = self.reply_history.replied_comments_for_submission(
+        #             submission
+        #     )
+        #     if not replied:
+        #         # the bot was summoned to a post with no replyable comments.
+        #         # - comment has 1+ non hyperlinked urls to instagram users
+        #         # - comment with links was edited/deleted/removed
+        #         # - subreddit/comment with links is blacklisted
+        #         # - mention author is trolling the bot
+        #         self.blacklist.increment_bad_actor(mention)
 
     def _run_forever(self):
         # XXX: instantiated here so that the _reddit instance is constructed
