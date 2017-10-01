@@ -20,7 +20,7 @@ class PotentialSubredditsDatabase(Database):
         return (
                 'potential_subreddits('
                 '   subreddit_name TEXT PRIMARY KEY NOT NULL COLLATE NOCASE,'
-                '   count INTEGER NOT NULL,'
+                '   count INTEGER NOT NULL'
                 ')'
         )
 
