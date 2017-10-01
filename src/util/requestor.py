@@ -81,11 +81,16 @@ class Requestor(object):
                     func_kwargs=kwargs,
             )
 
-            while not response:
+            while response is None:
                 try:
                     response = request_func(url, *args, **kwargs)
 
-                except requests.ConnectionError as e:
+                except (
+                        requests.ConnectionError,
+
+                        # ECONNRESET
+                        requests.exceptions.ChunkedEncodingError,
+                ):
                     delay = self.__choose_delay()
                     logger.id(logger.debug, self,
                             '{method} {url}: waiting {time} ...',
