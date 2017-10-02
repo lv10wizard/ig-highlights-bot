@@ -46,9 +46,13 @@ from pprint import pformat
 from constants import __DEBUG__
 
 
+# hard-coded, util.modules-specific debug flag because this stuff is suuuuper
+# spammy
+_DEBUG = False
+
 # hard-coded debug flag (changed to True to turn on debugging print statements)
 def _debug(*msg, **kwargs):
-    if __DEBUG__:
+    if __DEBUG__ and _DEBUG:
         print(*msg, **kwargs)
 
 def get_all_modules(path):
