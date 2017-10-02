@@ -140,6 +140,9 @@ class Instagram(object):
 
     @staticmethod
     def initialize(cfg, bot_username):
+        """
+        Initializes some statically cached instagram variables
+        """
         if not Instagram.cfg:
             Instagram.cfg = cfg
         if not Instagram.user_agent:
@@ -150,13 +153,17 @@ class Instagram(object):
                         email=EMAIL,
                     )
             )
+            logger.id(logger.info, __name__,
+                    'Using user-agent: \'{user_agent}\'',
+                    user_agent=Instagram.user_agent,
+            )
+
         if not Instagram._rate_limit:
             Instagram._rate_limit = database.InstagramRateLimitDatabase(
                     max_age='1h',
             )
 
     def __init__(self, user, last_id=None):
-        # self.history = database.Database()
         self.user = user
         self.initial_last_id = last_id
 
@@ -224,6 +231,10 @@ class Instagram(object):
 
     @property
     def top_media(self):
+        """
+        Returns the user's top-liked media (the exact number is defined in
+                the config)
+        """
         if self.__is_expired:
             self.__fetch_data()
 
@@ -252,6 +263,9 @@ class Instagram(object):
 
     @property
     def __db_path(self):
+        """
+        Returns the user's database file path
+        """
         if self.user:
             path = os.path.join(
                     database.InstagramDatabase.PATH,
@@ -264,7 +278,7 @@ class Instagram(object):
     def __is_expired(self):
         """
         Returns whether the cache is expired (database age > threshold)
-        Returns True if no cahced data exists
+        Returns True if no cached data exists
         """
         expired = False
 

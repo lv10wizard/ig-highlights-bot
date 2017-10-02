@@ -164,7 +164,7 @@ class Blacklist(object):
     def remove(self, name, prefix=None):
         """
         Removes the the name from the database.
-        Will not remove the name if it is a temporary ban (unless force is True)
+        Will not remove the name if it is a temporary ban
 
         name (str) - prefixed or raw (no prefix) name string
             eg. 'u/foobar' or 'AskReddit'
@@ -288,7 +288,7 @@ class Blacklist(object):
 
         parsed_prefix, name_raw = reddit.split_prefixed_name(name)
         if (
-                # check both in case one if a random string
+                # check both in case one is a random string
                 reddit.is_subreddit_prefix(prefix)
                 or reddit.is_subreddit_prefix(parsed_prefix)
         ):
@@ -299,6 +299,18 @@ class Blacklist(object):
                 or reddit.is_user_prefix(parsed_prefix)
         ):
             return self.__database.is_blacklisted_user(name_raw)
+
+        msg = ['Unrecognized prefix for {color_name}:']
+        if prefix:
+            msg.append('prefix=\'{prefix}\'')
+        if parsed_prefix:
+            msg.append('parsed_prefix=\'{parsed_prefix}\'')
+        logger.id(logger.debug, self,
+                ' '.join(msg),
+                color_name=name_raw,
+                prefix=prefix,
+                parsed_prefix=parsed_prefix,
+        )
 
         return False
 

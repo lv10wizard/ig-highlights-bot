@@ -1,15 +1,9 @@
-import ctypes
-import multiprocessing
-import os
 import re
 import signal
 import time
 
 from prawcore.exceptions import Redirect
 from six import iteritems
-from six.moves import queue
-
-from constants import SUBREDDITS_DEFAULTS_PATH
 
 from src import (
         blacklist,
@@ -23,7 +17,6 @@ from src import (
 from src.database import (
         ReplyQueueDatabase,
         SubredditsDatabase,
-        UniqueConstraintFailed,
 )
 from src.mixins import (
         RunForeverMixin,
@@ -35,6 +28,9 @@ from src.util import logger
 class IgHighlightsBot(RunForeverMixin, StreamMixin):
     """
     Instagram Highlights reddit bot class
+
+    This is intended to be run in the main process. It spawns all other
+    processes and crawls comments from subreddits in the subreddits database.
     """
 
     def __init__(self, cfg):
@@ -127,6 +123,8 @@ class IgHighlightsBot(RunForeverMixin, StreamMixin):
 
         if comment_stream is None or self.subreddits.is_dirty:
             with self.subreddits.updating():
+                logger.id(logger.info, self, 'Updating subreddits ...')
+
                 try:
                     current_subreddits = self.__current_subreddits
 
@@ -139,12 +137,24 @@ class IgHighlightsBot(RunForeverMixin, StreamMixin):
                 diff = subs_from_db.symmetric_difference(current_subreddits)
 
                 if bool(diff):
-                    logger.id(logger.debug, self,
-                            'New/missing subreddits: {color}',
-                            color=diff,
-                    )
+                    new = subs_from_db - current_subreddits
+                    if new:
+                        logger.id(logger.info, self,
+                                'New subreddits: {color}',
+                                color=new,
+                        )
+                    removed = current_subreddits - subs_from_db
+                    if removed:
+                        logger.id(logger.info, self,
+                                'Removed subreddits: {color}',
+                                color=removed,
+                        )
 
                     subreddits_str = reddit.pack_subreddits(subs_from_db)
+                    logger.id(logger.debug, self,
+                            'subreddit string:\n{subreddits_str}',
+                            subreddits_str=subreddits_str,
+                    )
                     if subreddits_str:
                         comment_subreddits = self._reddit.subreddit(
                                 subreddits_str
@@ -154,6 +164,15 @@ class IgHighlightsBot(RunForeverMixin, StreamMixin):
                         )
                         self.__cached_comment_stream = comment_stream
                         self.__current_subreddits = subs_from_db
+
+                else:
+                    msg = ['No']
+                    if comment_stream is not None:
+                        msg.append('new')
+                    msg.append('subreddits!')
+
+                    logger.id(logger.info, self, ' '.join(msg))
+
         return comment_stream
 
     def _run_forever(self):

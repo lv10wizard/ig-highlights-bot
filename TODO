@@ -223,6 +223,14 @@ O. persistent reddit ratelimit time
 - figure out why messages stream sleeps upon fetching items
     is it only if #items < 100?
 - reclassify some debug logging -> info (info is far too quiet)
+- change '._reddit' -> '.reddit'
+- add the bot-posted comment id to the [Contact] msg subject skeleton
+    - get comment from thing.reply()
+    - change CONTACT_SUBJECT_SKELETON to include a comment id placeholder
+        (ie, '{0}')
+    - comment.edit( ... )
+        probably: comment.edit( comment.body.format(comment.id) )
+    * what if ratelimited on .edit ?
 O. quiet spammy logging
     X. reddit-queue.db
         X. SELECT * FROM queue ORDER BY ratelimit_reset ASC

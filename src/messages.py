@@ -281,7 +281,7 @@ class Messages(ProcessMixin, StreamMixin):
                     do_reply = self.blacklist.remove(name, prefix)
 
                 else:
-                    # subject regex updated but no code to handle ...
+                    # subject regex changed but no code to handle ...
                     # XXX: flagging the message as unseen may not
                     # necessarily do anything if it does not remain the
                     # newest message
