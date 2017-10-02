@@ -27,15 +27,15 @@ DUMP          = 'dump'
 IG_DB         = 'ig-db'
 
 def add_subreddit(cfg, *subreddits):
-    subreddits = database.SubredditsDatabase(do_seed=False)
+    subreddits_db = database.SubredditsDatabase(do_seed=False)
     for sub in subreddits:
         _, sub_name = reddit.split_prefixed_name(sub)
         # in case the user passed something like '/u/'
         if sub_name:
-            if sub_name not in subreddits:
+            if sub_name not in subreddits_db:
                 try:
-                    with subreddits:
-                        subreddits.insert(sub_name)
+                    with subreddits_db:
+                        subreddits_db.insert(sub_name)
                 except database.UniqueConstraintFailed:
                     # this means there is a bug in __contains__
                     logger.warn('Failed to add \'{sub_name}\' (already added)!',
@@ -49,14 +49,14 @@ def add_subreddit(cfg, *subreddits):
                 )
 
 def rm_subreddit(cfg, *subreddits):
-    subreddits = database.SubredditsDatabase(do_seed=False)
+    subreddits_db = database.SubredditsDatabase(do_seed=False)
     for sub in subreddits:
         _, sub_name = reddit.split_prefixed_name(sub)
         # in case the user passed something like '/u/'
         if sub_name:
-            if sub_name in subreddits:
-                with subreddits:
-                    subreddits.delete(sub_name)
+            if sub_name in subreddits_db:
+                with subreddits_db:
+                    subreddits_db.delete(sub_name)
             else:
                 logger.debug('Cannot remove \'{sub_name}\': not in database!',
                         sub_name=sub_name,
