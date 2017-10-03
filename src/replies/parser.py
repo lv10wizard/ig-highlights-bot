@@ -1,4 +1,5 @@
 import ctypes
+from errno import ECONNABORTED
 import multiprocessing
 import re
 import time
@@ -74,6 +75,15 @@ class Parser(object):
             else:
                 try:
                     links = Parser._cache[self.comment.id]
+
+                except ConnectionAbortedError as e:
+                    if e.errno == ECONNABORTED:
+                        # Software caused connection abort
+                        # (shutdown interrupted lookup)
+                        links = set()
+
+                    else:
+                        raise
 
                 except KeyError:
                     logger.id(logger.debug, self, 'Parsing comment ...')
