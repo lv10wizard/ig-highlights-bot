@@ -52,19 +52,6 @@ class StreamMixin(RedditInstanceMixin):
         """
         return 0
 
-    @property
-    def _loop_condition(self):
-        """
-        This should return True to continue looping; False to stop.
-        """
-        if hasattr(self, '_killed'):
-            try:
-                return not self._killed.is_set()
-            except AttributeError:
-                return self._killed
-        else:
-            raise NotImplementedError('_loop_condition')
-
     def __sleep(self, delay):
         logger.id(logger.info, self,
                 'Waiting {time} ...',
@@ -104,9 +91,6 @@ class StreamMixin(RedditInstanceMixin):
     @property
     def stream(self):
         while True:
-            if not self._loop_condition:
-                break
-
             try:
                 for thing in self._stream:
                     yield thing

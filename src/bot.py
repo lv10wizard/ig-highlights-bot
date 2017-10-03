@@ -34,6 +34,7 @@ class IgHighlightsBot(RunForeverMixin, StreamMixin):
     """
 
     def __init__(self, cfg):
+        self._killed = False
         # this is created here so that any process can flag that the account
         # is rate-limited.
         rate_limited = ratelimit.Flag()
@@ -41,7 +42,6 @@ class IgHighlightsBot(RunForeverMixin, StreamMixin):
 
         self.ratelimit_handler = ratelimit.RateLimitHandler(cfg, rate_limited)
 
-        self._killed = False
         self.reply_queue = ReplyQueueDatabase()
         self.subreddits = SubredditsDatabase()
         self.blacklist = blacklist.Blacklist(cfg)
@@ -195,15 +195,14 @@ class IgHighlightsBot(RunForeverMixin, StreamMixin):
 
         try:
             while not self._killed:
-                if self.stream:
-                    # TODO: can GETs cause praw to throw a ratelimit exception?
-                    for comment in self.stream:
-                        if not comment:
-                            break
+                # TODO: can GETs cause praw to throw a ratelimit exception?
+                for comment in self.stream:
+                    if not comment:
+                        break
 
-                        ig_usernames = self.filter.replyable_usernames(comment)
-                        if ig_usernames:
-                            self.filter.enqueue(comment, ig_usernames)
+                    ig_usernames = self.filter.replyable_usernames(comment)
+                    if ig_usernames:
+                        self.filter.enqueue(comment, ig_usernames)
 
                 if not self._killed:
                     time.sleep(1)

@@ -113,6 +113,7 @@ class RunForeverMixin(object):
 
         pid_file = write_pid(self.__class__.__name__)
 
+        logger.id(logger.info, self, 'Starting run_forever ...')
         try:
             self._run_forever()
 
