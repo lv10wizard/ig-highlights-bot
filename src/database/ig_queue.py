@@ -71,11 +71,14 @@ class InstagramQueueDatabase(Database):
         )
 
     def _insert(self, ig_user, last_id=None):
-        self._db.execute(
-                'INSERT INTO queue(ig_user, last_id)'
-                ' VALUES(?, ?)',
-                (ig_user, last_id),
-        )
+        if ig_user not in self:
+            self._db.execute(
+                    'INSERT INTO queue(ig_user, last_id)'
+                    ' VALUES(?, ?)',
+                    (ig_user, last_id),
+            )
+        else:
+            self.update(ig_user, last_id)
 
     def _delete(self, ig_usernames):
         def do_delete(ig_user):
@@ -85,6 +88,12 @@ class InstagramQueueDatabase(Database):
             )
 
         return self._do_callback(do_delete, ig_usernames)
+
+    def _update(self, ig_user, last_id=None):
+        self._db.execute(
+                'UPDATE queue SET last_id = ? WHERE ig_user = ?',
+                (last_id, ig_user),
+        )
 
     def size(self):
         """

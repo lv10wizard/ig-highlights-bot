@@ -130,7 +130,7 @@ class Instagram(object):
         return -1
 
     @staticmethod
-    def rate_limit_reset_time():
+    def rate_limit_time_left():
         """
         Returns the time remaining in seconds until new requests can be made
         """
@@ -235,7 +235,10 @@ class Instagram(object):
         Returns the user's top-liked media (the exact number is defined in
                 the config)
         """
-        if self.__is_expired:
+
+        # re-fetch the user's data if expired or we were given an initial
+        # last_id indicating that the user's last fetch was queued
+        if self.__is_expired or self.initial_last_id:
             self.__fetch_data()
 
         data = None
@@ -314,9 +317,12 @@ class Instagram(object):
     def __handle_rate_limit(self):
         is_rate_limited = Instagram.is_rate_limited()
         if is_rate_limited:
+            time_left = Instagram.rate_limit_time_left()
             logger.id(logger.debug, self,
-                    'Rate-limited! (~{time} left)',
-                    time=Instagram.rate_limit_reset_time(),
+                    'Ratelimited! (~ {time} left; expires @ {strftime})',
+                    time=time_left,
+                    strftime='%H:%M:%S',
+                    strf_time=time.localtime(time.time() + time_left),
             )
             self.__do_enqueue = True
         return is_rate_limited
@@ -347,6 +353,7 @@ class Instagram(object):
             try:
                 while not data or data['more_available']:
                     if self.__handle_rate_limit():
+                        self.__last_id = last_id
                         break
 
                     delayed_time = (

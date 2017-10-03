@@ -253,6 +253,12 @@ O. quiet spammy logging
 - change replyable_usernames to return list to preverve order
 - include choices in --help (add to help='...' msg)
 - handle database table restructuring without dropping all data
+? logger keyword: {pluralize}
+    - take tuple? list? needs the actual word value (eg. 'entry') and the
+        corresponding num kwarg to test if the word should be plural
+    - if ends in 'y':
+        - check word[0] == upper => 's'
+        - check word[-2] != vowel => 'ies'
     (in case a database is changed significantly)
 ? include version in FOOTER? (probably just the {major}.{minor} if yes)
 ? push to github

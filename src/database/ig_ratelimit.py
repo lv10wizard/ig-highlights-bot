@@ -43,8 +43,9 @@ class InstagramRateLimitDatabase(Database):
         )
         if cursor.rowcount > 0:
             logger.id(logger.debug, self,
-                    'Pruned #{num} entries ...',
+                    'Pruned #{num} entr{plural} ...',
                     num=cursor.rowcount,
+                    plural='ies' if cursor.rowcount != 1 else 'y',
             )
             self._db.commit()
 
@@ -85,7 +86,8 @@ class InstagramRateLimitDatabase(Database):
         remaining = -1
         row = cursor.fetchone()
         if row:
-            remaining = self.max_age - row['timestamp']
+            elapsed = time.time() - row['timestamp']
+            remaining = self.max_age - elapsed
 
         return remaining
 
