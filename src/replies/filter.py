@@ -157,9 +157,11 @@ class Filter(object):
 
         pruned = orig_usernames - ig_usernames
         if pruned:
+            msg = ['Pruned #{num_posted} usernames: {color_posted}']
+            if ig_usernames:
+                msg.append('#{num_users}: {color_users}')
             logger.id(logger.debug, self,
-                    'Pruned #{num_posted} usernames: {color_posted}'
-                    '\n\t#{num_users}: {color_users}',
+                    '\n\t'.join(msg),
                     num_posted=len(pruned),
                     color_posted=pruned,
                     num_users=len(ig_usernames),
