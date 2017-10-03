@@ -130,7 +130,7 @@ class Replier(ProcessMixin, RedditInstanceMixin):
                 break
 
             last_id = self.ig_queue.get_last_id_for(ig_user)
-            ig = Instagram(ig_user, last_id)
+            ig = Instagram(ig_user, last_id, self._killed)
             if ig.valid:
                 ig_list.append(ig)
 

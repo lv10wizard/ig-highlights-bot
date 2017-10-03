@@ -217,9 +217,9 @@ O. persistent reddit ratelimit time
     welcome unless specifically summoned.
 ? check comment's immediate replies in Filter to guarantee that the bot does not
     make duplicate replies regardless of database state
-? gracefully exit instagram fetch
-    - pass _killed flag to Instagram class? __init__?
-    - in fetch, if _killed.is_set() => set do_enqueue
+O. gracefully exit instagram fetch
+    O. pass _killed flag to Instagram class? __init__?
+    O. in fetch, if _killed.is_set() => set do_enqueue
 - figure out why messages stream sleeps upon fetching items
     is it only if #items < 100?
 - reclassify some debug logging -> info (info is far too quiet)

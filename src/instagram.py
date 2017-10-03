@@ -163,9 +163,10 @@ class Instagram(object):
                     max_age='1h',
             )
 
-    def __init__(self, user, last_id=None):
+    def __init__(self, user, last_id=None, killed=None):
         self.user = user
         self.initial_last_id = last_id
+        self.killed = killed
 
         if not Instagram.cfg:
             logger.id(logger.critical, self,
@@ -194,6 +195,21 @@ class Instagram(object):
         if self.user:
             result.append(self.user)
         return ':'.join(result)
+
+    @property
+    def __killed(self):
+        """
+        Returns whether the optional killed flag is set
+        """
+        was_killed = bool(self.killed)
+        if hasattr(self.killed, 'is_set'):
+            was_killed = self.killed.is_set()
+
+        if was_killed:
+            # flag that the user should be queued if a fetch was killed
+            # XXX: this probably doesn't belong here ...
+            self.__do_enqueue = True
+        return was_killed
 
     @property
     def url(self):
@@ -352,7 +368,7 @@ class Instagram(object):
 
             try:
                 while not data or data['more_available']:
-                    if self.__handle_rate_limit():
+                    if self.__handle_rate_limit() or self.__killed:
                         self.__last_id = last_id
                         break
 
