@@ -193,7 +193,7 @@ class RedditRateLimitQueueDatabase(Database):
                 # prevent ratelimit logging spam
                 self.do_log(logger.info,
                         '{color_fullname}: {time} until rate-limit reset',
-                        _force=(delay <= 3),
+                        force_=(delay <= 3),
                         color_fullname=row['fullname'],
                         time=delay,
                 )

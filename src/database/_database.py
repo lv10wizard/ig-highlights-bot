@@ -79,6 +79,7 @@ class _SqliteConnectionWrapper(object):
         while not cursor:
             self.parent.do_log(logger.debug,
                     self.__construct_msg(sql, *args, **kwargs),
+                    min_threshold_=30,
                     func_args=args,
                     func_kwargs=kwargs,
             )
@@ -163,31 +164,31 @@ class Database(object):
             # return True
 
     def do_log(
-            self, logger_func, _msg, _min_threshold=60, _force=False,
-            *_args, **_kwargs
+            self, logger_func, msg_, min_threshold_=60, force_=False,
+            *args_, **kwargs_
     ):
         """
         This method time-gates logging calls to prevent flooding the logs if
-        _min_threshold > 0.
+        min_threshold_ > 0.
 
         logger_func (function) - the logger method to call (eg. logger.debug)
-        _msg (str) - the format message to pass to the logger
+        msg_ (str) - the format message to pass to the logger
                 Note: this string is used as a key to gauge the elapsed interval
-                of the last logging output. so if the _msg string changes
+                of the last logging output. so if the msg_ string changes
                 dynamically, then logging may still be spammed.
-        _min_threshold (int, float; optional) - the minimum elapsed time before
-                the given _msg can be logged again
-        _force (bool; optional) - whether logging should be output regardless
-                of the elapsed time since the last output of _msg. this has no
-                effect if _min_threshold <= 0 (logging is always output if
-                _min_threshold <= 0).
+        min_threshold_ (int, float; optional) - the minimum elapsed time before
+                the given msg_ can be logged again
+        force_ (bool; optional) - whether logging should be output regardless
+                of the elapsed time since the last output of msg_. this has no
+                effect if min_threshold_ <= 0 (logging is always output if
+                min_threshold_ <= 0).
         """
         did_log = False
 
         last_log_time = 0
         # don't bother checking/creating caches if we're just going to log
         # anyway
-        if _min_threshold > 0 or _force:
+        if min_threshold_ > 0 or force_:
             try:
                 log_times = self.__last_log_time
             except AttributeError:
@@ -195,17 +196,17 @@ class Database(object):
                 self.__last_log_time = log_times
 
             try:
-                last_log_time = log_times[_msg]
+                last_log_time = log_times[msg_]
             except KeyError:
                 pass
 
         elapsed = time.time() - last_log_time
         # limit how often messages are logged
         # TODO? config setting for time threshold?
-        if elapsed > _min_threshold or _force:
-            logger.id(logger_func, self, _msg, *_args, **_kwargs)
-            if _min_threshold > 0:
-                log_times[_msg] = time.time()
+        if elapsed > min_threshold_ or force_:
+            logger.id(logger_func, self, msg_, *args_, **kwargs_)
+            if min_threshold_ > 0:
+                log_times[msg_] = time.time()
             did_log = True
 
         return did_log
