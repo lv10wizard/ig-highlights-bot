@@ -267,6 +267,11 @@ class Replier(ProcessMixin, RedditInstanceMixin):
                 self.ig_queue.delete(ig_usernames)
 
     def _process_reply_queue(self):
+        """
+        Processes the reply-queue until all elements have been seen.
+        """
+
+        seen = set()
         while not self._killed.is_set() and self.reply_queue.size() > 0:
             data = self.reply_queue.get()
             if not data:
@@ -274,6 +279,11 @@ class Replier(ProcessMixin, RedditInstanceMixin):
                 break
 
             comment_id, mention_id = data
+            if comment_id in seen:
+                # all elements in the queue were processed
+                break
+
+            seen.add(comment_id)
             comment = self._reddit.comment(comment_id)
             mention = None
             if mention_id:
@@ -332,8 +342,10 @@ class Replier(ProcessMixin, RedditInstanceMixin):
                 self._task_done(comment)
 
             else:
-                # the comment was queued
-                break
+                # the comment was queued: cycle it to the back of the queue
+                # so we can check if we can reply immediately to other comments
+                with self.reply_queue:
+                    self.reply_queue.update(comment)
 
     def _run_forever(self):
         # XXX: instantiated here so that the _reddit instance is constructed
