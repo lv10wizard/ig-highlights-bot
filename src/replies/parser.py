@@ -69,11 +69,11 @@ class Parser(object):
 
         except AttributeError:
             if not self.comment:
-                self.__ig_links = set()
+                links = set()
 
             else:
                 try:
-                    self.__ig_links = Parser._cache[self.comment.id]
+                    links = Parser._cache[self.comment.id]
 
                 except KeyError:
                     logger.id(logger.debug, self, 'Parsing comment ...')
@@ -91,7 +91,8 @@ class Parser(object):
                             a['href']
                             for a in soup.find_all('a', href=Instagram.IG_REGEX)
                     )
-                    self.__ig_links = links
+                    # cache the links in case a new Parser is instantiated for
+                    # the same comment, potentially from a different process
                     Parser._cache[self.comment.id] = links
                     if links:
                         logger.id(logger.debug, self,
@@ -99,6 +100,9 @@ class Parser(object):
                                 num=len(links),
                                 color=links,
                         )
+            # cache a reference to the links on the instance in case the
+            # object is long-lived
+            self.__ig_links = links
 
         return links.copy()
 
