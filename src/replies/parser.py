@@ -1,4 +1,7 @@
+import ctypes
+import multiprocessing
 import re
+import time
 
 from bs4 import (
         BeautifulSoup,
@@ -16,6 +19,32 @@ class Parser(object):
     Parses reddit comments for instagram user links
     """
 
+    # XXX: I think creating these here is ok so long as this module is loaded
+    # by the main process so that child processes inherit them. otherwise child
+    # processes may create another version .. I think.
+    _manager = multiprocessing.Manager()
+    _cache = _manager.dict()
+    # the amount of time before the cache is cleared.
+    # too long and the bot may miss any edits to the comment
+    # (and the cache may start to impact memory significantly),
+    # too short and the number of potential network hits rises.
+    _EXPIRE_TIME = 15 * 60
+    _expire_timer = multiprocessing.Value(ctypes.c_float, 0.0)
+
+    @staticmethod
+    def _prune_cache():
+        """
+        Clears the cache if the time since the last clearing exceeds the
+        threshold
+        """
+        elapsed = time.time() - Parser._expire_timer.value
+        if elapsed > Parser._EXPIRE_TIME:
+            logger.id(logger.debug, Parser.__name__, 'Clearing cache ...')
+            # XXX: this may cause a comment to be parsed back-to-back if it was
+            # just parsed before clear()
+            Parser._cache.clear()
+            Parser._expire_timer.value = time.time()
+
     def __init__(self, comment):
         self.comment = comment
 
@@ -32,6 +61,9 @@ class Parser(object):
         """
         Returns a set of valid links in the comment
         """
+        # try to clear the cache whenever a comment is parsed
+        Parser._prune_cache()
+
         try:
             links = self.__ig_links
 
@@ -40,26 +72,33 @@ class Parser(object):
                 self.__ig_links = set()
 
             else:
-                logger.id(logger.debug, self, 'Parsing comment ...')
-
                 try:
-                    soup = BeautifulSoup(self.comment.body_html, 'lxml')
-                except FeatureNotFound:
-                    soup = BeautifulSoup(self.comment.body_html, 'html.parser')
+                    self.__ig_links = Parser._cache[self.comment.id]
 
-                # Note: this only considers valid links in the body's text
-                # TODO? regex search for anything that looks like a link
-                self.__ig_links = set(
-                        a['href']
-                        for a in soup.find_all('a', href=Instagram.IG_REGEX)
-                )
-                links = self.__ig_links
-                if links:
-                    logger.id(logger.debug, self,
-                            'Found #{num} links: {color}',
-                            num=len(links),
-                            color=links,
+                except KeyError:
+                    logger.id(logger.debug, self, 'Parsing comment ...')
+
+                    try:
+                        soup = BeautifulSoup(self.comment.body_html, 'lxml')
+                    except FeatureNotFound:
+                        soup = BeautifulSoup(
+                                self.comment.body_html, 'html.parser'
+                        )
+
+                    # Note: this only considers valid links in the body's text
+                    # TODO? regex search for anything that looks like a link
+                    links = set(
+                            a['href']
+                            for a in soup.find_all('a', href=Instagram.IG_REGEX)
                     )
+                    self.__ig_links = links
+                    Parser._cache[self.comment.id] = links
+                    if links:
+                        logger.id(logger.debug, self,
+                                'Found #{num} links: {color}',
+                                num=len(links),
+                                color=links,
+                        )
 
         return links.copy()
 
@@ -72,18 +111,12 @@ class Parser(object):
             usernames = self.__ig_usernames
 
         except AttributeError:
-            self.__ig_usernames = set()
+            usernames = set()
             for link in self.ig_links:
                 match = Instagram.IG_REGEX.search(link)
                 if match: # this check shouldn't be necessary
-                    self.__ig_usernames.add(match.group(2))
-            usernames = self.__ig_usernames
-            if usernames:
-                logger.id(logger.debug, self,
-                        'Found #{num} usernames: {color}',
-                        num=len(usernames),
-                        color=usernames,
-                )
+                    usernames.add(match.group(2))
+            self.__ig_usernames = usernames
 
         return usernames.copy()
 
