@@ -250,6 +250,10 @@ O. quiet spammy logging
         - all comment.scores > 0:   delay = higher => O(hours) ?
     ! DO NOT modify reply database (don't want to reply again)
 - write help post & link appropriately in code (formatter.py)
+- change replyable_usernames to return list to preverve order
+- include choices in --help (add to help='...' msg)
+- handle database table restructuring without dropping all data
+    (in case a database is changed significantly)
 ? include version in FOOTER? (probably just the {major}.{minor} if yes)
 ? push to github
     - if no: remove [Source](...) from FOOTER

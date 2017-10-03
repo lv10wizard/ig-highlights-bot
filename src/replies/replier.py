@@ -1,5 +1,6 @@
 from .filter import Filter
 from .formatter import Formatter
+from .parser import Parser
 from constants import PREFIX_USER
 from src import reddit
 from src.database import (
@@ -57,7 +58,7 @@ class Replier(ProcessMixin, RedditInstanceMixin):
 
         try:
             with self.ig_queue:
-                self.ig_queue.insert(ig.user, comment, ig.last_id)
+                self.ig_queue.insert(ig.user, ig.last_id)
 
         except UniqueConstraintFailed:
             msg = [
@@ -80,7 +81,7 @@ class Replier(ProcessMixin, RedditInstanceMixin):
             did_enqueue = True
         return did_enqueue
 
-    def _get_instagram_data(self, comment):
+    def _get_instagram_data(self, ig_usernames, comment):
         """
         Returns a list of instagram data for each user linked-to by the comment
                 or None if there were no reply-able instagram usernames found
@@ -88,22 +89,7 @@ class Replier(ProcessMixin, RedditInstanceMixin):
                     terminated before it was able to remove the comment from
                     the queue database)
         """
-        ig_list = []
-        # this is (most likely) an extra network hit.
-        # it only needs to occur if queue processing was interrupted previously
-        # by eg. program termination.
-        # (this is also duplicated work but it ensures that comments are
-        #  replied-to properly; ie, all instagram users linked to by the comment
-        #  are responded to)
-        ig_usernames = self.filter.replyable_usernames(
-                comment,
-                # don't bother with preliminary checks; they should have already
-                # passed
-                prelim_check=False,
-                # no need to check the comment thread for too many bot
-                # replies because it should have already been checked
-                check_thread=False,
-        )
+
         if not ig_usernames:
             logger.id(logger.debug, self,
                     'No reply-able instagram usernames found in'
@@ -112,7 +98,7 @@ class Replier(ProcessMixin, RedditInstanceMixin):
             )
             return None
 
-        queued_ig_data = self.ig_queue.get_ig_data_for(comment)
+        ig_list = []
         for ig_user in ig_usernames:
             if Instagram.is_rate_limited():
                 # TODO? logging? could be spammy
@@ -123,19 +109,12 @@ class Replier(ProcessMixin, RedditInstanceMixin):
                 ig_list = []
                 break
 
-            last_id = None
-            if ig_user in queued_ig_data:
-                # handle a previously queued instagram user
-                last_id = queued_ig_data[ig_user]
-
+            last_id = self.ig_queue.get_last_id_for(ig_user)
             ig = Instagram(ig_user, last_id)
             if ig.valid:
                 ig_list.append(ig)
 
-            if (
-                    ig.do_enqueue
-                    and not self.ig_queue.is_queued(ig.user, comment)
-            ):
+            if ig.do_enqueue and ig_user not in self.ig_queue:
                 self._enqueue_user(ig, comment)
                 # XXX: don't break in case the next user's data can be at
                 # least partially fetched. in theory, this could happen if
@@ -148,7 +127,7 @@ class Replier(ProcessMixin, RedditInstanceMixin):
 
         # XXX: this check does not prevent the bot from replying with a partial
         # list of instagram users (eg. typo in a link)
-        if comment in self.ig_queue:
+        if ig_usernames in self.ig_queue:
             # the bot only fetched data for a subset of the users (or none)
 
             # TODO? logging? could be spammy
@@ -251,13 +230,13 @@ class Replier(ProcessMixin, RedditInstanceMixin):
             # instagram user links.
             return
 
-        for body, ig_users in reply_list:
+        for body, ig_usernames in reply_list:
             if self._reddit.do_reply(comment, body, self._killed):
                 # only require a single reply to succeed to consider this method
                 # a success
                 success = True
                 try:
-                    self.reply_history.insert(comment, ig_users)
+                    self.reply_history.insert(comment, ig_usernames)
                 except UniqueConstraintFailed:
                     # this probably means that there is a bug in filter
                     logger.id(logger.warn, self,
@@ -266,7 +245,7 @@ class Replier(ProcessMixin, RedditInstanceMixin):
                             color_submission=reddit.display_fullname(
                                 comment.submission
                             ),
-                            color_user=ig_users,
+                            color_user=ig_usernames,
                             exc_info=True,
                     )
 
@@ -282,9 +261,10 @@ class Replier(ProcessMixin, RedditInstanceMixin):
             with self.reply_queue:
                 self.reply_queue.delete(comment)
 
-        if comment in self.ig_queue:
+        ig_usernames = Parser(comment).ig_usernames
+        if ig_usernames in self.ig_queue:
             with self.ig_queue:
-                self.ig_queue.delete(comment)
+                self.ig_queue.delete(ig_usernames)
 
     def _process_reply_queue(self):
         while not self._killed.is_set() and self.reply_queue.size() > 0:
@@ -299,7 +279,23 @@ class Replier(ProcessMixin, RedditInstanceMixin):
             if mention_id:
                 mention = self._reddit.comment(mention_id)
 
-            ig_list = self._get_instagram_data(comment)
+            # this is (most likely) an extra network hit.
+            # it only needs to occur if queue processing was interrupted
+            # previously by eg. program termination.
+            # (this is also duplicated work but it ensures that comments are
+            #  replied-to properly; ie, all instagram users linked to by the
+            #  comment are responded to)
+            ig_usernames = self.filter.replyable_usernames(
+                    comment,
+                    # don't bother with preliminary checks; they should have
+                    # already passed
+                    prelim_check=False,
+                    # no need to check the comment thread for too many bot
+                    # replies because it should have already been checked
+                    check_thread=False,
+            )
+
+            ig_list = self._get_instagram_data(ig_usernames, comment)
             if ig_list:
                 if mention:
                     # successfully summoned to a subreddit (ie, found an
@@ -320,7 +316,7 @@ class Replier(ProcessMixin, RedditInstanceMixin):
                 # handler should eventually get around to posting it)
                 self._task_done(comment)
 
-            elif not comment in self.ig_queue:
+            elif ig_usernames not in self.ig_queue:
                 # XXX: bad-actor flagging from mentions temporarily(?) turned
                 # off because linking to an invalid instagram page is not
                 # necessarily indicative of bad behavior. plus, trolling the bot

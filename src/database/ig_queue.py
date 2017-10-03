@@ -1,7 +1,4 @@
-import time
-
-# XXX: requests is already a dependency so may as well reuse this
-from requests.structures import CaseInsensitiveDict
+from six import string_types
 
 from ._database import Database
 
@@ -9,104 +6,107 @@ from ._database import Database
 class InstagramQueueDatabase(Database):
     """
     Persistent queue of instagram data to-be fetched and reddit data to-be
-    replied to
+    replied to (Note: not really a queue in the FIFO sense but in the delayed
+    data sense)
     """
 
     PATH = Database.PATH_FMT.format('ig-queue.db')
 
+    @staticmethod
+    def _do_callback(callback, ig_usernames):
+        """
+        Runs the callback method on the ig_usernames parameter based on its type
+
+        Assumes a True return from the callback means that iteration no longer
+                needs to occur on ig_usernames.
+        """
+        result = False
+        if isinstance(ig_usernames, string_types):
+            result = callback(ig_usernames)
+
+        elif hasattr(ig_usernames, '__iter__'):
+            for ig_user in ig_usernames:
+                try:
+                    # in case ig_usernames contains Instagram instances
+                    ig_user = ig_user.user
+                except AttributeError:
+                    pass
+                result = callback(ig_user)
+                if result:
+                    # return True if any of the specified users is in the
+                    # database
+                    break
+
+        else:
+            raise TypeError(
+                    'Unrecognized ig_usernames type=\'{type}\''
+                    ' ({ig_usernames}); str or iterable expected.'.format(
+                        type=type(ig_usernames),
+                        ig_usernames=ig_usernames,
+                    )
+            )
+
+        return result
+
     def __init__(self):
         Database.__init__(self, InstagramQueueDatabase.PATH)
 
-    def __contains__(self, comment):
-        cursor = self._db.execute(
-                'SELECT comment_id FROM queue WHERE comment_id = ?',
-                (comment.id,),
-        )
-        return bool(cursor.fetchone())
+    def __contains__(self, ig_usernames):
+        def contains_user(ig_user):
+            cursor = self._db.execute(
+                    'SELECT * FROM queue WHERE ig_user = ?',
+                    (ig_user,),
+            )
+            return bool(cursor.fetchone())
+
+        return self._do_callback(contains_user, ig_usernames)
 
     @property
     def _create_table_data(self):
         return (
                 'queue('
-                '   uid INTEGER PRIMARY KEY NOT NULL,'
-                '   comment_id TEXT NOT NULL,'
-                '   ig_user TEXT NOT NULL COLLATE NOCASE,'
-                '   last_id TEXT,'
-                '   timestamp REAL NOT NULL,'
-                '   UNIQUE(comment_id, ig_user)'
+                '   ig_user TEXT PRIMARY KEY NOT NULL COLLATE NOCASE,'
+                '   last_id TEXT'
                 ')'
         )
 
-    def _insert(self, ig_user, comment, last_id=None):
+    def _insert(self, ig_user, last_id=None):
         self._db.execute(
-                'INSERT INTO queue(comment_id, ig_user, last_id, timestamp)'
-                ' VALUES(?, ?, ?, ?)',
-                (comment.id, ig_user, last_id, time.time()),
+                'INSERT INTO queue(ig_user, last_id)'
+                ' VALUES(?, ?)',
+                (ig_user, last_id),
         )
 
-    def _delete(self, comment):
-        self._db.execute(
-                'DELETE FROM queue WHERE comment_id = ?',
-                (comment.id,),
-        )
+    def _delete(self, ig_usernames):
+        def do_delete(ig_user):
+            self._db.execute(
+                    'DELETE FROM queue WHERE ig_user = ?',
+                    (ig_user,),
+            )
 
-    def _update(self, comment):
-        """
-        Updates the timestamp for a given comment effectively moving it to the
-        back of the queue
-        """
-        self._db.execute(
-                'UPDATE queue SET timestamp = ? WHERE comment_id = ?',
-                (time.time(), comment.id),
-        )
+        return self._do_callback(do_delete, ig_usernames)
 
     def size(self):
         """
         Returns the current number of elements in the database
         """
-        cursor = self._db.execute('SELECT comment_id FROM queue')
-        # the database treats each unique comment as a queue element
-        return len(set(row['comment_id'] for row in cursor))
+        cursor = self._db.execute('SELECT count(*) FROM queue')
+        return cursor.fetchone()[0]
 
-    def get(self):
+    def get_last_id_for(self, ig_user):
         """
-        Gets the first queued comment_id
-
-        Returns comment_id of the oldest record in the database
-                or None if the queue is empty
+        Returns the last_id stored for the given ig_user
+                or None if the ig_user is not in the database
         """
+        last_id = None
         cursor = self._db.execute(
-                'SELECT comment_id FROM queue ORDER BY timestamp ASC'
+                'SELECT last_id FROM queue WHERE ig_user = ?',
+                (comment.id,)
         )
         row = cursor.fetchone()
         if row:
-            return row['comment_id']
-        return None
-
-    def get_ig_data_for(self, comment):
-        """
-        Returns a case-insensitive dictionary {ig_user: last_id}
-
-                or an empty ditionary if the comment is not queued
-        """
-        cursor = self._db.execute(
-                'SELECT ig_user, last_id FROM queue WHERE comment_id = ?',
-                (comment.id,)
-        )
-        return CaseInsensitiveDict(
-                {row['ig_user']: row['last_id'] for row in cursor}
-        )
-
-    def is_queued(self, ig_user, comment):
-        """
-        Returns whether the (ig_user, comment) pair is in the queue
-        """
-        cursor = self._db.execute(
-                'SELECT comment_id FROM queue'
-                ' WHERE ig_user = ? AND comment_id = ?',
-                (ig_user, comment.id),
-        )
-        return bool(cursor.fetchone())
+            last_id = row['last_id']
+        return last_id
 
 
 __all__ = [
