@@ -101,7 +101,7 @@ class InstagramQueueDatabase(Database):
         last_id = None
         cursor = self._db.execute(
                 'SELECT last_id FROM queue WHERE ig_user = ?',
-                (comment.id,)
+                (ig_user,)
         )
         row = cursor.fetchone()
         if row:
