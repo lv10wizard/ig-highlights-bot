@@ -10,7 +10,7 @@ def choose_delay(delay):
     # exponentially increase delay
     delay *= 2
     # but don't let it run away
-    delay = max(delay, 10 * 60)
+    delay = min(delay, 10 * 60)
     return delay
 
 class Requestor(object):
