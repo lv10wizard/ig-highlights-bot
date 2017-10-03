@@ -20,9 +20,12 @@ class Parser(object):
         self.comment = comment
 
     def __str__(self):
+        result = [self.__class__.__name__]
         if not self.comment:
-            return '<invalid comment>'
-        return reddit.display_id(self.comment)
+            result.append('<invalid comment>')
+        else:
+            result.append(reddit.display_id(self.comment))
+        return ':'.join(result)
 
     @property
     def ig_links(self):
