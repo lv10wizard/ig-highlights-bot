@@ -65,6 +65,7 @@ class Instagram(object):
     # be allowed to change this to any number they wish
     RATE_LIMIT_THRESHOLD = 3000
 
+    _ig_queue = None
     _requestor = None
     _server_error_timestamp = 0
     _server_error_delay = 0
@@ -163,9 +164,8 @@ class Instagram(object):
                     max_age='1h',
             )
 
-    def __init__(self, user, last_id=None, killed=None):
+    def __init__(self, user, killed=None):
         self.user = user
-        self.initial_last_id = last_id
         self.killed = killed
 
         if not Instagram.cfg:
@@ -190,6 +190,9 @@ class Instagram(object):
                     },
             )
 
+        if not Instagram._ig_queue:
+            Instagram._ig_queue = database.InstagramQueueDatabase()
+
     def __str__(self):
         result = [self.__class__.__name__]
         if self.user:
@@ -206,9 +209,7 @@ class Instagram(object):
             was_killed = self.killed.is_set()
 
         if was_killed:
-            # flag that the user should be queued if a fetch was killed
-            # XXX: this probably doesn't belong here ...
-            self.__do_enqueue = True
+            self.__enqueue()
         return was_killed
 
     @property
@@ -221,22 +222,11 @@ class Instagram(object):
         )
 
     @property
-    def valid(self):
-        return bool(self.user) and bool(self.top_media)
-
-    @property
     def status_codes(self):
         try:
             return list(self.__status_codes)
         except AttributeError:
             return []
-
-    @property
-    def do_enqueue(self):
-        try:
-            return self.__do_enqueue
-        except AttributeError:
-            return False
 
     @property
     def last_id(self):
@@ -250,23 +240,33 @@ class Instagram(object):
         """
         Returns the user's top-liked media (the exact number is defined in
                 the config)
+                or None if the fetch was interrupted
+                or False if the user's profile is private or not a user page
+                    (eg. instagram.com/about)
         """
-
+        data = False
+        complete = True
         # re-fetch the user's data if expired or we were given an initial
         # last_id indicating that the user's last fetch was queued
-        if self.__is_expired or self.initial_last_id:
-            self.__fetch_data()
-
-        data = None
+        if self.__is_expired or self.user in Instagram._ig_queue:
+            complete = self.__fetch_data()
+            if not complete:
+                # fetch failed; return this value
+                data = complete
 
         # don't create a new database file if one does not exist;
         # we should only look up here
-        if os.path.exists(self.__db_path):
+        if complete and os.path.exists(self.__db_path):
             media_cache = database.InstagramDatabase(self.__db_path)
             num_highlights = Instagram.cfg.num_highlights_per_ig_user
             data = media_cache.get_top_media(num_highlights)
             if num_highlights > 0 and not data:
                 # empty database
+                logger.id(logger.debug, self,
+                        'Removing \'{path}\': empty database',
+                        path=self.__db_path,
+                )
+
                 try:
                     os.remove(self.__db_path)
 
@@ -345,6 +345,53 @@ class Instagram(object):
 
         return expired
 
+    def __enqueue(self):
+        """
+        Enqueues the user so their in-progress fetch can be continued later.
+        This may happen if instagram is ratelimited, experiencing a service
+        outage, or the program was killed during a fetch.
+        """
+        try:
+            self.__status_codes
+        except AttributeError:
+            # if there are no status codes, then no fetch was issued which means
+            # that we should not enqueue the user
+            return
+
+        did_enqueue = False
+        msg = ['Queueing']
+        if self.last_id:
+            msg.append('@ {last_id}')
+        msg.append('...')
+        logger.id(logger.debug, self,
+                ' '.join(msg),
+                last_id=self.last_id,
+        )
+
+        try:
+            with Instagram._ig_queue:
+                # XXX: insert() implictly calls update
+                Instagram._ig_queue.insert(self.user, self.last_id)
+
+        except database.UniqueConstraintFailed:
+            msg = [
+                    'Attempted to enqueue duplicate instagram user'
+                    ' \'{color_user}\''
+            ]
+            if self.last_id:
+                msg.append('@ {last_id}')
+
+            logger.id(logger.warn, self,
+                    ' '.join(msg),
+                    color_user=self.user,
+                    last_id=self.last_id,
+                    exc_info=True,
+            )
+
+        else:
+            did_enqueue = True
+        return did_enqueue
+
     def __handle_rate_limit(self):
         is_rate_limited = Instagram.is_rate_limited()
         if is_rate_limited:
@@ -355,16 +402,22 @@ class Instagram(object):
                     strftime='%H:%M:%S',
                     strf_time=time.localtime(time.time() + time_left),
             )
-            self.__do_enqueue = True
+            self.__enqueue()
         return is_rate_limited
 
     def __fetch_data(self):
         """
         Fetches user data from instagram
+
+        Returns True if successfully fetches all of the user's data
+                or None if fetching was interrupted
+                or False if the user is not valid (404 or a private/non-user page
+                    eg. instagram.com/about)
         """
+        success = None
         if not self.__handle_rate_limit():
             data = None
-            last_id = self.initial_last_id
+            last_id = Instagram._ig_queue.get_last_id_for(self.user)
             fatal_msg = [
                     'Failed to fetch \'{user}\' media!'
                     ' Response structure changed.'.format(user=self.user)
@@ -384,7 +437,6 @@ class Instagram(object):
             try:
                 while not data or data['more_available']:
                     if self.__handle_rate_limit() or self.__killed:
-                        self.__last_id = last_id
                         break
 
                     delayed_time = (
@@ -439,10 +491,18 @@ class Instagram(object):
                         data = response.json()
                         last_id = self.__parse_data(data)
                         if not last_id:
+                            if last_id is False:
+                                # private or non-user page
+                                success = False
                             break
+
+                        if not data['more_available']:
+                            # parsed the last set of items
+                            success = True
 
                     elif response.status_code == 404:
                         # probably a typo
+                        success = False
                         break
 
                     # elif response.status_code == 403:
@@ -468,10 +528,7 @@ class Instagram(object):
                                 timestamp=Instagram._server_error_timestamp,
                         )
 
-                        self.__do_enqueue = True
-                        # store the last_id so that we can properly enqueue
-                        # the request for later
-                        self.__last_id = last_id
+                        self.__enqueue()
                         # no reason in trying any more, need to wait until
                         # instagram comes back up
                         break
@@ -504,6 +561,8 @@ class Instagram(object):
                 )
                 raise
 
+        return success
+
     def __parse_data(self, data, stop_at_first_duplicate=False):
         """
         Parses out relevant information from the response object.
@@ -511,17 +570,20 @@ class Instagram(object):
         Returns last_id (string) - eg. '1571552046892748751_3108326'
                 - to be used in fetching the next page of data
 
-        Returns None if stop_at_first_duplicate == True and there was a
+                or None if stop_at_first_duplicate == True and there was a
                 duplicate seen in the current data set
                 Note: stop_at_first_duplicate skips pruning missing (deleted)
                     media. This can cause replies to include non-existent
                     links.
-                None is also returned if data['items'] is empty
+
+                or False if data['items'] is empty
         """
         last_id = None
 
         if data['status'].lower() == 'ok' and data['items']:
             last_id = data['items'][-1]['id']
+            # store the last_id in case we need to enqueue the request for later
+            self.__last_id = last_id
 
             try:
                 cache = self.__cache
@@ -592,6 +654,12 @@ class Instagram(object):
                     # prune any rows in the cache db that we did not see
                     all_codes = self.__cache.get_all_codes()
                     seen_codes = seen.get_all_codes()
+                    logger.id(logger.debug, self,
+                            'cached: #{num_cached} vs. fetched: #{num_seen}',
+                            num_cached=len(all_codes),
+                            num_seen=len(seen_codes),
+                    )
+
                     missing = all_codes - seen_codes
                     if missing:
                         logger.id(logger.debug, self,
@@ -606,6 +674,10 @@ class Instagram(object):
 
                 # fetch is finished: remove the seen database
                 self.__remove_cache_if_exists(self.__seen_db_path, seen)
+                if self.user in Instagram._ig_queue:
+                    # remove the user from the queue
+                    with Instagram._ig_queue:
+                        Instagram._ig_queue.delete(self.user)
 
         elif not data['items']:
             logger.id(logger.debug, self,
@@ -621,6 +693,7 @@ class Instagram(object):
             except AttributeError:
                 cache = None
             self.__remove_cache_if_exists(self.__db_path, cache)
+            last_id = False
 
         return last_id
 
