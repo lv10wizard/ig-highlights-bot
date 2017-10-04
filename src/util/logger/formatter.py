@@ -40,12 +40,12 @@ class Formatter(logging.Formatter):
     }
 
     KEYWORD_REGEX_FMT = r'^\w*{0}\w*$'
-    #             |\_/\_/\_/ \
-    #             | |  |  | match entire string
-    #             | |  | optionally match any trailing words
-    #             | | match keyword (eg. 'color') optionally followed by
-    #             |optionally match any leading words
-    #            match entire string
+    #                     |\_/\_/\_/ \
+    #                     | |  |  | match entire string
+    #                     | |  | optionally match any trailing words
+    #                     | \ match keyword (eg. 'color') optionally followed by
+    #                     | optionally match any leading words
+    #                   match entire string
     __REGEXES = {}
 
     __LARGE_TIME_UNITS = [
