@@ -118,7 +118,31 @@ class Instagram(object):
         """
         Returns whether we have hit/exceeded the rate-limit
         """
-        return Instagram.rate_limit_num_remaining() <= 0
+        try:
+            was_rate_limited = Instagram.__was_rate_limited
+        except AttributeError:
+            was_rate_limited = False
+            Instagram.__was_rate_limited = was_rate_limited
+
+        num_remaining = Instagram.rate_limit_num_remaining()
+        currently_rate_limited = num_remaining <= 0
+        Instagram.__was_rate_limited = currently_rate_limited
+        if currently_rate_limited and not was_rate_limited:
+            time_left = Instagram.rate_limit_time_left()
+            logger.id(logger.debug, Instagram.__name__,
+                    'Ratelimited! (~ {time} left; expires @ {strftime})',
+                    time=time_left,
+                    strftime='%H:%M:%S',
+                    strf_time=time.time() + time_left,
+            )
+
+        elif not currently_rate_limited and was_rate_limited:
+            logger.id(logger.debug, Instagram.__name__,
+                    'No longer ratelimited! ({num} requests left)',
+                    num=num_remaining,
+            )
+
+        return currently_rate_limited
 
     @staticmethod
     def rate_limit_num_remaining():
@@ -237,6 +261,20 @@ class Instagram(object):
 
     @property
     def top_media(self):
+        """
+        Cached wrapper around __get_top_media worker
+
+        This will prevent the same Instagram instance from attempting to fetch
+        multiple times if one is necessary.
+        """
+        try:
+            media = self.__cached_top_media
+        except AttributeError:
+            media = self.__get_top_media()
+            self.__cached_top_media
+        return media
+
+    def __get_top_media(self):
         """
         Returns the user's top-liked media (the exact number is defined in
                 the config)
@@ -358,6 +396,17 @@ class Instagram(object):
             # that we should not enqueue the user
             return
 
+        if self.user in Instagram._ig_queue:
+            queued_last_id = Instagram._ig_queue.get_last_id_for(self.user)
+            if (
+                    # don't queue invalid data (last_id queued but no last_id
+                    # fetched) -- ie, don't restart the fetching sequence
+                    (queued_last_id and not self.last_id)
+                    # don't re-queue the same data
+                    or queued_last_id == self.last_id
+            ):
+                return
+
         did_enqueue = False
         msg = ['Queueing']
         if self.last_id:
@@ -395,13 +444,6 @@ class Instagram(object):
     def __handle_rate_limit(self):
         is_rate_limited = Instagram.is_rate_limited()
         if is_rate_limited:
-            time_left = Instagram.rate_limit_time_left()
-            logger.id(logger.debug, self,
-                    'Ratelimited! (~ {time} left; expires @ {strftime})',
-                    time=time_left,
-                    strftime='%H:%M:%S',
-                    strf_time=time.localtime(time.time() + time_left),
-            )
             self.__enqueue()
         return is_rate_limited
 

@@ -69,35 +69,6 @@ class Replier(ProcessMixin, RedditInstanceMixin):
 
         ig_list = []
         for ig_user in ig_usernames:
-            if Instagram.is_rate_limited():
-                if self.__first_run:
-                    # only output this once and only if this is the first
-                    # run_forever iteration; ie, only log that we are
-                    # ratelimited by instagram on program start (this would
-                    # be very spammy otherwise)
-                    try:
-                        self.__has_logged_ratelimit
-                    except AttributeError:
-                        import time
-
-                        self.__has_logged_ratelimit = True
-                        time_left = Instagram.rate_limit_time_left()
-                        logger.id(logger.debug, self,
-                                'Instagram ratelimited! (~ {time} left; expires'
-                                ' @ {strftime})',
-                                time=time_left,
-                                strftime='%H:%M:%S',
-                                strf_time=time.localtime(
-                                    time.time() + time_left
-                                ),
-                        )
-
-                # instagram ratelimited: drop the partially
-                # constructed instagram user list so that the bot
-                # doesn't reply with a subset of users
-                ig_list = []
-                break
-
             ig = Instagram(ig_user, self._killed)
             if ig.top_media:
                 ig_list.append(ig)
@@ -306,11 +277,9 @@ class Replier(ProcessMixin, RedditInstanceMixin):
         )
         self.formatter = Formatter(self._reddit.username_raw)
 
-        self.__first_run = True
         delay = 1
         while not self._killed.is_set():
             self._process_reply_queue()
-            self.__first_run = False
 
             # sleep a bit in case all queues are empty to prevent wasteful CPU
             # spin

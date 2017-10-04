@@ -253,6 +253,8 @@ O. quiet spammy logging
 - change replyable_usernames to return list to preverve order
 O. include choices in --help (add to help='...' msg)
 - handle database table restructuring without dropping all data
+- reply-queue per-comment logging
+    > how to prevent spam the log though?
 ? logger keyword: {pluralize}
     - take tuple? list? needs the actual word value (eg. 'entry') and the
         corresponding num kwarg to test if the word should be plural
