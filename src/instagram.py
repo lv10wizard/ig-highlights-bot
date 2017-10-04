@@ -271,7 +271,7 @@ class Instagram(object):
             media = self.__cached_top_media
         except AttributeError:
             media = self.__get_top_media()
-            self.__cached_top_media
+            self.__cached_top_media = media
         return media
 
     def __get_top_media(self):
