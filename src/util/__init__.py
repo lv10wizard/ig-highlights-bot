@@ -9,6 +9,18 @@ def get_padding(num):
         num //= 10
     return padding if padding > 0 else 1
 
+def remove_duplicates(seq):
+    """
+    Removes duplicate elements from the list
+
+    https://stackoverflow.com/a/480227
+
+    Returns a list
+    """
+    seen = set()
+    seen_add = seen.add
+    return [x for x in seq if not (x in seen or seen_add(x))]
+
 def mkdirs(path):
     # https://stackoverflow.com/a/20667049
     try:

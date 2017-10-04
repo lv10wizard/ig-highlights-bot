@@ -12,7 +12,10 @@ from six.moves.urllib.parse import urlparse
 
 from src import reddit
 from src.instagram import Instagram
-from src.util import logger
+from src.util import (
+        logger,
+        remove_duplicates,
+)
 
 
 class Parser(object):
@@ -60,7 +63,7 @@ class Parser(object):
     @property
     def ig_links(self):
         """
-        Returns a set of valid links in the comment
+        Returns a list of unique instagram links in the comment
         """
         # try to clear the cache whenever a comment is parsed
         Parser._prune_cache()
@@ -70,7 +73,7 @@ class Parser(object):
 
         except AttributeError:
             if not self.comment:
-                links = set()
+                links = []
 
             else:
                 try:
@@ -80,7 +83,7 @@ class Parser(object):
                     if e.errno == ECONNABORTED:
                         # Software caused connection abort
                         # (shutdown interrupted lookup)
-                        links = set()
+                        links = []
 
                     else:
                         raise
@@ -97,10 +100,11 @@ class Parser(object):
 
                     # Note: this only considers valid links in the body's text
                     # TODO? regex search for anything that looks like a link
-                    links = set(
+                    links = [
                             a['href']
                             for a in soup.find_all('a', href=Instagram.IG_REGEX)
-                    )
+                    ]
+                    links = remove_duplicates(links)
                     # cache the links in case a new Parser is instantiated for
                     # the same comment, potentially from a different process
                     Parser._cache[self.comment.id] = links
@@ -119,17 +123,18 @@ class Parser(object):
     @property
     def ig_usernames(self):
         """
-        Returns a set of usernames corresponding to Parser.links
+        Returns a list of unique usernames corresponding to Parser.links
         """
         try:
             usernames = self.__ig_usernames
 
         except AttributeError:
-            usernames = set()
+            usernames = []
             for link in self.ig_links:
                 match = Instagram.IG_REGEX.search(link)
                 if match: # this check shouldn't be necessary
-                    usernames.add(match.group(2))
+                    usernames.append(match.group(2))
+            usernames = remove_duplicates(usernames)
             self.__ig_usernames = usernames
 
         return usernames.copy()

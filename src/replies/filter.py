@@ -148,18 +148,21 @@ class Filter(object):
         Returns a subset of the passed-in instagram usernames (the returned
                 set will be less than or equal to the passed-in set)
         """
+        orig_usernames = ig_usernames.copy()
         already_posted = self.reply_history.replied_ig_users_for_submission(
                 submission
         )
         currently_queued = self.reddit_ratelimit_queue.ig_users_for(submission)
-        orig_usernames = ig_usernames.copy()
-        ig_usernames -= (already_posted | currently_queued)
+        skip = list(already_posted | currently_queued)
+        ig_usernames = [user for user in ig_usernames if user not in skip]
 
-        pruned = orig_usernames - ig_usernames
+        pruned = [user for user in orig_usernames if user not in ig_usernames]
         if pruned:
             msg = ['Pruned #{num_posted} usernames: {color_posted}']
             if ig_usernames:
                 msg.append('#{num_users}: {color_users}')
+            else:
+                msg.append('All users pruned!')
             logger.id(logger.debug, self,
                     '\n\t'.join(msg),
                     num_posted=len(pruned),
@@ -208,8 +211,8 @@ class Filter(object):
             self, comment, prelim_check=True, check_thread=True
     ):
         """
-        Returns a set of instagram usernames contained in the comment that the
-        bot can reply to or an empty set if the bot cannot reply to the comment
+        Returns a list of instagram usernames contained in the comment that the
+        bot can reply to or an empty list if the bot cannot reply to the comment
         for any reason.
 
         prelim_check (bool, optional) - whether preliminary comment checks
@@ -219,7 +222,7 @@ class Filter(object):
                 checked for too many bot replies (this is an expensive operation
                 in terms of reddit's ratelimit)
         """
-        usernames = set()
+        usernames = []
         # filter out comments that the bot cannot reply to
         if comment and (not prelim_check or self._can_reply(comment)):
             parsed_comment = Parser(comment)
@@ -240,7 +243,7 @@ class Filter(object):
                     # filter out comment threads that the bot has made too many
                     # replies to
                     if not too_many_replies:
-                        usernames |= new_usernames
+                        usernames = new_usernames
 
         return usernames
 
