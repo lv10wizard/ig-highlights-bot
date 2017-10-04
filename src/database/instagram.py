@@ -35,7 +35,7 @@ class InstagramDatabase(Database):
     def _delete(self, codes):
         def do_delete(code):
             self._db.execute(
-                    'DELETE FROM cache WHERE code = ?'
+                    'DELETE FROM cache WHERE code = ?',
                     (code,),
             )
 

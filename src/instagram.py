@@ -294,6 +294,21 @@ class Instagram(object):
         return ''
 
     @property
+    def __seen_db_path(self):
+        """
+        Returns the user's in-progress fetch database file path
+        """
+        if self.user:
+            path = os.path.join(
+                    database.InstagramDatabase.PATH,
+                    # instagram usernames cannot start with a '.' so this
+                    # shouldn't clash with an actual username
+                    '.{0}.fetching.db'.format(self.user),
+            )
+            return database.Database.resolve_path(path)
+        return ''
+
+    @property
     def __is_expired(self):
         """
         Returns whether the cache is expired (database age > threshold)
@@ -519,7 +534,13 @@ class Instagram(object):
                 seen = self.__seen
 
             except AttributeError:
-                seen = set()
+                if not stop_at_first_duplicate:
+                    # XXX: this is persistent in case the fetch is interrupted
+                    # (eg. killed, ratelimited, server issues, etc)
+                    seen = database.InstagramDatabase(self.__seen_db_path)
+                else:
+                    seen = None
+
                 self.__seen = seen
 
             with self.__cache:
@@ -532,35 +553,59 @@ class Instagram(object):
                         with self.__cache:
                             self.__cache.update(item)
 
-                    # Note: stop_at_first_duplicate skips pruning.
-                    # assumption: media data is fetched newest -> oldest,
-                    # meaning we've already seen everything past the first
-                    # duplicate.
-                    if stop_at_first_duplicate:
-                        logger.id(logger.debug, self,
-                                'Already cached \'{code}\' ({id}). halting ...',
-                                code=code,
-                                id=item['id'],
-                        )
-                        return None
+                        # Note: stop_at_first_duplicate skips pruning.
+                        # assumption: media data is fetched newest -> oldest,
+                        # meaning we've already seen everything past the first
+                        # duplicate.
+                        if stop_at_first_duplicate:
+                            logger.id(logger.debug, self,
+                                    'Already cached \'{code}\' ({id}).'
+                                    ' halting ...',
+                                    code=code,
+                                    id=item['id'],
+                            )
+                            return None
 
-                    # cache which codes have been seen so that we can prune missing
+                    # cache items that have been seen to prune missing
                     # (probably deleted) entries
-                    seen.add(code)
+                    if seen:
+                        try:
+                            seen.insert(item)
+
+                        except database.UniqueConstraintFailed:
+                            # this shouldn't happen since the seen database
+                            # should only exist while a fetch is active
+                            # XXX: spammy if this does somehow occur
+                            logger.id(logger.debug, self,
+                                    'Already seen \'{code}\' ({id})!'
+                                    ' Was \'{path}\' not deleted?',
+                                    code=code,
+                                    id=item['id'],
+                                    path=self.__seen_db_path,
+                            )
+
+                if seen:
+                    seen.commit()
 
             if not data['more_available']:
-                # prune any rows in the cache db that we did not see
-                missing = self.__cache.get_all_codes() - seen
-                if missing:
-                    logger.id(logger.debug, self,
-                            '#{num} links missing (probably deleted).'
-                            ' pruning ...'
-                            '\ncodes: {color}',
-                            num=len(missing),
-                            color=missing,
-                    )
-                    with self.__cache:
-                        self.__cache.delete(missing)
+                if seen:
+                    # prune any rows in the cache db that we did not see
+                    all_codes = self.__cache.get_all_codes()
+                    seen_codes = seen.get_all_codes()
+                    missing = all_codes - seen_codes
+                    if missing:
+                        logger.id(logger.debug, self,
+                                '#{num} links missing (probably deleted).'
+                                ' pruning ...'
+                                '\ncodes: {color}',
+                                num=len(missing),
+                                color=missing,
+                        )
+                        with self.__cache:
+                            self.__cache.delete(missing)
+
+                # fetch is finished: remove the seen database
+                self.__remove_cache_if_exists(self.__seen_db_path, seen)
 
         elif not data['items']:
             logger.id(logger.debug, self,
@@ -570,29 +615,45 @@ class Instagram(object):
                     items=data['items'],
             )
 
-            if os.path.exists(self.__db_path):
-                try:
-                    self.__cache.close()
-                except AttributeError:
-                    pass
-
-                # user changed profile to private?
-                logger.id(logger.debug, self,
-                        'Removing \'{path}\' ...',
-                        path=self.__db_path,
-                )
-
-                try:
-                    os.remove(self.__db_path)
-
-                except OSError as e:
-                    logger.id(logger.warn, self,
-                            'Could not remove \'{path}\'!',
-                            path=self.__db_path,
-                            exc_info=True,
-                    )
+            # user may have changed profile to private
+            try:
+                cache = self.__cache
+            except AttributeError:
+                cache = None
+            self.__remove_cache_if_exists(self.__db_path, cache)
 
         return last_id
+
+    def __remove_cache_if_exists(self, path, cache):
+        """
+        Removes the database file located at path if it exists
+        """
+        removed = False
+        if os.path.exists(path):
+            try:
+                cache.close()
+            except AttributeError:
+                pass
+
+            logger.id(logger.debug, self,
+                    'Removing \'{path}\' ...',
+                    path=path,
+            )
+
+            try:
+                os.remove(path)
+
+            except (IOError, OSError):
+                logger.id(logger.warn, self,
+                        'Could not remove \'{path}\'!',
+                        path=path,
+                        exc_info=True,
+                )
+
+            else:
+                removed = True
+
+        return removed
 
 
 __all__ = [

@@ -309,6 +309,18 @@ class Database(object):
     def rollback(self):
         self._db.rollback()
 
+    def close(self):
+        """
+        Closes the database connection
+        """
+        try:
+            self.__the_connection
+        except AttributeError:
+            # don't create a new connection if none exists
+            pass
+        else:
+            self.__the_connection.close()
+
     def __wrapper(self, func, *args, **kwargs):
         """
         Wraps the callback func in a try/except block
@@ -324,11 +336,11 @@ class Database(object):
             # catch any other errors so the program doesn't terminate
             logger.id(logger.warn, self,
                     '{ME} Failed!'
-                    '\n\targs={func_args}'
-                    '\n\tkwargs={func_kwargs}',
+                    '\n\targs={pprint_func_args}'
+                    '\n\tkwargs={pprint_func_kwargs}',
                     ME=func.__name__.upper(),
-                    func_args=args,
-                    func_kwargs=kwargs,
+                    pprint_func_args=args,
+                    pprint_func_kwargs=kwargs,
                     exc_info=True,
             )
 
