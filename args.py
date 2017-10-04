@@ -347,7 +347,9 @@ def parse():
 
     parser.add_argument('--{0}'.format(DUMP),
             metavar='NAME', nargs='+', choices=list(database.SUBCLASSES.keys()),
-            help='Dump the specified databases to stdout',
+            help='Dump the specified databases to stdout. Choices: {0}'.format(
+                list(database.SUBCLASSES.keys())
+            ),
     )
 
     resolved_igdb_path = config.resolve_path(database.InstagramDatabase.PATH)
@@ -360,7 +362,8 @@ def parse():
         ig_choices = []
     parser.add_argument('--{0}'.format(IG_DB),
             metavar='NAME', nargs='+', choices=ig_choices,
-            help='Dump the specified instagram user databases to stdout',
+            help='Dump the specified instagram user databases to stdout.'
+            ' Choices: {0}'.format(ig_choices),
     )
 
     args = vars(parser.parse_args())

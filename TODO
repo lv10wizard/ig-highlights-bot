@@ -251,7 +251,7 @@ O. quiet spammy logging
     ! DO NOT modify reply database (don't want to reply again)
 - write help post & link appropriately in code (formatter.py)
 - change replyable_usernames to return list to preverve order
-- include choices in --help (add to help='...' msg)
+O. include choices in --help (add to help='...' msg)
 - handle database table restructuring without dropping all data
 ? logger keyword: {pluralize}
     - take tuple? list? needs the actual word value (eg. 'entry') and the
