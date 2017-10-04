@@ -447,13 +447,14 @@ class Formatter(logging.Formatter):
                     '{{{0}:02d}}{0}'.format(u)
                     for u, _ in UNITS if time_parts[u] > 0
             ]
-            if is_negative:
-                fmt.insert(0, '-')
             return ''.join(fmt)
 
         fmt = split_time(seconds, Formatter.__LARGE_TIME_UNITS)
         if not fmt:
             fmt = split_time(seconds, Formatter.__SMALL_TIME_UNITS)
+
+        if is_negative:
+            fmt = '{0}{1}'.format('-', fmt)
 
         return fmt.format(**time_parts)
 
