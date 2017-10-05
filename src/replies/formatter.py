@@ -18,11 +18,11 @@ class Formatter(object):
     COMMENT_CHARACTER_LIMIT = 1e4
     HEADER_FMT = '[@{user}]({link}) highlights:'
     FOOTER_FMT = (
-            '---\n^Beep ^Boop. ^I ^am ^a ^bot.'
-            ' ^[[Contact]({contact_url})]'
-            ' ^[[Source]({source_url})]'
-            ' ^[[Blacklist]({blacklist_url})]'
-            ' ^[[Help]({help_url})]'
+            '---\n^Beep&#32;Boop.&#32;I&#32;am&#32;a&#32;bot.'
+            '&#32;[[Contact]({contact_url})]'
+            '&#32;[[Source]({source_url})]'
+            '&#32;[[Block]({blacklist_url})]'
+            '&#32;[[FAQ]({help_url})]'
     )
     HIGHLIGHT_FMT = '[{i}]({link})'
     LINE_DELIM = '\n\n'

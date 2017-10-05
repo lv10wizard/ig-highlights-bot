@@ -86,7 +86,7 @@ BLACKLIST_URL_FMT = (
         + '&message=.'
 )
 REPO_URL = 'https://github.com/lv10wizard/ig-highlights-bot'
-HELP_URL = '' # TODO
+HELP_URL = 'https://redd.it/74dtgu'
 
 PREFIX_SUBREDDIT = 'r/'
 PREFIX_USER = 'u/'

@@ -249,7 +249,7 @@ O. quiet spammy logging
         - saw non-deleted negative: delay = lower =>  O(minutes) ?
         - all comment.scores > 0:   delay = higher => O(hours) ?
     ! DO NOT modify reply database (don't want to reply again)
-- write help post & link appropriately in code (formatter.py)
+O. write help post & link appropriately in code (formatter.py)
 O. change replyable_usernames to return list to preverve order
 O. include choices in --help (add to help='...' msg)
 - handle database table restructuring without dropping all data
