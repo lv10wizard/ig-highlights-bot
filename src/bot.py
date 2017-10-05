@@ -197,8 +197,13 @@ class IgHighlightsBot(RunForeverMixin, StreamMixin):
             while not self._killed:
                 # TODO: can GETs cause praw to throw a ratelimit exception?
                 for comment in self.stream:
-                    if not comment:
+                    if not comment or self._killed:
                         break
+
+                    logger.id(logger.debug, self,
+                            'Processing {color_comment}',
+                            color_comment=reddit.display_id(comment),
+                    )
 
                     ig_usernames = self.filter.replyable_usernames(comment)
                     if ig_usernames:
