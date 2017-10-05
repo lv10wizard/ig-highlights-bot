@@ -33,6 +33,8 @@ python 3.5+:
 
 ##### Running the bot
 
+*Note: only tested in cygwin 2.9 and raspbian gnu/linux 9*
+
 1. Define [praw.ini](https://praw.readthedocs.io/en/latest/getting_started/configuration/prawini.html)
 
 2. Modify config file
