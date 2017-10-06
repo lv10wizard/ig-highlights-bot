@@ -180,14 +180,14 @@ class Replier(ProcessMixin, RedditInstanceMixin):
                 'Replying #{num} time{plural} to {color_comment} ...',
                 num=len(reply_list),
                 plural=('' if len(reply_list) == 1 else 's'),
-                color_comment=comment.id,
+                color_comment=reddit.display_id(comment),
         )
 
         if self.dry_run:
             logger.id(logger.info, self,
                     'Dry run: skipping repl{plural} to {color_comment}',
                     plural=('y' if len(reply_list) == 1 else 'ies'),
-                    color_comment=comment.id,
+                    color_comment=reddit.display_id(comment),
             )
             return
 

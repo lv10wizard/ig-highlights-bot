@@ -107,11 +107,12 @@ def unpack_subreddits(subreddits_str):
     return set(subreddits_str.split('+'))
 
 def display_id(thing):
-    if hasattr(thing, 'id'):
-        if hasattr(thing, 'subreddit_name_prefixed'):
-            return '/'.join([thing.subreddit_name_prefixed, thing.id])
-        else:
-            return thing.id
+    if hasattr(thing, 'permalink'):
+        try:
+            return thing.permalink()
+        except TypeError:
+            # object is not callable: thing should be a submission
+            return thing.permalink
     return thing
 
 def display_fullname(thing):
