@@ -43,7 +43,7 @@ class IgHighlightsBot(RunForeverMixin, StreamMixin):
         self.ratelimit_handler = ratelimit.RateLimitHandler(cfg, rate_limited)
 
         self.reply_queue = ReplyQueueDatabase()
-        self.subreddits = SubredditsDatabase()
+        self.subreddits = SubredditsDatabase(do_seed=True)
         self.blacklist = blacklist.Blacklist(cfg)
 
         self.messages = messages.Messages(cfg, rate_limited, self.blacklist)

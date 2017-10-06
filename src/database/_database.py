@@ -63,6 +63,12 @@ class _SqliteConnectionWrapper(object):
     def __str__(self):
         return str(self.parent)
 
+    def __enter__(self):
+        return self.connection
+
+    def __exit__(self, *args, **kwargs):
+        self.connection.__exit__(*args, **kwargs)
+
     def __getattr__(self, attr):
         return getattr(self.connection, attr)
 
@@ -221,11 +227,8 @@ class Database(object):
             db = self.__the_connection
 
         except AttributeError:
-            self.__the_connection = _SqliteConnectionWrapper(
-                    connection=self.__init_db(),
-                    parent=self,
-            )
-            db = self.__the_connection
+            db = self.__init_db()
+            self.__the_connection = db
 
         return db
 
@@ -257,6 +260,9 @@ class Database(object):
             raise FailedInit(e, Database.get_err_msg(e), self._resolved_path)
 
         else:
+            # https://docs.python.org/2/library/sqlite3.html#row-objects
+            db.row_factory = sqlite3.Row
+            db = _SqliteConnectionWrapper(db, self)
 
             def create_table(table):
                 if not isinstance(table, string_types):
@@ -297,10 +303,6 @@ class Database(object):
             except sqlite3.DatabaseError as e:
                 db.close()
                 raise FailedInit(e, Database.get_err_msg(e))
-
-            else:
-                # https://docs.python.org/2/library/sqlite3.html#row-objects
-                db.row_factory = sqlite3.Row
         return db
 
     def commit(self):

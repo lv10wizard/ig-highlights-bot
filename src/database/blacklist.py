@@ -4,7 +4,10 @@ import time
 
 from six import integer_types
 
-from ._database import Database
+from ._database import (
+        Database,
+        UniqueConstraintFailed,
+)
 from constants import (
         BLACKLIST_DEFAULTS_PATH,
         PREFIX_USER,
@@ -26,10 +29,13 @@ class BlacklistDatabase(Database):
     TYPE_SUBREDDIT = '__subreddit__'
     TYPE_USER      = '__user__'
 
-    def __init__(self, cfg):
-        self.do_seed = not bool(
-                Database.resolve_path(os.path.exists(BlacklistDatabase.PATH))
-        )
+    def __init__(self, cfg, do_seed=None):
+        if do_seed is None:
+            do_seed = not os.path.exists(
+                    Database.resolve_path(BlacklistDatabase.PATH)
+            )
+        self.do_seed = bool(do_seed)
+
         Database.__init__(self, BlacklistDatabase.PATH)
         self.cfg = cfg
 
@@ -87,21 +93,75 @@ class BlacklistDatabase(Database):
             else:
                 sub_type = BlacklistDatabase.TYPE_SUBREDDIT
                 subreddits = [
-                    (
-                        self.__sanitize(sub, sub_type),
-                        sub_type,
-                        BlacklistDatabase.PERMANENT,
-                    )
-                    for sub in subreddits
-                    if bool(sub.strip())
+                        self.__sanitize(sub, sub_type)
+                        for sub in subreddits
+                        if bool(sub.strip())
                 ]
+
                 if subreddits:
+                    cursor = db.execute(
+                            'SELECT name FROM blacklist'
+                            ' WHERE type = ?'
+                            ' AND start = ?',
+                            (sub_type, BlacklistDatabase.PERMANENT),
+                    )
+                    blacklisted_subs = set(row['name'] for row in cursor)
+                    to_remove = [
+                            name for name in blacklisted_subs
+                            if name not in subreddits
+                    ]
+
                     with db:
-                        db.executemany(
-                                'INSERT INTO blacklist(name, type, start)'
-                                ' VALUES(?, ?, ?)',
-                                subreddits,
-                        )
+                        added = set()
+                        for name in subreddits:
+                            try:
+                                db.execute(
+                                        'INSERT INTO'
+                                        ' blacklist(name, type, start)'
+                                        ' VALUES(?, ?, ?)',
+                                        (
+                                            name,
+                                            sub_type,
+                                            BlacklistDatabase.PERMANENT,
+                                        ),
+                                )
+                            except UniqueConstraintFailed:
+                                # just ignore duplicates; probably means we're
+                                # trying to seed the database every time in case
+                                # the defaults file is updated
+                                pass
+                            else:
+                                added.add(name)
+
+                        if added:
+                            logger.id(logger.info, self,
+                                    'Blacklisted #{num} subreddit{plural}',
+                                    num=len(added),
+                                    plural=('' if len(added) == 1 else 's'),
+                            )
+                            logger.id(logger.debug, self,
+                                    'Blacklisted: {color_names}',
+                                    color_names=added,
+                            )
+
+                        if to_remove:
+                            logger.id(logger.info, self,
+                                    'Removing #{num} missing blacklisted'
+                                    ' subreddit{plural}',
+                                    num=len(to_remove),
+                                    plural=('' if len(to_remove) == 1 else 's'),
+                            )
+                            logger.id(logger.debug, self,
+                                    'Removed: {color_names}',
+                                    color_names=to_remove,
+                            )
+
+                            db.executemany(
+                                    'DELETE FROM blacklist'
+                                    ' WHERE name = ?'
+                                    ' AND type = \'{0}\''.format(sub_type),
+                                    to_remove,
+                            )
 
     def __sanitize(self, name, name_type):
         # coerce user profile "subreddits" to their display name

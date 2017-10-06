@@ -4,7 +4,10 @@ import time
 
 from six import string_types
 
-from ._database import Database
+from ._database import (
+        Database,
+        UniqueConstraintFailed,
+)
 from constants import SUBREDDITS_DEFAULTS_PATH
 from src.util import logger
 
@@ -30,9 +33,11 @@ class SubredditsDatabase(Database):
 
     def __init__(self, do_seed=None):
         if do_seed is None:
-            self.do_seed = not bool(os.path.exists(SubredditsDatabase.PATH))
-        else:
-            self.do_seed = bool(do_seed)
+            do_seed = not os.path.exists(
+                    Database.resolve_path(SubredditsDatabase.PATH)
+            )
+        self.do_seed = bool(do_seed)
+
         Database.__init__(self, SubredditsDatabase.PATH)
 
     @property
@@ -102,7 +107,7 @@ class SubredditsDatabase(Database):
 
             else:
                 subreddits = [
-                        (name.strip(), time.time())
+                        name.strip()
                         for name in subreddits if bool(name.strip())
                 ]
 
@@ -112,13 +117,62 @@ class SubredditsDatabase(Database):
                 )
 
                 if subreddits:
+                    cursor = db.execute('SELECT subreddit_name FROM subreddits')
+                    current_subreddits = set(
+                            row['subreddit_name'] for row in cursor
+                    )
+                    to_remove = [
+                            name for name in current_subreddits
+                            if name not in subreddits
+                    ]
+
                     with db:
-                        db.executemany(
-                                'INSERT INTO'
-                                ' subreddits(subreddit_name, added_utc)'
-                                ' VALUES(?, ?)',
-                                subreddits,
-                        )
+                        added = set()
+                        for name in subreddits:
+                            try:
+                                db.execute(
+                                        'INSERT INTO'
+                                        ' subreddits(subreddit_name, added_utc)'
+                                        ' VALUES(?, ?)',
+                                        (name, time.time()),
+                                )
+                            except UniqueConstraintFailed:
+                                # just ignore duplicates; probably means we're
+                                # trying to seed the database every time in case
+                                # the defaults file is updated
+                                pass
+                            else:
+                                added.add(name)
+
+                        if added:
+                            logger.id(logger.info, self,
+                                    'Added #{num} subreddit{plural}',
+                                    num=len(added),
+                                    plural=('' if len(added) == 1 else 's'),
+                            )
+                            logger.id(logger.debug, self,
+                                    'Added: {color_names}',
+                                    color_names=added,
+                            )
+
+                        # remove any subreddits in the database that are missing
+                        # from the file
+                        if to_remove:
+                            logger.id(logger.info, self,
+                                    'Removing #{num} missing subreddit{plural}',
+                                    num=len(to_remove),
+                                    plural=('' if len(to_remove) == 1 else 's'),
+                            )
+                            logger.id(logger.debug, self,
+                                    'Removed: {color_names}',
+                                    color_names=to_remove,
+                            )
+
+                            db.executemany(
+                                    'DELETE FROM subreddits'
+                                    ' WHERE subreddit_name = ?',
+                                    to_remove,
+                            )
 
     def _insert(self, thing):
         name = SubredditsDatabase.get_subreddit_name(thing)

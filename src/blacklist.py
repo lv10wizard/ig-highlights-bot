@@ -22,7 +22,7 @@ class Blacklist(object):
     def __init__(self, cfg):
         self.cfg = cfg
         self.__badactors = BadActorsDatabase(cfg)
-        self.__database = BlacklistDatabase(cfg)
+        self.__database = BlacklistDatabase(cfg, do_seed=True)
         self.__lock = multiprocessing.RLock()
 
     def __str__(self):
