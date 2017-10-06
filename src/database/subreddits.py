@@ -171,7 +171,7 @@ class SubredditsDatabase(Database):
                             db.executemany(
                                     'DELETE FROM subreddits'
                                     ' WHERE subreddit_name = ?',
-                                    to_remove,
+                                    [(name,) for name in to_remove],
                             )
 
     def _insert(self, thing):

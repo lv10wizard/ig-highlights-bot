@@ -160,7 +160,7 @@ class BlacklistDatabase(Database):
                                     'DELETE FROM blacklist'
                                     ' WHERE name = ?'
                                     ' AND type = \'{0}\''.format(sub_type),
-                                    to_remove,
+                                    [(name,) for name in to_remove],
                             )
 
     def __sanitize(self, name, name_type):
