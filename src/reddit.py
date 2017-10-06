@@ -302,6 +302,8 @@ class Reddit(praw.Reddit):
         Asks the user to enter the bot account password if it was not defined
         in praw.ini
         """
+        from getpass import getpass
+
         did_set = False
         while isinstance(self.config.password, Reddit.NOTSET_TYPE):
             first = getpass('{0} password: '.format(self.username))
