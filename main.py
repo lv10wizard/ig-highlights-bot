@@ -100,7 +100,7 @@ if __name__ == '__main__':
     init_logger(cfg, options)
 
     from src.bot import IgHighlightsBot
-    ig_highlights_bot = IgHighlightsBot(cfg)
+    ig_highlights_bot = IgHighlightsBot(cfg, options['dry_run'])
     try:
         ig_highlights_bot.run_forever()
 

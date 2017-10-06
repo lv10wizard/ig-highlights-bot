@@ -231,31 +231,27 @@ def print_instagram_database(cfg, *user_databases):
             )
 
 def handle(cfg, args):
-    def convert(arg_str):
+    def to_opt_str(arg_str):
         return arg_str.replace('-', '_')
+    def to_cmdline(arg_str):
+        return arg_str.replace('_', '-')
 
-    ignore_keys = [
-            'config',
-            'logging_path',
-            'logging_level',
-            'logging_no_color',
-    ]
     handlers = {
-            convert(ADD_SUBREDDIT): add_subreddit,
-            convert(RM_SUBREDDIT): rm_subreddit,
-            convert(ADD_BLACKLIST): add_blacklist,
-            convert(RM_BLACKLIST): rm_blacklist,
-            convert(DELETE_DATA): delete_data,
-            convert(DUMP): print_database,
-            convert(IG_DB): print_instagram_database,
+            ADD_SUBREDDIT: add_subreddit,
+            RM_SUBREDDIT: rm_subreddit,
+            ADD_BLACKLIST: add_blacklist,
+            RM_BLACKLIST: rm_blacklist,
+            DELETE_DATA: delete_data,
+            DUMP: print_database,
+            IG_DB: print_instagram_database,
     }
 
     had_handleable_opt = False
     for opt, opt_val in iteritems(args):
+        opt_key = to_cmdline(opt)
         # XXX: options should evaluate to true if they are to be handled
-        if opt not in ignore_keys and bool(opt_val):
+        if opt_key in handlers and bool(opt_val):
             had_handleable_opt = True
-            opt_key = convert(opt)
             try:
                 handler_func = handlers[opt_key]
             except KeyError as e:
@@ -280,6 +276,9 @@ def parse():
 
     parser.add_argument('-c', '--config', metavar='PATH',
             help='Custom config path; default: {0}'.format(config.Config.PATH),
+    )
+    parser.add_argument('-d', '--dry-run', action='store_true',
+            help='Runs the bot normally but disables comment replies',
     )
 
     parser.add_argument('-P', '--logging-path', metavar='PATH',

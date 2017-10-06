@@ -25,10 +25,11 @@ class Replier(ProcessMixin, RedditInstanceMixin):
     separate process so that stream fetching processes are never interrupted.
     """
 
-    def __init__(self, cfg, rate_limited, blacklist):
+    def __init__(self, cfg, rate_limited, blacklist, dry_run):
         ProcessMixin.__init__(self)
         RedditInstanceMixin.__init__(self, cfg, rate_limited)
 
+        self.dry_run = dry_run
         self.blacklist = blacklist
         self.subreddits = SubredditsDatabase()
         self.potential_subreddits = PotentialSubredditsDatabase()
@@ -173,6 +174,21 @@ class Replier(ProcessMixin, RedditInstanceMixin):
             # TODO? temporarily blacklist user? (may be trying to break bot)
             # -- could also just be a comment with a lot (like a lot) of
             # instagram user links.
+            return
+
+        logger.id(logger.debug, self,
+                'Replying #{num} time{plural} to {color_comment} ...',
+                num=len(reply_list),
+                plural=('' if len(reply_list) == 1 else 's'),
+                color_comment=comment.id,
+        )
+
+        if self.dry_run:
+            logger.id(logger.info, self,
+                    'Dry run: skipping repl{plural} to {color_comment}',
+                    plural=('y' if len(reply_list) == 1 else 'ies'),
+                    color_comment=comment.id,
+            )
             return
 
         for body, ig_usernames in reply_list:

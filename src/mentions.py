@@ -16,10 +16,11 @@ class Mentions(ProcessMixin, StreamMixin):
     Username mentions (in comments) parser
     """
 
-    def __init__(self, cfg, rate_limited, blacklist):
+    def __init__(self, cfg, rate_limited, blacklist, dry_run):
         ProcessMixin.__init__(self)
         StreamMixin.__init__(self, cfg, rate_limited)
 
+        self.dry_run = dry_run
         self.blacklist = blacklist
         self.reply_history = database.ReplyDatabase()
         self.reply_queue = database.ReplyQueueDatabase()
@@ -95,19 +96,22 @@ class Mentions(ProcessMixin, StreamMixin):
                     else:
                         break
 
-                try:
-                    with mentions_db:
-                        mentions_db.insert(mention)
-                except database.UniqueConstraintFailed:
-                    # this means there is a bug in has_seen
-                    logger.id(logger.warn, self,
-                            'Attempted to process duplicate submission:'
-                            ' {color_mention} from {color_from}!',
-                            color_mention=reddit.display_fullname(mention),
-                            color_from=reddit.author(mention),
-                            exc_info=True,
-                    )
-                    break
+                # don't add any mentions to the seen database if this is a dry
+                # run since the bot won't be committing any replies
+                if not self.dry_run:
+                    try:
+                        with mentions_db:
+                            mentions_db.insert(mention)
+                    except database.UniqueConstraintFailed:
+                        # this means there is a bug in has_seen
+                        logger.id(logger.warn, self,
+                                'Attempted to process duplicate submission:'
+                                ' {color_mention} from {color_from}!',
+                                color_mention=reddit.display_fullname(mention),
+                                color_from=reddit.author(mention),
+                                exc_info=True,
+                        )
+                        break
 
                 self._process_mention(mention)
 

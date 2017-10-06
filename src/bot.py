@@ -33,7 +33,7 @@ class IgHighlightsBot(RunForeverMixin, StreamMixin):
     processes and crawls comments from subreddits in the subreddits database.
     """
 
-    def __init__(self, cfg):
+    def __init__(self, cfg, dry_run):
         self._killed = False
         # this is created here so that any process can flag that the account
         # is rate-limited.
@@ -47,8 +47,12 @@ class IgHighlightsBot(RunForeverMixin, StreamMixin):
         self.blacklist = blacklist.Blacklist(cfg)
 
         self.messages = messages.Messages(cfg, rate_limited, self.blacklist)
-        self.mentions = mentions.Mentions(cfg, rate_limited, self.blacklist)
-        self.replier = replies.Replier(cfg, rate_limited, self.blacklist)
+        self.mentions = mentions.Mentions(
+                cfg, rate_limited, self.blacklist, dry_run,
+        )
+        self.replier = replies.Replier(
+                cfg, rate_limited, self.blacklist, dry_run,
+        )
 
         # initialize stuff that requires correct credentials
         instagram.Instagram.initialize(cfg, self._reddit.username)
@@ -149,10 +153,18 @@ class IgHighlightsBot(RunForeverMixin, StreamMixin):
                                 'Removed subreddits: {color}',
                                 color=removed,
                         )
+                    if new or removed:
+                        # if the set of subreddits does not receive many
+                        # comments, then the comment stream may contain
+                        # duplicates
+                        logger.id(logger.info, self,
+                                'Re-initializing comment stream (some comments'
+                                ' may have been processed before) ...',
+                        )
 
                     subreddits_str = reddit.pack_subreddits(subs_from_db)
                     logger.id(logger.debug, self,
-                            'subreddit string:\n{subreddits_str}',
+                            'subreddit string:\n\t{subreddits_str}',
                             subreddits_str=subreddits_str,
                     )
                     if subreddits_str:
