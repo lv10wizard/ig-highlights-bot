@@ -42,6 +42,11 @@ class Mentions(ProcessMixin, StreamMixin):
             )
             return
 
+        logger.id(logger.info, self,
+                'Processing {color_submission}',
+                color_submission=reddit.display_id(submission),
+        )
+
         had_replyable_comment = False
         for comment in submission.comments.list():
             ig_usernames = self.filter.replyable_usernames(comment)

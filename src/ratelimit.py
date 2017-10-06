@@ -199,7 +199,7 @@ class _RateLimit(ProcessMixin):
             # wait until the rate-limit is done
             delay = self.rate_limited.remaining
             if delay > 0:
-                logger.id(logger.debug, self,
+                logger.id(logger.info, self,
                         'Rate limited! Sleeping {time} ...',
                         time=delay,
                 )
@@ -292,7 +292,7 @@ class RateLimitHandler(ProcessMixin, RedditInstanceMixin):
                             thing.id = thing_id
 
                         if thing:
-                            logger.id(logger.debug, self,
+                            logger.id(logger.info, self,
                                     'Processing {color_thing} ...',
                                     color_thing=reddit.display_fullname(thing),
                             )
@@ -337,7 +337,7 @@ class RateLimitHandler(ProcessMixin, RedditInstanceMixin):
                                 handled = True
 
                             else:
-                                logger.id(logger.debug, self,
+                                logger.id(logger.info, self,
                                         'Skipping {color_thing}:'
                                         ' invalid type={type}',
                                         color_thing=reddit.display_fullname(

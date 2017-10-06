@@ -377,7 +377,7 @@ class Reddit(praw.Reddit):
                 delay += 90
 
             self.__rate_limited.value = time.time() + delay
-            logger.id(logger.debug, self,
+            logger.id(logger.info, self,
                     'Flagging rate-limit: \'{errmsg}\'',
                     errmsg=err_msg,
             )
@@ -429,7 +429,7 @@ class Reddit(praw.Reddit):
                 pass
 
             try:
-                logger.id(logger.debug, self,
+                logger.id(logger.info, self,
                         'Rate limited! Queueing {color_thing} ...',
                         color_thing=display_fullname(thing),
                 )

@@ -255,6 +255,12 @@ class Filter(object):
         Returns True if the comment was successfully queued
         """
         success = False
+
+        logger.id(logger.info, self,
+                'Queueing {color_comment} into reply-queue ...',
+                color_comment=reddit.display_id(comment),
+        )
+
         try:
             with self.reply_queue:
                 self.reply_queue.insert(comment, mention)

@@ -212,7 +212,7 @@ class IgHighlightsBot(RunForeverMixin, StreamMixin):
                     if not comment or self._killed:
                         break
 
-                    logger.id(logger.debug, self,
+                    logger.id(logger.info, self,
                             'Processing {color_comment}',
                             color_comment=reddit.display_id(comment),
                     )

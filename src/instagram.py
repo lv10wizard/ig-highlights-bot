@@ -130,7 +130,7 @@ class Instagram(object):
         Instagram.__was_rate_limited = currently_rate_limited
         if currently_rate_limited and not was_rate_limited:
             time_left = Instagram.rate_limit_time_left()
-            logger.id(logger.debug, Instagram.__name__,
+            logger.id(logger.info, Instagram.__name__,
                     'Ratelimited! (~ {time} left; expires @ {strftime})',
                     time=time_left,
                     strftime='%H:%M:%S',
@@ -138,7 +138,7 @@ class Instagram(object):
             )
 
         elif not currently_rate_limited and was_rate_limited:
-            logger.id(logger.debug, Instagram.__name__,
+            logger.id(logger.info, Instagram.__name__,
                     'No longer ratelimited! ({num} requests left)',
                     num=num_remaining,
             )
@@ -470,7 +470,7 @@ class Instagram(object):
             if last_id:
                 msg.append('(starting @ {last_id})')
             msg.append('...')
-            logger.id(logger.debug, self,
+            logger.id(logger.info, self,
                     ' '.join(msg),
                     last_id=last_id,
             )
@@ -705,7 +705,7 @@ class Instagram(object):
 
                     missing = all_codes - seen_codes
                     if missing:
-                        logger.id(logger.debug, self,
+                        logger.id(logger.info, self,
                                 '#{num} links missing (probably deleted).'
                                 ' pruning ...'
                                 '\ncodes: {color}',
@@ -723,7 +723,7 @@ class Instagram(object):
                         Instagram._ig_queue.delete(self.user)
 
         elif not data['items']:
-            logger.id(logger.debug, self,
+            logger.id(logger.info, self,
                     'No data. halting ...'
                     '\nstatus = \'{status}\'\titems = {items}',
                     status=data['status'],

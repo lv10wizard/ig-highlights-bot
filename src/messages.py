@@ -275,9 +275,17 @@ class Messages(ProcessMixin, StreamMixin):
 
                 do_reply = False
                 if self._is_add(match.group(1)):
+                    logger.id(logger.info, self,
+                            'Adding {color_name} to blacklist ...',
+                            color_name=reddit.prefix(name, prefix),
+                    )
                     do_reply = self.blacklist.add(name, prefix)
 
                 elif self._is_remove(match.group(1)):
+                    logger.id(logger.info, self,
+                            'Removing {color_name} from blacklist ...',
+                            color_name=reddit.prefix(name, prefix),
+                    )
                     do_reply = self.blacklist.remove(name, prefix)
 
                 else:

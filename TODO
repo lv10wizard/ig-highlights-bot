@@ -222,7 +222,7 @@ O. gracefully exit instagram fetch
     O. in fetch, if _killed.is_set() => set do_enqueue
 - figure out why messages stream sleeps upon fetching items
     is it only if #items < 100?
-- reclassify some debug logging -> info (info is far too quiet)
+O. reclassify some debug logging -> info (info is far too quiet)
 - add the bot-posted comment id to the [Contact] msg subject skeleton
     - get comment from thing.reply()
     - change CONTACT_SUBJECT_SKELETON to include a comment id placeholder

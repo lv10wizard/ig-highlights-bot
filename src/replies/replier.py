@@ -155,7 +155,7 @@ class Replier(ProcessMixin, RedditInstanceMixin):
         """
         success = False
 
-        logger.id(logger.debug, self,
+        logger.id(logger.info, self,
                 'Replying to {color_comment}: {color_list}',
                 color_comment=reddit.display_id(comment),
                 color_list=ig_list,
@@ -176,7 +176,7 @@ class Replier(ProcessMixin, RedditInstanceMixin):
             # instagram user links.
             return
 
-        logger.id(logger.debug, self,
+        logger.id(logger.info, self,
                 'Replying #{num} time{plural} to {color_comment} ...',
                 num=len(reply_list),
                 plural=('' if len(reply_list) == 1 else 's'),

@@ -80,7 +80,7 @@ class Blacklist(object):
         if prefix:
             msg.append(', prefix=\'{prefix}\'')
         msg.append(' ...')
-        logger.id(logger.debug, self,
+        logger.id(logger.info, self,
                 ''.join(msg),
                 thing_name=name,
                 tmp=tmp,
@@ -112,7 +112,7 @@ class Blacklist(object):
                     if tmp:
                         # tried to ban temporarily but was already temporarily
                         # banned
-                        logger.id(logger.debug, self,
+                        logger.id(logger.info, self,
                                 'Could not temporarily add {color_name} to'
                                 ' blacklist: already temporarily blacklisted.',
                                 color_name=name_raw,
@@ -123,7 +123,7 @@ class Blacklist(object):
                         time_left = self.__database.blacklist_time_left_seconds(
                                 name_raw,
                         )
-                        logger.id(logger.debug, self,
+                        logger.id(logger.info, self,
                                 'Flagging {color_name}\'s ban to be made'
                                 ' permanent ({time} remaining)',
                                 color_name=name_raw,
@@ -133,7 +133,7 @@ class Blacklist(object):
                         success = True
 
                 elif not is_blacklisted:
-                    logger.id(logger.debug, self,
+                    logger.id(logger.info, self,
                             'Adding {color_name} {tmp}to blacklist',
                             color_name=name_raw,
                             tmp=('temporarily ' if tmp else ''),
@@ -150,7 +150,7 @@ class Blacklist(object):
                         success = True
 
                 else:
-                    logger.id(logger.debug, self,
+                    logger.id(logger.info, self,
                             'Could not add {color_name} to blacklist:'
                             ' already blacklisted.',
                             color_name=name_raw,
@@ -177,7 +177,7 @@ class Blacklist(object):
         if prefix:
             msg.append(', prefix=\'{prefix}\'')
         msg.append(' ...')
-        logger.id(logger.debug, self,
+        logger.id(logger.info, self,
                 ''.join(msg),
                 thing_name=name,
                 prefix=prefix,
@@ -208,7 +208,7 @@ class Blacklist(object):
 
                     if time_left <= 0:
                         # permanent ban (user or subreddit)
-                        logger.id(logger.debug, self,
+                        logger.id(logger.info, self,
                                 'Removing {color_name} ({color_nametype})'
                                 ' from blacklist',
                                 color_name=name_raw,
@@ -220,7 +220,7 @@ class Blacklist(object):
 
                     elif time_left > 0:
                         # temp ban
-                        logger.id(logger.debug, self,
+                        logger.id(logger.info, self,
                                 'Clearing flag to make {color_name}\'s ban'
                                 ' permanent ({time} remaining)',
                                 color_name=name_raw,
@@ -232,7 +232,7 @@ class Blacklist(object):
                         success = True
 
                 else:
-                    logger.id(logger.debug, self,
+                    logger.id(logger.info, self,
                             '{color_name} ({name_type}) is not blacklisted!',
                             color_name=name_raw,
                             name_type=name_type,
@@ -340,7 +340,7 @@ class Blacklist(object):
         """
         if hasattr(thing, 'author') and bool(thing.author):
             if thing in self.__badactors:
-                logger.id(logger.debug, self,
+                logger.id(logger.info, self,
                         '{color_author} already flagged as a bad actor for'
                         ' {color_thing}',
                         color_author=thing.author.name,
@@ -348,7 +348,7 @@ class Blacklist(object):
                 )
                 return
 
-            logger.id(logger.debug, self,
+            logger.id(logger.info, self,
                     'Incrementing {color_author}\'s bad actor count ...',
                     color_author=thing.author.name,
             )
@@ -387,7 +387,7 @@ class Blacklist(object):
                 count = self.__badactors.count(thing)
                 threshold = self.cfg.bad_actor_threshold
                 if count > threshold:
-                    logger.id(logger.debug, self,
+                    logger.id(logger.info, self,
                             '{color_author} over bad actor threshold!'
                             ' ({count} > {threshold})',
                             color_author=thing.author.name,

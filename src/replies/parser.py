@@ -109,7 +109,7 @@ class Parser(object):
                     # the same comment, potentially from a different process
                     Parser._cache[self.comment.id] = links
                     if links:
-                        logger.id(logger.debug, self,
+                        logger.id(logger.info, self,
                                 'Found #{num} links: {color}',
                                 num=len(links),
                                 color=links,
