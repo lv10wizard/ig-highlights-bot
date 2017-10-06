@@ -26,6 +26,24 @@ DELETE_DATA   = 'delete-data'
 DUMP          = 'dump'
 IG_DB         = 'ig-db'
 
+DUMP_CHOICES = list(database.SUBCLASSES.keys())
+try:
+    # disallow InstagramDatabase from --dump choices since they are handled
+    # separately
+    DUMP_CHOICES.remove('InstagramDatabase')
+except ValueError:
+    # database class renamed? this shouldn't happen
+    pass
+
+resolved_igdb_path = config.resolve_path(database.InstagramDatabase.PATH)
+try:
+    IG_DB_CHOICES = [
+            name for name in os.listdir(resolved_igdb_path)
+            if name.endswith('.db')
+    ]
+except OSError:
+    IG_DB_CHOICES = []
+
 def add_subreddit(cfg, *subreddits):
     subreddits_db = database.SubredditsDatabase(do_seed=False)
     for sub in subreddits:
@@ -198,6 +216,10 @@ def do_print_database(path, query=''):
             print(end, num, end=end_sep + '\n\n')
 
 def print_database(cfg, *databases):
+    if '*' in databases:
+        # dump all databases
+        databases = DUMP_CHOICES
+
     for db_name in databases:
         if db_name == 'InstagramDatabase':
             logger.info('Please use --{opt} to dump individual instagram'
@@ -218,7 +240,10 @@ def print_database(cfg, *databases):
                 do_print_database(resolved_path)
 
 def print_instagram_database(cfg, *user_databases):
-    resolved_igdb_path = config.resolve_path(database.InstagramDatabase.PATH)
+    if '*' in user_databases:
+        # dump all instagram databases
+        user_databases = IG_DB_CHOICES
+
     for user_db in user_databases:
         path = os.path.join(resolved_igdb_path, user_db)
         if os.path.exists(path):
@@ -278,7 +303,8 @@ def parse():
             help='Custom config path; default: {0}'.format(config.Config.PATH),
     )
     parser.add_argument('-d', '--dry-run', action='store_true',
-            help='Runs the bot normally but disables comment replies',
+            help='Runs the bot normally but disables it from replying to'
+            ' comments',
     )
 
     parser.add_argument('-P', '--logging-path', metavar='PATH',
@@ -344,21 +370,15 @@ def parse():
             help='Remove all data saved by the program',
     )
 
+    dump_choices = DUMP_CHOICES + ['*']
     parser.add_argument('--{0}'.format(DUMP),
-            metavar='NAME', nargs='+', choices=list(database.SUBCLASSES.keys()),
+            metavar='NAME', nargs='+', choices=dump_choices,
             help='Dump the specified databases to stdout. Choices: {0}'.format(
-                list(database.SUBCLASSES.keys())
+                dump_choices
             ),
     )
 
-    resolved_igdb_path = config.resolve_path(database.InstagramDatabase.PATH)
-    try:
-        ig_choices = [
-                name for name in os.listdir(resolved_igdb_path)
-                if name.endswith('.db')
-        ]
-    except OSError:
-        ig_choices = []
+    ig_choices = IG_DB_CHOICES + ['*']
     parser.add_argument('--{0}'.format(IG_DB),
             metavar='NAME', nargs='+', choices=ig_choices,
             help='Dump the specified instagram user databases to stdout.'
