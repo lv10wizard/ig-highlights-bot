@@ -75,7 +75,7 @@ class Mentions(ProcessMixin, StreamMixin):
         )
 
         mentions_db = database.MentionsDatabase()
-        delay = 15 # too long?
+        delay = 60 # too long?
         first_run = True
 
         while not self._killed.is_set():

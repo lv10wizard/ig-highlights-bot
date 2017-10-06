@@ -200,7 +200,7 @@ class Messages(ProcessMixin, StreamMixin):
         # XXX: a manual delay is used instead of relying on praw's stream
         # delay so that external shutdown events can be received in a timely
         # fashion.
-        delay = 15 # too long?
+        delay = 60 # too long?
         # check all items on the first run since stream_generator will fetch
         # the first 100 newest items (all of which may or may not be duplicates)
         first_run = True
