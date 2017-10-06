@@ -610,7 +610,6 @@ class Reddit(praw.Reddit):
                             color_thing=display_fullname(thing),
                             exc_info=True,
                     )
-                    raise
 
                 except praw.exceptions.APIException as e:
                     self.__handle_api_exception(e)
