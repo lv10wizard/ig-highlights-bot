@@ -76,6 +76,7 @@ class Instagram(object):
 
             # random web interface to instagram
             'instaliga.com',
+            'yotagram.com',
     ]
     BASE_URL = BASE_URLS[0]
 
