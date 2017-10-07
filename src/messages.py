@@ -12,6 +12,7 @@ from constants import (
         REMOVE_BLACKLIST_SUBJECT,
 )
 from src import (
+        bottiquette,
         database,
         reddit,
 )
@@ -196,6 +197,9 @@ class Messages(ProcessMixin, StreamMixin):
             BLACKLIST_SUBJECT,
             REMOVE_BLACKLIST_SUBJECT,
         ))
+
+        seen_from_robots = set()
+        robots = bottiquette.RobotsTxt(self._reddit)
         messages_db = database.MessagesDatabase()
         # XXX: a manual delay is used instead of relying on praw's stream
         # delay so that external shutdown events can be received in a timely
@@ -206,6 +210,25 @@ class Messages(ProcessMixin, StreamMixin):
         first_run = True
 
         while not self._killed.is_set():
+            # add new banned subreddits from r/bottiquette:
+            # https://www.reddit.com/r/Bottiquette/wiki/robots_txt_json
+            # XXX: this list has not been updated for over 1 year as of
+            # implementation (2017/10/06)
+            to_blacklist = set(robots['disallowed']) - seen_from_robots
+            # TODO? remove subreddits missing from ['disallowed']
+            # ie: to_remove = seen_from_robots - set(robots['disallowed'])
+            for subreddit in to_blacklist:
+                seen_from_robots.add(subreddit)
+
+                prefixed_name = reddit.prefix_subreddit(subreddit)
+                if not self.blacklist.is_blacklisted_name(prefixed_name):
+                    logger.id(logger.info, self,
+                            'Blacklisting new subreddit from r/Bottiquette:'
+                            ' {color_sub}',
+                            color_sub=prefixed_name,
+                    )
+                    self.blacklist.add(prefixed_name)
+
             logger.id(logger.debug, self, 'Processing messages ...')
             for message in self.stream:
                 if message is None or self._killed.is_set():
