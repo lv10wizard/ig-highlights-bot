@@ -1,5 +1,8 @@
 import ctypes
-from errno import ECONNABORTED
+from errno import (
+        ECONNABORTED,
+        EPIPE,
+)
 import multiprocessing
 import re
 import time
@@ -30,6 +33,8 @@ class _Cache(object):
     # too short and the number of potential network hits rises.
     EXPIRE_TIME = parse_time('15m')
 
+    NON_FATAL_ERR = [ECONNABORTED, EPIPE]
+
     def __init__(self, name=None):
         self.name = name
         self._expire_timer = multiprocessing.Value(ctypes.c_float, 0.0)
@@ -45,8 +50,8 @@ class _Cache(object):
     def __setitem__(self, key, item):
         try:
             self.cache[key] = item
-        except ConnectionAbortedError as e:
-            if e.errno == ECONNABORTED:
+        except (BrokenPipeError, ConnectionAbortedError) as e:
+            if e.errno in _Cache.NON_FATAL_ERR:
                 # Software caused connection abort
                 # (shutdown interrupted lookup)
                 pass
@@ -57,8 +62,8 @@ class _Cache(object):
         self._clear()
         try:
             item = self.cache[key]
-        except ConnectionAbortedError as e:
-            if e.errno == ECONNABORTED:
+        except (BrokenPipeError, ConnectionAbortedError) as e:
+            if e.errno in _Cache.NON_FATAL_ERR:
                 # Software caused connection abort
                 # (shutdown interrupted lookup)
                 item = []
@@ -83,8 +88,8 @@ class _Cache(object):
             # parsed just before clear()
             try:
                 self.cache.clear()
-            except ConnectionAbortedError as e:
-                if e.errno == ECONNABORTED:
+            except (BrokenPipeError, ConnectionAbortedError) as e:
+                if e.errno in _Cache.NON_FATAL_ERR:
                     pass
                 else:
                     raise
