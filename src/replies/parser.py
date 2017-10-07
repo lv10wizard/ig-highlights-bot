@@ -27,6 +27,8 @@ class _Cache(object):
     Inter-process parsed comment cache
     """
 
+    _manager = multiprocessing.Manager()
+
     # the amount of time before the cache is cleared.
     # too long and the bot may miss any edits to the comment
     # (and the cache may start to impact memory significantly),
@@ -38,8 +40,7 @@ class _Cache(object):
     def __init__(self, name=None):
         self.name = name
         self._expire_timer = multiprocessing.Value(ctypes.c_float, 0.0)
-        self._manager = multiprocessing.Manager()
-        self.cache = self._manager.dict()
+        self.cache = _Cache._manager.dict()
 
     def __str__(self):
         result = [__name__, self.__class__.__name__]
