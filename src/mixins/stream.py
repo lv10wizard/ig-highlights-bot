@@ -1,3 +1,4 @@
+from errno import ECONNRESET
 import time
 
 from prawcore.exceptions import (
@@ -96,13 +97,29 @@ class StreamMixin(RedditInstanceMixin):
             try:
                 for thing in self._stream:
                     yield thing
+
             except (RequestException, ResponseException, ServerError) as e:
-                # TODO: check error/status code & raise if fatal (403, etc)
+                if hasattr(e, 'original_exception'):
+                    # RequestException
+                    try:
+                        is_retryable = e.original_exception.errno == ECONNRESET
+                    except AttributeError:
+                        is_retryable = False
+                elif hasattr(e, 'response'):
+                    try:
+                        status_code = e.response.status_code
+                    except AttributeError:
+                        status_code = -1
+                    is_retryable = status_code // 100 == 5
                 logger.id(logger.info, self,
-                        'Failed to fetch stream element!',
+                        'Failed to fetch stream element!{retry}',
+                        retry=(' Retrying ...' if is_retryable else ''),
                         exc_info=True,
                 )
-                self.__sleep(self.__delay)
+                if is_retryable:
+                    self.__sleep(self.__delay)
+                else:
+                    raise
             else:
                 self.__reset_delay()
 
