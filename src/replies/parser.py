@@ -138,12 +138,19 @@ class Parser(object):
 
                     # Note: this only considers valid links in the body's text
                     # TODO? regex search for anything that looks like a link
-                    links = [
-                            a['href']
-                            for a in soup.find_all(
-                                'a', href=Instagram.IG_LINK_REGEX
-                            )
-                    ]
+                    links = []
+                    for a in soup.find_all('a', href=True):
+                        # parse the url to strip any queries or fragments
+                        parsed_url = urlparse(a['href'])
+                        url = '{0}://{1}{2}'.format(
+                                parsed_url.scheme,
+                                parsed_url.netloc,
+                                parsed_url.path,
+                        )
+                        match = Instagram.IG_LINK_REGEX.search(url)
+                        if match:
+                            links.append(url)
+
                     links = remove_duplicates(links)
                     # cache the links in case a new Parser is instantiated for
                     # the same comment, potentially from a different process

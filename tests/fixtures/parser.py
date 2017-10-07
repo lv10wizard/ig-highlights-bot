@@ -48,6 +48,13 @@ def haileypandolfi():
         return pickle.load(fd)
 
 @pytest.fixture(scope='session')
+def viktoria_kay():
+    """ praw.models.Comment containing a hard-linked instagram user """
+    path = _pickle_path('viktoria_kay')
+    with open(path, 'rb') as fd:
+        return pickle.load(fd)
+
+@pytest.fixture(scope='session')
 def ig_media_link():
     """ praw.models.Comment containing a instagram media link """
     path = _pickle_path('medialink')
