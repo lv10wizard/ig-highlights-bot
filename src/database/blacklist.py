@@ -106,10 +106,6 @@ class BlacklistDatabase(Database):
                             (sub_type, BlacklistDatabase.PERMANENT),
                     )
                     blacklisted_subs = set(row['name'] for row in cursor)
-                    to_remove = [
-                            name for name in blacklisted_subs
-                            if name not in subreddits
-                    ]
 
                     with db:
                         added = set()
@@ -142,25 +138,6 @@ class BlacklistDatabase(Database):
                             logger.id(logger.debug, self,
                                     'Blacklisted: {color_names}',
                                     color_names=added,
-                            )
-
-                        if to_remove:
-                            logger.id(logger.info, self,
-                                    'Removing #{num} missing blacklisted'
-                                    ' subreddit{plural}',
-                                    num=len(to_remove),
-                                    plural=('' if len(to_remove) == 1 else 's'),
-                            )
-                            logger.id(logger.debug, self,
-                                    'Removed: {color_names}',
-                                    color_names=to_remove,
-                            )
-
-                            db.executemany(
-                                    'DELETE FROM blacklist'
-                                    ' WHERE name = ?'
-                                    ' AND type = \'{0}\''.format(sub_type),
-                                    [(name,) for name in to_remove],
                             )
 
     def __sanitize(self, name, name_type):
