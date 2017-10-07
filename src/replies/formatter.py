@@ -18,7 +18,7 @@ class Formatter(object):
     COMMENT_CHARACTER_LIMIT = 1e4
     HEADER_FMT = '[@{user}]({link}) highlights:'
     FOOTER_FMT = (
-            '---\n^Beep&#32;Boop.&#32;I&#32;am&#32;a&#32;bot.'
+            '---\n^I&#32;am&#32;a&#32;bot.'
             '&#32;[[Contact]({contact_url})]'
             '&#32;[[Source]({source_url})]'
             '&#32;[[Block]({blacklist_url})]'
