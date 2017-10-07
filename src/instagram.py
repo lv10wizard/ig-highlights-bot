@@ -65,7 +65,7 @@ class Instagram(object):
     # imposed (this is a rolling limit per max_age, eg. 3000 / hr)
     # XXX: I don't think this should be a config option since the user shouldn't
     # be allowed to change this to any number they wish
-    RATE_LIMIT_THRESHOLD = 3000
+    RATE_LIMIT_THRESHOLD = 1000
 
     _ig_queue = None
     _requestor = None
