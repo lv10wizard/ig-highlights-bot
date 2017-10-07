@@ -187,6 +187,13 @@ class Replier(ProcessMixin, RedditInstanceMixin):
                 color_comment=reddit.display_id(comment),
         )
 
+        lengths = [len(body) for body, _ in reply_list]
+        logger.id(logger.debug, self,
+                'Length of repl{plural}: {lengths}',
+                plural=('y' if len(lengths) == 1 else 'ies'),
+                lengths=lengths,
+        )
+
         if self.dry_run:
             logger.id(logger.info, self,
                     'Dry run: skipping repl{plural} to {color_comment}',
