@@ -203,8 +203,8 @@ class Parser(object):
                     usernames = Parser._username_cache[self.comment.id]
                     if usernames is None:
                         logger.id(logger.debug, self,
-                                'Looking for soft-linked users in body:'
-                                '\n\n{body}\n\n',
+                                '\nLooking for soft-linked users in body:'
+                                ' \'{body}\'\n',
                                 body=self.comment.body,
                         )
 
