@@ -3,6 +3,8 @@ import os
 import re
 import time
 
+from six import string_types
+
 from constants import EMAIL
 from src import database
 from src.util import (
@@ -548,17 +550,90 @@ class Instagram(object):
                             Instagram._server_error_timestamp = 0
                             Instagram._server_error_delay = 0
 
-                        data = response.json()
-                        last_id = self.__parse_data(data)
-                        if not last_id:
-                            if last_id is False:
-                                # private or non-user page
-                                success = False
-                            break
+                        try:
+                            data = response.json()
 
-                        if not data['more_available']:
-                            # parsed the last set of items
-                            success = True
+                        except ValueError as e:
+                            # bad json ...?
+                            # try again, it may be a temporary error
+                            try:
+                                num_tries = self.__bad_json_tries
+                            except AttributeError:
+                                num_tries = 0
+                            self.__bad_json_tries = num_tries + 1
+
+                            if num_tries < 10:
+                                delay = 5
+                                logger.id(logger.warn, self,
+                                        'Bad json! Retrying in {time}'
+                                        ' (#{num}) ...',
+                                        time=delay,
+                                        num=num_tries,
+                                        exc_info=True,
+                                )
+
+                                if (
+                                        logger.is_enabled_for(logger.DEBUG)
+                                        and isinstance(e.args[0], string_types)
+                                ):
+                                    # try to determine some context
+                                    # '... line 1 column 69152 (char 69151)'
+                                    match = re.search(
+                                            r'[(]char (\d+)[)]', e.args[0]
+                                    )
+                                    if match:
+                                        # TODO: dynamically determine context
+                                        # amount from error -- probably should
+                                        # shift to util/json.py or something
+                                        idx = int(match.group(1))
+                                        ctx = 100
+                                        start = max(0, idx - ctx)
+                                        end = min(idx + ctx, len(response.text))
+                                        logger.id(logger.debug, self,
+                                                'Response snippet @ {idx}'
+                                                ' [{start} : {end}]:'
+                                                '\n\n{snippet}\n\n',
+                                                idx=idx,
+                                                start=start,
+                                                end=end,
+                                                snippet=response.text[
+                                                    start:end
+                                                ],
+                                        )
+
+                                if hasattr(self.killed, 'wait'):
+                                    do_wait = self.killed.wait
+                                else:
+                                    do_wait = time.sleep
+                                do_wait(delay)
+
+                            else:
+                                # too many retries hitting bad json; maybe the
+                                # endpoint changed?
+                                fatal_msg.append('(bad endpoint?)')
+                                logger.id(logger.critical, self,
+                                        ' '.join(fatal_msg),
+                                        exc_info=True,
+                                )
+                                self.__enqueue()
+                                raise
+
+                        else:
+                            try:
+                                del self.__bad_json_tries
+                            except AttributeError:
+                                pass
+
+                            last_id = self.__parse_data(data)
+                            if not last_id:
+                                if last_id is False:
+                                    # private or non-user page
+                                    success = False
+                                break
+
+                            if not data['more_available']:
+                                # parsed the last set of items
+                                success = True
 
                     elif response.status_code == 404:
                         # probably a typo
@@ -601,6 +676,7 @@ class Instagram(object):
                         color=data.keys(),
                         exc_info=True,
                 )
+                self.__enqueue()
                 raise
 
             except TypeError as e:
@@ -610,15 +686,7 @@ class Instagram(object):
                         ' '.join(fatal_msg),
                         exc_info=True,
                 )
-                raise
-
-            except ValueError as e:
-                # response not json (bad endpoint?)
-                fatal_msg.append('(bad endpoint?)')
-                logger.id(logger.critical, self,
-                        ' '.join(fatal_msg),
-                        exc_info=True,
-                )
+                self.__enqueue()
                 raise
 
         return success
