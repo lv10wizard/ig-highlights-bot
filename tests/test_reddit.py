@@ -77,12 +77,15 @@ def test_unpack_subreddits():
     unpacked = reddit.unpack_subreddits('games+memes+AskReddit')
     assert len(unpacked) == 3
 
+@pytest.mark.xfail # TODO: get pickled comment
 def test_display_id_comment(comment):
     assert reddit.display_id(comment) == 'u/lv10wizard/dmzb5qa'
 
+@pytest.mark.xfail # TODO: get pickled submission
 def test_display_id_submission(submission):
     assert reddit.display_id(submission) == 'u/lv10wizard/6zztml'
 
+@pytest.mark.xfail # TODO: get pickled subreddit
 def test_display_id_subreddit(subreddit):
     assert reddit.display_id(subreddit) == '3odt0'
 
