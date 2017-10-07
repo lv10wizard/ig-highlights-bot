@@ -21,3 +21,15 @@ def test_parser_ig_users_only(linstahh, natalieannworth, tiffanie_marie):
     assert N.ig_usernames == ['natalieannworth']
     assert T.ig_usernames == ['tiffanie.marie']
 
+def test_parser_ig_links(haileypandolfi):
+    p = Parser(haileypandolfi)
+
+    assert bool(p.ig_links)
+    assert p.ig_usernames == ['haileypandolfi']
+
+def test_parser_ig_media_link(ig_media_link):
+    p = Parser(ig_media_link)
+
+    assert not p.ig_links
+    assert not p.ig_usernames
+

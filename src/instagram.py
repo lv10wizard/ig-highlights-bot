@@ -95,9 +95,10 @@ class Instagram(object):
     _USERNAME_PTN = r'\w[\w\.]{,29}'
 
     IG_LINK_REGEX = re.compile(
-            r'(https?://(?:www[.])?(?:{0})/({1})/?)'.format(
-            #  \_______/\_________/\_____/|\___/ \
-            #      |         |        |   |  |   optionally match
+            r'(https?://(?:www[.])?(?:{0})/({1})/?$)'.format(
+            #  \_______/\_________/\_____/|\___/ \ \
+            #      |         |        |   |  |   / match end of string
+            #      |         |        |   |  | optionally match
             #      |         |        |   |  \    trailing '/'
             #      |         |        |   \  capture username
             #      |         |        |  match path separator '/'
