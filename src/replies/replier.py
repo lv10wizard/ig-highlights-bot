@@ -77,10 +77,14 @@ class Replier(ProcessMixin, RedditInstanceMixin):
                 # insert the return of top_media so we can handle appropriately
                 ig_list.append(ig.top_media)
 
-            if 404 in ig.status_codes:
-                # linked to a non-existent user; probably a typo but the
-                # user could be trying to troll
-                self.blacklist.increment_bad_actor(comment)
+            # XXX: 404-based bad actor flagging is turned off (temporarily?)
+            # because the bot now tries to match '@username' strings if no links
+            # to instagram user pages are found.
+
+            # if 404 in ig.status_codes:
+            #     # linked to a non-existent user; probably a typo but the
+            #     # user could be trying to troll
+            #     self.blacklist.increment_bad_actor(comment)
 
         return ig_list
 

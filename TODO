@@ -253,6 +253,21 @@ O. write help post & link appropriately in code (formatter.py)
 O. change replyable_usernames to return list to preverve order
 O. include choices in --help (add to help='...' msg)
 - handle database table restructuring without dropping all data
+O. parse soft-linked users
+    O. in comments: @foo.bar
+    X. in submission title: @foo.bar
+        > requires another database?
+            need to prevent reparsing same submission constantly
+        >> too much extra overhead for no real gain
+            99% of submissions don't soft-link anyway
+    O. disable 404 badactor flagging since the bot is now guessing at usernames
+        .. basically badactor flagging is turned off completely after this
+- test Parser.ig_{links,usernames}
+    - with usernames
+    - without usernames
+    - with links
+    - without links
+    - without either
 X. reply-queue per-comment logging
     > how to prevent spam the log though?
     >> handled in 821f2ea (kind of)

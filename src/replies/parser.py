@@ -11,12 +11,84 @@ from bs4 import (
 from six.moves.urllib.parse import urlparse
 
 from src import reddit
+from src.config import parse_time
 from src.instagram import Instagram
 from src.util import (
         logger,
         remove_duplicates,
 )
 
+
+class _Cache(object):
+    """
+    Inter-process parsed comment cache
+    """
+
+    # the amount of time before the cache is cleared.
+    # too long and the bot may miss any edits to the comment
+    # (and the cache may start to impact memory significantly),
+    # too short and the number of potential network hits rises.
+    EXPIRE_TIME = parse_time('15m')
+
+    def __init__(self, name=None):
+        self.name = name
+        self._expire_timer = multiprocessing.Value(ctypes.c_float, 0.0)
+        self._manager = multiprocessing.Manager()
+        self.cache = self._manager.dict()
+
+    def __str__(self):
+        result = [__name__, self.__class__.__name__]
+        if self.name:
+            result.append(self.name)
+        return ':'.join(result)
+
+    def __setitem__(self, key, item):
+        try:
+            self.cache[key] = item
+        except ConnectionAbortedError as e:
+            if e.errno == ECONNABORTED:
+                # Software caused connection abort
+                # (shutdown interrupted lookup)
+                pass
+            else:
+                raise
+
+    def __getitem__(self, key):
+        self._clear()
+        try:
+            item = self.cache[key]
+        except ConnectionAbortedError as e:
+            if e.errno == ECONNABORTED:
+                # Software caused connection abort
+                # (shutdown interrupted lookup)
+                item = []
+            else:
+                raise
+        except KeyError:
+            item = None
+        return item
+
+    def _clear(self):
+        """
+        Clears the cache if the time since it was last cleared exceeds the
+        threshold
+        """
+        elapsed = time.time() - self._expire_timer.value
+        if elapsed > _Cache.EXPIRE_TIME:
+            logger.id(logger.debug, self,
+                    'Clearing cache (#{num}) ...',
+                    num=len(self.cache),
+            )
+            # XXX: this may cause a comment to be parsed back-to-back if it was
+            # parsed just before clear()
+            try:
+                self.cache.clear()
+            except ConnectionAbortedError as e:
+                if e.errno == ECONNABORTED:
+                    pass
+                else:
+                    raise
+            self._expire_timer.value = time.time()
 
 class Parser(object):
     """
@@ -26,28 +98,8 @@ class Parser(object):
     # XXX: I think creating these here is ok so long as this module is loaded
     # by the main process so that child processes inherit them. otherwise child
     # processes may create another version .. I think.
-    _manager = multiprocessing.Manager()
-    _cache = _manager.dict()
-    # the amount of time before the cache is cleared.
-    # too long and the bot may miss any edits to the comment
-    # (and the cache may start to impact memory significantly),
-    # too short and the number of potential network hits rises.
-    _EXPIRE_TIME = 15 * 60
-    _expire_timer = multiprocessing.Value(ctypes.c_float, 0.0)
-
-    @staticmethod
-    def _prune_cache():
-        """
-        Clears the cache if the time since the last clearing exceeds the
-        threshold
-        """
-        elapsed = time.time() - Parser._expire_timer.value
-        if elapsed > Parser._EXPIRE_TIME:
-            logger.id(logger.debug, Parser.__name__, 'Clearing cache ...')
-            # XXX: this may cause a comment to be parsed back-to-back if it was
-            # just parsed before clear()
-            Parser._cache.clear()
-            Parser._expire_timer.value = time.time()
+    _link_cache = _Cache('links')
+    _username_cache = _Cache('usernames')
 
     def __init__(self, comment):
         self.comment = comment
@@ -65,9 +117,6 @@ class Parser(object):
         """
         Returns a list of unique instagram links in the comment
         """
-        # try to clear the cache whenever a comment is parsed
-        Parser._prune_cache()
-
         try:
             links = self.__ig_links
 
@@ -76,19 +125,8 @@ class Parser(object):
                 links = []
 
             else:
-                try:
-                    links = Parser._cache[self.comment.id]
-
-                except ConnectionAbortedError as e:
-                    if e.errno == ECONNABORTED:
-                        # Software caused connection abort
-                        # (shutdown interrupted lookup)
-                        links = []
-
-                    else:
-                        raise
-
-                except KeyError:
+                links = Parser._link_cache[self.comment.id]
+                if links is None:
                     logger.id(logger.debug, self, 'Parsing comment ...')
 
                     try:
@@ -102,16 +140,19 @@ class Parser(object):
                     # TODO? regex search for anything that looks like a link
                     links = [
                             a['href']
-                            for a in soup.find_all('a', href=Instagram.IG_REGEX)
+                            for a in soup.find_all(
+                                'a', href=Instagram.IG_LINK_REGEX
+                            )
                     ]
                     links = remove_duplicates(links)
                     # cache the links in case a new Parser is instantiated for
                     # the same comment, potentially from a different process
-                    Parser._cache[self.comment.id] = links
+                    Parser._link_cache[self.comment.id] = links
                     if links:
                         logger.id(logger.info, self,
-                                'Found #{num} links: {color}',
+                                'Found #{num} link{plural}: {color}',
                                 num=len(links),
+                                plural=('' if len(links) == 1 else 's'),
                                 color=links,
                         )
             # cache a reference to the links on the instance in case the
@@ -130,11 +171,47 @@ class Parser(object):
 
         except AttributeError:
             usernames = []
-            for link in self.ig_links:
-                match = Instagram.IG_REGEX.search(link)
-                if match: # this check shouldn't be necessary
-                    usernames.append(match.group(2))
-            usernames = remove_duplicates(usernames)
+            if self.comment:
+                # look for usernames from links first since they are all but
+                # guaranteed to be accurate
+                for link in self.ig_links:
+                    match = Instagram.IG_LINK_REGEX.search(link)
+                    if match: # this check shouldn't be necessary
+                        usernames.append(match.group(2))
+
+                if not usernames:
+                    # try looking username-like strings in the comment body in
+                    # case the user soft-linked one or more usernames
+                    # eg. '@angiegoesboom'
+
+                    # XXX: this will increase the frequency of 404s from general
+                    # bad matches and may cause the bot to link incorrect user
+                    # data if someone soft-links eg. a twitter user and a
+                    # different person owns the same username on instagram.
+                    usernames = Parser._username_cache[self.comment.id]
+                    if usernames is None:
+                        logger.id(logger.debug, self,
+                                'Looking for soft-linked users in body:'
+                                '\n\n{body}\n\n',
+                                body=self.comment.body,
+                        )
+
+                        usernames = [
+                                name for name in
+                                Instagram.IG_USER_REGEX.findall(
+                                    self.comment.body
+                                )
+                        ]
+                        usernames = remove_duplicates(usernames)
+                        if usernames:
+                            logger.id(logger.info, self,
+                                    'Found #{num} username{plural}: {color}',
+                                    num=len(usernames),
+                                    plural=('' if len(usernames) == 1 else 's'),
+                                    color=usernames,
+                            )
+
+            Parser._username_cache[self.comment.id] = usernames
             self.__ig_usernames = usernames
 
         return usernames.copy()

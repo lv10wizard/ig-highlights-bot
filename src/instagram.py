@@ -89,11 +89,14 @@ class Instagram(object):
     # not sure if information is outdated
     # XXX: periods cannot appear consecutively
     # eg. 'foo.b.a.r' is ok; 'foo..bar' is not
-    IG_REGEX = re.compile(
-            r'(https?://(?:www[.])?(?:{0})/([\w\.]+)/?)'.format(
-            #  \_______/\_________/\_____/|\_______/ \
-            #      |         |        |   |    |   optionally match
-            #      |         |        |   |    |    trailing '/'
+    # XXX: periods cannot appear as the first character
+    _USERNAME_PTN = r'\w[\w\.]{,29}'
+
+    IG_LINK_REGEX = re.compile(
+            r'(https?://(?:www[.])?(?:{0})/({1})/?)'.format(
+            #  \_______/\_________/\_____/|\___/ \
+            #      |         |        |   |  |   optionally match
+            #      |         |        |   |  \    trailing '/'
             #      |         |        |   \  capture username
             #      |         |        |  match path separator '/'
             #      |         |  match domain variants
@@ -101,6 +104,20 @@ class Instagram(object):
             #    match scheme 'http://' or 'https://'
 
                 '|'.join(BASE_URLS),
+                _USERNAME_PTN,
+            ),
+    )
+
+    IG_USER_REGEX = re.compile(
+            r'(?:^|\s+)@({0})(?:\s+|$)'.format(
+            # \_______/|\___/\_______/
+            #     |    |  |      \
+            #     |    |  |    match whitespace or end of string
+            #     |    | capture username
+            #     |  only match if username is preceded by '@'
+            #     |  -- basically limit guesses at username matches
+            #   match start of string or whitespace
+                _USERNAME_PTN,
             ),
     )
 
