@@ -65,8 +65,9 @@ class Controversial(ProcessMixin, StreamMixin):
             threshold = self.cfg.delete_comment_threshold
             # arbitrary large value guaranteed to be > threshold
             lowest_score = abs(threshold) * 1000
+            seen = set()
             for comment in self.stream:
-                if self._killed.is_set():
+                if comment in seen or self._killed.is_set():
                     break
 
                 logger.id(logger.debug, self,
@@ -75,6 +76,7 @@ class Controversial(ProcessMixin, StreamMixin):
                         score=comment.score,
                 )
 
+                seen.add(comment)
                 if comment.score <= threshold:
                     # score too low: delete the comment
                     logger.id(logger.info, self,
@@ -100,6 +102,7 @@ class Controversial(ProcessMixin, StreamMixin):
                     # delay can be adjusted
                     lowest_score = min(lowest_score, comment.score)
 
+            delay = 0
             if not self._killed.is_set():
                 # adjust the delay so that we are waiting less time between
                 # checks if we've seen a comment score closer to the threshold
