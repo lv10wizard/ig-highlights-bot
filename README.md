@@ -33,7 +33,8 @@ python 3.5+:
 
 ##### Running the bot
 
-*Note: only tested in cygwin 2.9 and raspbian gnu/linux 9*
+*Note: only tested in python 3.6 on cygwin 2.9 and python 3.5 on raspbian
+gnu/linux 9, ubuntu 16.04*
 
 1. Define [praw.ini](https://praw.readthedocs.io/en/latest/getting_started/configuration/prawini.html)
 
@@ -56,7 +57,7 @@ requests user-agent field)
 
 ##### Config:
 
-*See [bot.cfg](bot.cfg) for the default config*
+*See [bot.cfg](bot.cfg) for the default config and some options documentation*
 
 Note: time settings (eg. `instagram_cache_expire_time`) can either be defined
 as a total number of seconds or as a string consisting of numbers followed by
