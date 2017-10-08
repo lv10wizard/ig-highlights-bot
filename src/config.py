@@ -180,7 +180,8 @@ class Config(object):
 
         self.__fallback = configparser.SafeConfigParser(Config.DEFAULTS)
         loaded = self.__fallback.read(self._resolved_fallback)
-        if self._resolved_fallback not in loaded:
+        fallback_was_loaded = self._resolved_fallback in loaded
+        if not fallback_was_loaded:
             logger.id(logger.warn, self,
                     'Failed to load fallback config (\'{path}\'):'
                     ' bad/missing options may terminate the program.',
@@ -189,22 +190,100 @@ class Config(object):
         self.__parser = configparser.SafeConfigParser(Config.DEFAULTS)
         loaded = self.__parser.read(self._resolved_path)
         if self._resolved_path not in loaded:
-            logger.id(logger.debug, self,
-                    'Writing default config to \'{path}\' ...',
-                    path=self.path,
-            )
             self.__parser = self.__fallback
-            try:
-                with open(self._resolved_path, 'w') as fd:
-                    self.__parser.write(fd)
-            except (IOError, OSError):
-                logger.id(logger.exception, self,
-                        'Failed to write config to \'{path}\'',
-                        path=self.path,
+            self.__do_write()
+
+        elif fallback_was_loaded:
+            # check for any missing/extra options
+            changed = False
+            fallback_sections = self.__fallback.sections()
+            missing_sections = [
+                    section for section in self.__parser.sections()
+                    if section not in fallback_sections
+            ]
+            if missing_sections:
+                changed = True
+                logger.id(logger.debug, self,
+                        'Removing missing sections: {color}',
+                        color=missing_sections,
                 )
+
+            for section in missing_sections:
+                if not self.__parser.remove(section):
+                    # this shouldn't happen
+                    logger.id(logger.warn, self,
+                            'Failed to remove section [{section}]:'
+                            ' no such section',
+                            section=section,
+                    )
+
+            for section in fallback_sections:
+                if not self.__parser.has_section(section):
+                    logger.id(logger.debug, self,
+                            'Adding new section: [{section}]',
+                            section=section,
+                    )
+                    try:
+                        self.__parser.add_section(section)
+                    except ValueError:
+                        # DEFAULT section (this shouldn't happen)
+                        pass
+                    else:
+                        changed = True
+
+                fallback_opts = self.__fallback.options(section)
+                parser_opts = self.__parser.options(section)
+
+                only_in_fallback = set(fallback_opts) - set(parser_opts)
+                for key in only_in_fallback:
+                    value = self.__fallback.get(section, key)
+                    logger.id(logger.debug, self,
+                            'Adding new option:'
+                            ' [{section}] \'{key}\' -> \'{value}\'',
+                            section=section,
+                            key=key,
+                            value=value,
+                    )
+                    self.__parser.set(section, key, value)
+
+                only_in_parser = set(parser_opts) - set(fallback_opts)
+                for key in only_in_parser:
+                    value = self.__parser.get(section, key)
+                    logger.id(logger.debug, self,
+                            'Removing missing option:'
+                            ' [{section}] \'{key}\' ({value})',
+                            secttion=section,
+                            key=key,
+                            value=value,
+                    )
+
+                changed = changed or bool(only_in_fallback or only_in_fallback)
+
+            if changed:
+                # the user version had missing/extra options
+                self.__do_write()
 
     def __str__(self):
         return os.path.basename(self.path)
+
+    def __do_write(self):
+        logger.id(logger.info, self,
+                'Writing config to \'{path}\' ...',
+                path=self.path,
+        )
+        success = False
+        try:
+            with open(self._resolved_path, 'w') as fd:
+                self.__parser.write(fd)
+        except (IOError, OSError):
+            logger.id(logger.exception, self,
+                    'Failed to write config to \'{path}\'',
+                    path=self.path,
+            )
+        else:
+            success = True
+
+        return success
 
     def __get_fallback(self, section, key, err=None):
         try:
