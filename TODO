@@ -274,6 +274,9 @@ O. parse soft-linked users
     - with links
     - without links
     - without either
+- add num_comments column to InstagramDatabase
+    - highlights = ORDER BY num_likes DESC, num_comments DESC
+        should get highest liked & most commented media first (ie, most popular)
 X. reply-queue per-comment logging
     > how to prevent spam the log though?
     >> handled in 821f2ea (kind of)

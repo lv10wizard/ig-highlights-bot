@@ -99,18 +99,22 @@ class StreamMixin(RedditInstanceMixin):
                     yield thing
 
             except (RequestException, ResponseException, ServerError) as e:
-                if hasattr(e, 'original_exception'):
-                    # RequestException
-                    try:
-                        is_retryable = e.original_exception.errno == ECONNRESET
-                    except AttributeError:
-                        is_retryable = False
-                elif hasattr(e, 'response'):
+                # retry all RequestExceptions
+                is_retryable = isinstance(e, RequestException)
+
+#                 if hasattr(e, 'original_exception'):
+#                     # RequestException
+#                     try:
+#                         is_retryable = e.original_exception.errno == ECONNRESET
+#                     except AttributeError:
+#                         is_retryable = False
+                if not is_retryable and hasattr(e, 'response'):
                     try:
                         status_code = e.response.status_code
                     except AttributeError:
                         status_code = -1
                     is_retryable = status_code // 100 == 5
+
                 logger.id(logger.info, self,
                         'Failed to fetch stream element!{retry}',
                         retry=(' Retrying ...' if is_retryable else ''),
