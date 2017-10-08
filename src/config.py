@@ -35,6 +35,7 @@ NUM_HIGHLIGHTS_PER_IG_USER      = 'num_highlights_per_ig_user'
 MAX_REPLIES_PER_COMMENT         = 'max_replies_per_comment'
 MAX_REPLIES_PER_POST            = 'max_replies_per_post'
 MAX_REPLIES_IN_COMMENT_THREAD   = 'max_replies_in_comment_thread'
+DELETE_COMMENT_THRESHOLD        = 'delete_comment_threshold'
 ADD_SUBREDDIT_THRESHOLD         = 'add_subreddit_threshold'
 BLACKLIST_TEMP_BAN_TIME         = 'blacklist_temp_ban_time'
 BAD_ACTOR_EXPIRE_TIME           = 'bad_actor_expire_time'
@@ -280,6 +281,10 @@ class Config(object):
         return self.__get(
                 SECTION_REDDIT, MAX_REPLIES_IN_COMMENT_THREAD, 'getint'
         )
+
+    @property
+    def delete_comment_threshold(self):
+        return self.__get(SECTION_REDDIT, DELETE_COMMENT_THRESHOLD, 'getint')
 
     @property
     def add_subreddit_threshold(self):

@@ -19,6 +19,8 @@ class Formatter(object):
     HEADER_FMT = '[@{user}]({link}) highlights:'
     FOOTER_FMT = (
             '---\n^I&#32;am&#32;a&#32;bot.'
+            '&#32;Did&#32;I&#32;get&#32;something&#32;wrong?'
+            '&#32;Downvote&#32;to&#32;delete.'
             '&#32;[[Contact]({contact_url})]'
             '&#32;[[Source]({source_url})]'
             '&#32;[[Block]({blacklist_url})]'

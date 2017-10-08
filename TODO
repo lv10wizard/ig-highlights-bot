@@ -239,16 +239,17 @@ O. quiet spammy logging
         the same logged query.
 - Fetch all(?) messages/mentions on first run and stop on first duplicate
     (to prevent missing older items)
-- delete negative threshold comments (ie, downvote to remove bot comments)
-    - fetch bot's comments:
+O. delete negative threshold comments (ie, downvote to remove bot comments)
+    O. fetch bot's comments:
         _reddit.user.me().comments.controversial(time_filter='month')
         .. maybe time_filter='week'
-    - call comment.delete() if comment.score < threshold
-    - define delete threshold in config
-    - dynamically change delay based on if any comments had negative score
+    O. call comment.delete() if comment.score < threshold
+    O. define delete threshold in config
+    O. dynamically change delay based on if any comments had negative score
         - saw non-deleted negative: delay = lower =>  O(minutes) ?
         - all comment.scores > 0:   delay = higher => O(hours) ?
     ! DO NOT modify reply database (don't want to reply again)
+- Write missing config options on startup
 O. write help post & link appropriately in code (formatter.py)
 O. change replyable_usernames to return list to preverve order
 O. include choices in --help (add to help='...' msg)
@@ -296,6 +297,10 @@ O. remove try/catch in mentions/messages _run_forever
     there's no real reason to support both
 ? refactor queue databases (ig_queue, reddit_ratelimit, submission_queue) to
   use a base QueueDatabase class?
+? block instagram users?
+    would need a way to verify owner of instagram account so that random
+    people can't cause the bot to no longer post highlights of instagram users
+    - maybe just add a manual way to blacklist instagram user accounts
 
 N. testing!
 

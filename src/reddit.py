@@ -162,6 +162,8 @@ def get_ancestor_tree(comment, to_lower=True):
         ancestor = ancestor.parent()
         result.append(ancestor)
         if refresh_counter % 9 == 0:
+            # TODO? catch praw.exceptions.ClientException:
+            # This comment does not appear to be in the comment tree
             ancestor.refresh()
         refresh_counter += 1
     return result

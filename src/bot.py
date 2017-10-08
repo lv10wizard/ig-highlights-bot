@@ -7,6 +7,7 @@ from six import iteritems
 
 from src import (
         blacklist,
+        controversial,
         instagram,
         mentions,
         messages,
@@ -46,6 +47,7 @@ class IgHighlightsBot(RunForeverMixin, StreamMixin):
         self.subreddits = SubredditsDatabase(do_seed=True)
         self.blacklist = blacklist.Blacklist(cfg)
 
+        self.controversial = controversial.Controversial(cfg, rate_limited)
         self.messages = messages.Messages(cfg, rate_limited, self.blacklist)
         self.mentions = mentions.Mentions(
                 cfg, rate_limited, self.blacklist, dry_run,
@@ -98,11 +100,13 @@ class IgHighlightsBot(RunForeverMixin, StreamMixin):
             )
 
         self.ratelimit_handler.kill()
+        self.controversial.kill()
         self.messages.kill()
         self.mentions.kill()
         self.replier.kill()
 
         self.ratelimit_handler.join()
+        self.controversial.join()
         self.messages.join()
         self.mentions.join()
         self.replier.join()
@@ -197,6 +201,7 @@ class IgHighlightsBot(RunForeverMixin, StreamMixin):
         signal.signal(signal.SIGTERM, signal.SIG_IGN)
 
         self.ratelimit_handler.start()
+        self.controversial.start()
         self.messages.start()
         self.mentions.start()
         self.replier.start()
