@@ -248,7 +248,22 @@ def print_instagram_database(cfg, *user_databases):
         path = os.path.join(resolved_igdb_path, user_db)
         if os.path.exists(path):
             igdb = database.InstagramDatabase(path)
-            do_print_database(path, 'ORDER BY {0}'.format(igdb.order_string))
+            if igdb.size() == 0:
+                igdb.close()
+                logger.info('Removing \'{path}\': empty database ...',
+                        path=path,
+                )
+                try:
+                    os.remove(path)
+                except (IOError, OSError):
+                    logger.exception('Failed to remove \'{path}\'!',
+                            path=path,
+                    )
+
+            else:
+                do_print_database(
+                        path, 'ORDER BY {0}'.format(igdb.order_string)
+                )
 
         else:
             path_raw = os.path.join(database.InstagramDatabase.PATH, user_db)

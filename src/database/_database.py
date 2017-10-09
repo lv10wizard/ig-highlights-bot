@@ -24,6 +24,8 @@ class UniqueConstraintFailed(BaseIntegrityException): pass
 class NotNullConstraintFailed(BaseIntegrityException): pass
 class CheckConstraintFailed(BaseIntegrityException): pass
 
+class FailedVerificationCheck(BaseDatabaseException): pass
+
 class FailedInit(BaseDatabaseException):
     def __init__(self, error, *args, **kwargs):
         Exception.__init__(self, *args, **kwargs)
@@ -125,6 +127,9 @@ class Database(object):
     """
 
     PATH_FMT = os.path.join(DATA_ROOT_DIR, 'data', '{0}')
+
+    TABLENAME_RE = re.compile(r'^(\w+)\s*[(]')
+    COLUMN_RE = re.compile(r'\s*(\w+).+?')
 
     @staticmethod
     def resolve_path(path):
@@ -228,11 +233,104 @@ class Database(object):
 
         except AttributeError:
             db = self.__init_db()
+            if db is None:
+                # the database was outdated; re-initialize it
+                db = self.__init_db()
+
             self.__the_connection = db
 
         return db
 
+    def __verify_db(self, db, tbl_defn):
+        """
+        Checks if the table definition has changed.
+        This may happen if a database's wrapper code has changed since it was
+        first created.
+
+        Note: this does not verify column types.
+
+        Returns True if the database matches the definition or the existing
+                    extraneous columns were removed
+                or False if the database table is missing columns that exist in
+                    the definition
+        """
+        name_match = Database.TABLENAME_RE.search(tbl_defn)
+        if not name_match:
+            # either TABLENAME_RE needs updating or unexpected
+            # table definition
+            raise FailedVerificationCheck(
+                    'Failed to determine table name from'
+                    ' \'{0}\''.format(tbl_defn)
+            )
+        name = name_match.group(1)
+
+        columns = set()
+        col_start = tbl_defn.find('(')
+        col_end = tbl_defn.rfind(')')
+        for col in tbl_defn[col_start+1 : col_end].split(','):
+            match = Database.COLUMN_RE.search(col)
+            if not match:
+                # either COLUMN_RE needs updating or unexpected
+                # column definition
+                raise FailedVerificationCheck(
+                        'Failed to determine column name from'
+                        ' \'{0}\''.format(col)
+                )
+            columns.add(match.group(1))
+
+        # get actual column names
+        # https://stackoverflow.com/a/20643403
+        info = db.execute('PRAGMA table_info(\'{0}\')'.format(name)).fetchall()
+        existing_columns = set(row['name'] for row in info)
+
+        logger.id(logger.debug, self,
+                'Verifying integrity of table \'{tblname}\':'
+                '\n\tdefined columns: {color_def}'
+                '\n\tactual columns:  {color_actual}',
+                tblname=name,
+                color_def=columns,
+                color_actual=existing_columns,
+        )
+
+        extra_columns = existing_columns - columns
+        if extra_columns:
+            logger.id(logger.info, self,
+                    'Table \'{tblname}\' has extra columns: {color}',
+                    tblname=name,
+                    color=extra_columns,
+            )
+            logger.id(logger.debug, self, 'Dropping the extra columns ...')
+            tmp_name = '__TMP__{0}__TMP__'.format(name)
+            # drop the extra columns
+            # https://stackoverflow.com/a/4253879
+            db.execute('ALTER TABLE {0} RENAME TO {1}'.format(name, tmp_name))
+            db.execute('CREATE TABLE {0}'.format(tbl_defn))
+            # copy the data into the new table
+            db.execute('INSERT INTO {0}({2}) SELECT {2} FROM {1}'.format(
+                name, tmp_name, ', '.join(columns)
+            ))
+            db.execute('DROP TABLE {0}'.format(tmp_name))
+
+        missing_columns = columns - existing_columns
+        if missing_columns:
+            # the entire table should be dropped in this situation in case one
+            # or more new (missing) columns are integral to the database's
+            # behavior
+            logger.id(logger.info, self,
+                    'Table \'{tblname}\' is missing columns: {color}',
+                    tblname=name,
+                    color=missing_columns,
+            )
+
+        return not bool(missing_columns)
+
     def __init_db(self):
+        """
+        Initializes the database connection.
+
+        Returns db (_SqliteConnectionWrapper) if initialization succeeds
+                or None if an existing database is outdated
+        """
         if (
                 # check that _resolved_dirname is not the empty string in case
                 # path == ':memory:'
@@ -253,6 +351,8 @@ class Database(object):
                 path=self.path,
         )
 
+        do_integrity_check = os.path.exists(self._resolved_path)
+
         try:
             db = sqlite3.connect(self._resolved_path)
 
@@ -264,10 +364,11 @@ class Database(object):
             db.row_factory = sqlite3.Row
             db = _SqliteConnectionWrapper(db, self)
 
-            def create_table(table):
+            def initialize_table(table):
+                success = True
                 if not isinstance(table, string_types):
                     raise TypeError(
-                            'create_table string expected, got {type}'
+                            'initialize_table string expected, got {type}'
                             ' (\'{data}\')'.format(
                                 type=type(table),
                                 data=table,
@@ -275,12 +376,18 @@ class Database(object):
                     )
                 db.execute('CREATE TABLE IF NOT EXISTS {0}'.format(table))
 
+                if do_integrity_check:
+                    success = self.__verify_db(db, table)
+                return success
+
             try:
+                verified = True
                 if isinstance(self._create_table_data, string_types):
-                    create_table(self._create_table_data)
+                    verified = initialize_table(self._create_table_data)
                 elif isinstance(self._create_table_data, (list, tuple)):
                     for table in self._create_table_data:
-                        create_table(table)
+                        verified = initialize_table(table) and verified
+
                 else:
                     # programmer error
                     raise TypeError(
@@ -290,15 +397,45 @@ class Database(object):
                             )
                     )
 
-                try:
-                    self._initialize_tables(db)
-                except sqlite3.IntegrityError:
-                    # probably attempted a duplicate INSERT (UNIQUE
-                    # constraint)
-                    # => tables were already initialized
-                    pass
+                if not verified:
+                    # existing database does not match table definition(s)
+                    db.close()
+                    db = None
 
-                db.commit()
+                    logger.id(logger.info, self,
+                            'Outdated database detected:'
+                            ' removing \'{path}\' ...',
+                            path=self.path,
+                    )
+
+                    # XXX: this is a heavy-handed, lazy solution which will
+                    # cause data loss. if the database was missing columns, then
+                    # data loss probably shouldn't be a huge issue.
+                    try:
+                        os.remove(self._resolved_path)
+                    except (IOError, OSError):
+                        # database is probably in use by another process.
+                        # terminate this process if we couldn't remove it so
+                        # that we're not trying to work with an outdated
+                        # database.
+                        logger.id(logger.critical, self,
+                                'Could not remove outdated database'
+                                ' @ \'{path}\'!',
+                                path=self.path,
+                                exc_info=True,
+                        )
+                        raise
+
+                else:
+                    try:
+                        self._initialize_tables(db)
+                    except sqlite3.IntegrityError:
+                        # probably attempted a duplicate INSERT (UNIQUE
+                        # constraint)
+                        # => tables were already initialized
+                        pass
+
+                    db.commit()
 
             except sqlite3.DatabaseError as e:
                 db.close()
