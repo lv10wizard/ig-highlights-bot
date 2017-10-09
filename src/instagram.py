@@ -300,7 +300,7 @@ class Instagram(object):
             self.__cached_top_media = media
         return media
 
-    def __get_top_media(self):
+    def __get_top_media(self, force_fetch=False, depth=0):
         """
         Returns the user's most popular media (the exact number is defined in
                 the config)
@@ -308,11 +308,16 @@ class Instagram(object):
                 or False if the user's profile is private or not a user page
                     (eg. instagram.com/about)
         """
+        if depth > 1:
+            # probably about to recurse infinitely.
+            # this shouldn't happen.
+            raise ValueError('Infinite __get_top_media recursion!')
+
         data = False
         complete = True
         # re-fetch the user's data if expired or we were given an initial
         # last_id indicating that the user's last fetch was queued
-        if self.__is_expired or self.user in Instagram._ig_queue:
+        if force_fetch or self.__is_expired or self.user in Instagram._ig_queue:
             complete = self.__fetch_data()
             if not complete:
                 # fetch failed; return this value
@@ -321,26 +326,32 @@ class Instagram(object):
         # don't create a new database file if one does not exist;
         # we should only look up here
         if complete and os.path.exists(self.__db_path):
-            media_cache = database.InstagramDatabase(self.__db_path)
             num_highlights = Instagram.cfg.num_highlights_per_ig_user
-            data = media_cache.get_top_media(num_highlights)
-            if num_highlights > 0 and not data:
-                # empty database
-                logger.id(logger.debug, self,
-                        'Removing \'{path}\': empty database',
-                        path=self.__db_path,
-                )
-
-                try:
-                    os.remove(self.__db_path)
-
-                except OSError as e:
-                    logger.id(logger.warn, self,
-                            'Could not remove empty database file'
-                            ' \'{path}\'',
+            media_cache = database.InstagramDatabase(self.__db_path)
+            if media_cache.size() == 0:
+                # re-fetch an outdated existing cache
+                # (outdated meaning the cached version no longer reflects
+                #  the way the database behaves in code)
+                data = self.__get_top_media(True, depth=depth+1)
+            else:
+                data = media_cache.get_top_media(num_highlights)
+                if num_highlights > 0 and not data:
+                    # empty database
+                    logger.id(logger.debug, self,
+                            'Removing \'{path}\': empty database',
                             path=self.__db_path,
-                            exc_info=True,
                     )
+
+                    try:
+                        os.remove(self.__db_path)
+
+                    except OSError as e:
+                        logger.id(logger.warn, self,
+                                'Could not remove empty database file'
+                                ' \'{path}\'',
+                                path=self.__db_path,
+                                exc_info=True,
+                        )
 
         return data
 

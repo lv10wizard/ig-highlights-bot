@@ -267,14 +267,25 @@ class Database(object):
         columns = set()
         col_start = tbl_defn.find('(')
         col_end = tbl_defn.rfind(')')
-        for col in tbl_defn[col_start+1 : col_end].split(','):
+        # XXX: hack to prevent CHECK(...) and UNIQUE(...) from being included
+        # as columns
+        col_defn = re.sub(
+                r'(?:CHECK|UNIQUE)\s*\(.+?\)',
+                '',
+                tbl_defn[col_start+1 : col_end]
+        )
+        for col in col_defn.split(','):
+            # don't count empty strings as a column (eg. stripped UNIQUE(...))
+            if not col.strip():
+                continue
+
             match = Database.COLUMN_RE.search(col)
             if not match:
                 # either COLUMN_RE needs updating or unexpected
                 # column definition
                 raise FailedVerificationCheck(
                         'Failed to determine column name from'
-                        ' \'{0}\''.format(col)
+                        ' \'{0}\' ({1})'.format(col, col_defn)
                 )
             columns.add(match.group(1))
 
