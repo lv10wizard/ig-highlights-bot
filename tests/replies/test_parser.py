@@ -1,6 +1,7 @@
 import praw
 import pytest
 
+from src.instagram import Instagram
 from src.replies import Parser
 
 
@@ -33,6 +34,14 @@ def test_parser_ig_links(haileypandolfi, viktoria_kay):
 def test_parser_ig_media_link(ig_media_link):
     p = Parser(ig_media_link)
 
+    assert not p.ig_links
+    assert not p.ig_usernames
+
+def test_parser_ignores_automod(parenthesis_user):
+    assert not Instagram.IG_LINK_REGEX.search(parenthesis_user.body_html)
+    assert Instagram.IG_USER_REGEX.search(parenthesis_user.body)
+
+    p = Parser(parenthesis_user)
     assert not p.ig_links
     assert not p.ig_usernames
 

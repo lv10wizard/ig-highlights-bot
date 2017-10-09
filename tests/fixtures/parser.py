@@ -61,3 +61,12 @@ def ig_media_link():
     with open(path, 'rb') as fd:
         return pickle.load(fd)
 
+@pytest.fixture(scope='session')
+def parenthesis_user():
+    """
+    praw.models.Comment posted by AutoModerator containing a soft-linked user
+    """
+    path = _pickle_path('parenthesis_user')
+    with open(path, 'rb') as fd:
+        return pickle.load(fd)
+

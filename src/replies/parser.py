@@ -101,6 +101,12 @@ class Parser(object):
     Parses reddit comments for instagram user links
     """
 
+    # list of authors whose comments should not be parsed for soft-links
+    # XXX: these should be in lower-case
+    IGNORE = [
+            'automoderator',
+    ]
+
     # XXX: I think creating these here is ok so long as this module is loaded
     # by the main process so that child processes inherit them. otherwise child
     # processes may create another version .. I think.
@@ -192,7 +198,10 @@ class Parser(object):
                     if match: # this check shouldn't be necessary
                         usernames.append(match.group(2))
 
-                if not usernames:
+                author = self.comment.author
+                author = author and author.name.lower()
+
+                if not usernames and author not in Parser.IGNORE:
                     # try looking username-like strings in the comment body in
                     # case the user soft-linked one or more usernames
                     # eg. '@angiegoesboom'

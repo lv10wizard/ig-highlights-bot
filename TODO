@@ -277,6 +277,14 @@ O. parse soft-linked users
 - add num_comments column to InstagramDatabase
     - highlights = ORDER BY num_likes DESC, num_comments DESC
         should get highest liked & most commented media first (ie, most popular)
+
+O. ignore AutoModerator '@username' soft-links
+    ! hard-links ok
+    O. fix IG_USER_REGEX to match '(@username)'
+    O. in ig_usernames: skip if comment.author.name.lower() == 'automoderator'
+        or better: ignore if .name.lower() in IGNORE_LIST
+    O. test: parenthesis_username.pickle
+
 X. reply-queue per-comment logging
     > how to prevent spam the log though?
     >> handled in 821f2ea (kind of)

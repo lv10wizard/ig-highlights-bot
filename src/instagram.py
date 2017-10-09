@@ -112,14 +112,16 @@ class Instagram(object):
     )
 
     IG_USER_REGEX = re.compile(
-            r'(?:^|\s+)@({0})(?:\s+|$)'.format(
-            # \_______/|\___/\_______/
-            #     |    |  |      \
-            #     |    |  |    match whitespace or end of string
-            #     |    | capture username
-            #     |  only match if username is preceded by '@'
-            #     |  -- basically limit guesses at username matches
-            #   match start of string or whitespace
+            r'(?:^|\s+|[(\[])@({0})(?:[)\]]|\s+|$)'.format(
+            # \_____________/|\___/\_____________/
+            #       |        |  |        \
+            #       |        |  |    match whitespace or end of string
+            #       |        |  |    or a set of acceptable ending delimiters
+            #       |        | capture username
+            #       |      only match if username is preceded by '@'
+            #       |      -- basically limit guesses at username matches
+            #     match start of string or whitespace or a set of acceptable
+            #     starting characters
                 _USERNAME_PTN,
             ),
     )
