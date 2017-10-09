@@ -89,6 +89,13 @@ class InstagramDatabase(Database):
         cursor = self._db.execute('SELECT MIN({0}) FROM cache'.format(col))
         return cursor.fetchone()[0]
 
+    def _get_avg(self, col):
+        """
+        Returns the avg value of the column
+        """
+        cursor = self._db.execute('SELECT AVG({0}) FROM cache'.format(col))
+        return cursor.fetchone()[0]
+
     @property
     def order_string(self):
         """
@@ -98,11 +105,19 @@ class InstagramDatabase(Database):
         """
         min_likes = self._get_min('num_likes')
         max_likes = self._get_max('num_likes')
-        weight_likes = 0.25
         min_comments = self._get_min('num_comments')
         max_comments = self._get_max('num_comments')
-        # comments seem to be a better indicator of activity/popularity
-        weight_comments = 1.0
+        # weight the likes value by the ratio of comments-to-likes to prevent
+        # very high comment, low-ish like count outliers from being sorted too
+        # high. these outliers are not typically indicative of the user's posts.
+        # XXX: 10.0 is an arbitrary value that seems to work. conceptually, it
+        # is the base scaling factor so that if num_comments == num_likes then
+        # the likes weight = 10. num_likes >= num_comments should be the typical
+        # case but the reverse should not cause any issues (it will just cause
+        # likes to be weighted > 10).
+        weight_likes = '10.0 * num_comments / num_likes'
+        # XXX: 0.75 is an arbitrary value that seems to work.
+        weight_comments = '0.75 / ({0})'.format(weight_likes)
 
         # sort the data by a combination of likes/comments count so that we
         # get a set that is ordered by most active first
