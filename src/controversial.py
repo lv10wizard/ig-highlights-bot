@@ -1,3 +1,5 @@
+from praw.models import Comment
+
 from src import reddit
 from src.config import parse_time
 from src.mixins import (
@@ -69,6 +71,10 @@ class Controversial(ProcessMixin, StreamMixin):
             for comment in self.stream:
                 if comment in seen or self._killed.is_set():
                     break
+
+                if not isinstance(comment, Comment):
+                    # don't try to delete non-comments (eg. FAQ post)
+                    continue
 
                 logger.id(logger.debug, self,
                         'Processing {color_comment} ({score}) ...',
