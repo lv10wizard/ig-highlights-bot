@@ -18,13 +18,15 @@ from src import (
 from src.util import logger
 
 
-ADD_SUBREDDIT = 'add-subreddit'
-RM_SUBREDDIT  = 'rm-subreddit'
-ADD_BLACKLIST = 'add-blacklist'
-RM_BLACKLIST  = 'rm-blacklist'
-DELETE_DATA   = 'delete-data'
-DUMP          = 'dump'
-IG_DB         = 'ig-db'
+ADD_SUBREDDIT   = 'add-subreddit'
+RM_SUBREDDIT    = 'rm-subreddit'
+ADD_BLACKLIST   = 'add-blacklist'
+RM_BLACKLIST    = 'rm-blacklist'
+DELETE_DATA     = 'delete-data'
+DUMP            = 'dump'
+IG_DB           = 'ig-db'
+IG_DB_LIKES     = 'ig-db-likes'
+IG_DB_COMMENTS  = 'ig-db-comments'
 
 DUMP_CHOICES = sorted(list(database.SUBCLASSES.keys()))
 try:
@@ -155,6 +157,7 @@ def do_print_database(path, query=''):
 
     connection = sqlite3.connect(path)
     connection.row_factory = sqlite3.Row
+
     try:
         # https://stackoverflow.com/a/305639
         tables = connection.execute(
@@ -239,7 +242,7 @@ def print_database(cfg, *databases):
             if os.path.exists(resolved_path):
                 do_print_database(resolved_path)
 
-def print_instagram_database(cfg, *user_databases):
+def print_instagram_database(cfg, order, *user_databases):
     if '*' in user_databases:
         # dump all instagram databases
         user_databases = IG_DB_CHOICES
@@ -247,23 +250,26 @@ def print_instagram_database(cfg, *user_databases):
     for user_db in user_databases:
         path = os.path.join(resolved_igdb_path, user_db)
         if os.path.exists(path):
-            igdb = database.InstagramDatabase(path)
-            if igdb.size() == 0:
-                igdb.close()
-                logger.info('Removing \'{path}\': empty database ...',
-                        path=path,
-                )
-                try:
-                    os.remove(path)
-                except (IOError, OSError):
-                    logger.exception('Failed to remove \'{path}\'!',
+            if not order:
+                # use the default order if none was specified
+                igdb = database.InstagramDatabase(path)
+                if igdb.size() == 0:
+                    igdb.close()
+                    logger.info('Removing \'{path}\': empty database ...',
                             path=path,
                     )
+                    try:
+                        os.remove(path)
+                    except (IOError, OSError):
+                        logger.exception('Failed to remove \'{path}\'!',
+                                path=path,
+                        )
 
-            else:
-                do_print_database(
-                        path, 'ORDER BY {0}'.format(igdb.order_string)
-                )
+                    continue
+                order = 'ORDER BY {0}'.format(igdb.order_string)
+
+            logger.debug(order)
+            do_print_database(path, order)
 
         else:
             path_raw = os.path.join(database.InstagramDatabase.PATH, user_db)
@@ -285,6 +291,13 @@ def handle(cfg, args):
             DELETE_DATA: delete_data,
             DUMP: print_database,
             IG_DB: print_instagram_database,
+            IG_DB_LIKES: print_instagram_database,
+            IG_DB_COMMENTS: print_instagram_database,
+    }
+    order = {
+            IG_DB: None,
+            IG_DB_LIKES: 'ORDER BY num_likes DESC',
+            IG_DB_COMMENTS: 'ORDER BY num_comments DESC',
     }
 
     had_handleable_opt = False
@@ -301,7 +314,10 @@ def handle(cfg, args):
                 )
             else:
                 try:
-                    handler_func(cfg, *opt_val)
+                    if opt_key in order:
+                        handler_func(cfg, order[opt_key], *opt_val)
+                    else:
+                        handler_func(cfg, *opt_val)
                 except TypeError:
                     # opt_val not iterable
                     handler_func(cfg, opt_val)
@@ -399,6 +415,18 @@ def parse():
             metavar='NAME', nargs='+', choices=ig_choices,
             help='Dump the specified instagram user databases to stdout.'
             ' Choices: {0}'.format(ig_choices),
+    )
+    parser.add_argument('--{0}'.format(IG_DB_LIKES), metavar='NAME',
+            nargs='+', choices=ig_choices,
+            help='Dump the specified instagram user databases to stdout'
+            ' sorted by most likes -> least likes.'
+            ' See --{0} for choices'.format(IG_DB),
+    )
+    parser.add_argument('--{0}'.format(IG_DB_COMMENTS), metavar='NAME',
+            nargs='+', choices=ig_choices,
+            help='Dump the specified instagram user databases to stdout'
+            ' sorted by most comments -> least comments.'
+            ' See --{0} for choices'.format(IG_DB),
     )
 
     args = vars(parser.parse_args())
