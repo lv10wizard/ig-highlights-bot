@@ -25,7 +25,10 @@ from src.util.version import get_version
 #               'can_view_comments': True,
 #               'caption': { ... },
 #               'code': 'BYtcWH_j31M',
-#               'comments': { ... },
+#               'comments': {
+#                   'count': 6969,
+#                   'data': [ ... ],
+#               },
 #               'created_time': '1504723393',
 #               'id': '1598058108499754316_3224256723',
 #               'images': { ... },
@@ -299,7 +302,7 @@ class Instagram(object):
 
     def __get_top_media(self):
         """
-        Returns the user's top-liked media (the exact number is defined in
+        Returns the user's most popular media (the exact number is defined in
                 the config)
                 or None if the fetch was interrupted
                 or False if the user's profile is private or not a user page

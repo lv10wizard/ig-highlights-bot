@@ -247,7 +247,8 @@ def print_instagram_database(cfg, *user_databases):
     for user_db in user_databases:
         path = os.path.join(resolved_igdb_path, user_db)
         if os.path.exists(path):
-            do_print_database(path, 'ORDER BY num_likes DESC')
+            igdb = database.InstagramDatabase(path)
+            do_print_database(path, 'ORDER BY {0}'.format(igdb.order_string))
 
         else:
             path_raw = os.path.join(database.InstagramDatabase.PATH, user_db)
@@ -295,7 +296,7 @@ def handle(cfg, args):
 def parse():
     parser = argparse.ArgumentParser(
             description='Instagram Highlights Bot, a reddit bot that will reply'
-            ' to comments linking to instagram accounts with their top-liked'
+            ' to comments linking to instagram accounts with their most popular'
             ' media.'
     )
 

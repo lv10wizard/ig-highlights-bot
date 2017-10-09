@@ -1,7 +1,7 @@
 ## Instagram Highlight Reddit Bot
 
 Replies to reddit comments linking to instagram account(s) with each instagram
-user's top liked media.
+user's most popular media.
 
 #### Dependencies
 
