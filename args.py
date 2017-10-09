@@ -26,7 +26,7 @@ DELETE_DATA   = 'delete-data'
 DUMP          = 'dump'
 IG_DB         = 'ig-db'
 
-DUMP_CHOICES = list(database.SUBCLASSES.keys())
+DUMP_CHOICES = sorted(list(database.SUBCLASSES.keys()))
 try:
     # disallow InstagramDatabase from --dump choices since they are handled
     # separately
@@ -37,10 +37,10 @@ except ValueError:
 
 resolved_igdb_path = config.resolve_path(database.InstagramDatabase.PATH)
 try:
-    IG_DB_CHOICES = [
+    IG_DB_CHOICES = sorted([
             name for name in os.listdir(resolved_igdb_path)
             if name.endswith('.db')
-    ]
+    ])
 except OSError:
     IG_DB_CHOICES = []
 
