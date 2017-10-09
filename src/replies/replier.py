@@ -42,7 +42,7 @@ class Replier(ProcessMixin, RedditInstanceMixin):
                 or None if there were no reply-able instagram usernames found
                     in the comment (this may happen if the program was
                     terminated before it was able to remove the comment from
-                    the queue database)
+                    the queue database or if the comment was deleted)
         """
         # this is (most likely) an extra network hit.
         # it only needs to occur if queue processing was interrupted
@@ -250,7 +250,17 @@ class Replier(ProcessMixin, RedditInstanceMixin):
 
             ig_list = self._get_instagram_data(comment)
 
-            if ig_list:
+            if ig_list is None:
+                # comment was probably deleted.
+                logger.id(logger.debug, self,
+                        'No instagram users found in \'{color_comment}!'
+                        ' Removing from reply-queue ...',
+                        color_comment=reddit.display_id(comment),
+                )
+                with self.reply_queue:
+                    self.reply_queue.delete(comment)
+
+            elif ig_list:
                 if None in ig_list:
                     # at least one user's fetch was interrupted.
                     # the comment was queued: cycle it to the back of the queue
