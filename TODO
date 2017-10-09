@@ -264,10 +264,10 @@ O. parse soft-linked users
     O. disable 404 badactor flagging since the bot is now guessing at usernames
         .. basically badactor flagging is turned off completely after this
 - test Parser.ig_{links,usernames}
-    - create script that takes comment_id & filename to create pickles
-        - c = Comment(comment_id)
-        - c.body
-        - with open('filename.py{ver}.pickle', 'wb') as fd:
+    O. create script that takes comment_id & filename to create pickles
+        O. c = Comment(comment_id)
+        O. c.body
+        O. with open('filename.py{ver}.pickle', 'wb') as fd:
             pickle.dump(c, fd)
     - with usernames
     - without usernames
