@@ -327,7 +327,10 @@ class Instagram(object):
         # we should only look up here
         if complete and os.path.exists(self.__db_path):
             num_highlights = Instagram.cfg.num_highlights_per_ig_user
-            media_cache = database.InstagramDatabase(self.__db_path)
+            try:
+                media_cache = self.__cache
+            except AttributeError:
+                media_cache = database.InstagramDatabase(self.__db_path)
             if media_cache.size() == 0:
                 # re-fetch an outdated existing cache
                 # (outdated meaning the cached version no longer reflects
