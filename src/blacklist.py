@@ -45,11 +45,14 @@ class Blacklist(object):
                 elif reddit.is_user_prefix(prefix):
                     result = BlacklistDatabase.TYPE_USER
 
-                logger.id(logger.debug, __name__,
-                        'name_type={color_nametype} for prefix=\'{prefix}\'',
-                        color_nametype=result,
-                        prefix=prefix,
-                )
+                # commenting out not-very-useful logging spam
+                # (this may be useful in the future to help in solving blacklist
+                #  bugs)
+                # logger.id(logger.debug, __name__,
+                #         'name_type={color_nametype} for prefix=\'{prefix}\'',
+                #         color_nametype=result,
+                #         prefix=prefix,
+                # )
             return result
 
         name_type = get_type(prefix)
