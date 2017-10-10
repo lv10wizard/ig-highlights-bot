@@ -96,6 +96,31 @@ class InstagramDatabase(Database):
         cursor = self._db.execute('SELECT AVG({0}) FROM cache'.format(col))
         return cursor.fetchone()[0]
 
+    def _get_q1(self, col):
+        """
+        Returns the 25th percentile (1st quartile) of the given column
+        """
+        # https://stackoverflow.com/a/15766121
+        cursor = self._db.execute(
+                'SELECT AVG({0}) FROM (SELECT {0} FROM cache ORDER BY {0}'
+                ' LIMIT 2 - (SELECT count(*) FROM cache) % 2'
+                ' OFFSET (SELECT (count(*)/2 - 1) / 2 FROM cache))'.format(col)
+        )
+        return cursor.fetchone()[0]
+
+    def _get_q3(self, col):
+        """
+        Returns the 75th percentile (3rd quartile) of the given column
+        """
+        # https://stackoverflow.com/a/15766121
+        cursor = self._db.execute(
+                'SELECT AVG({0}) FROM (SELECT {0} FROM cache ORDER BY {0}'
+                ' LIMIT 2 - (SELECT count(*) FROM cache) % 2'
+                ' OFFSET (SELECT (3*count(*)/2 - 1) / 2'
+                ' FROM cache))'.format(col)
+        )
+        return cursor.fetchone()[0]
+
     @property
     def order_string(self):
         """
@@ -103,42 +128,49 @@ class InstagramDatabase(Database):
 
         (This exists so that args.py can utilize it)
         """
-        min_likes = self._get_min('num_likes')
-        max_likes = self._get_max('num_likes')
-        min_comments = self._get_min('num_comments')
-        max_comments = self._get_max('num_comments')
-        # weight the likes value by the ratio of comments-to-likes to prevent
-        # very high comment, low-ish like count outliers from being sorted too
-        # high. these outliers are not typically indicative of the user's posts.
-        # XXX: 10.0 is an arbitrary value that seems to work. conceptually, it
-        # is the base scaling factor so that if num_comments == num_likes then
-        # the likes weight = 10. num_likes >= num_comments should be the typical
-        # case but the reverse should not cause any issues (it will just cause
-        # likes to be weighted > 10).
-        weight_likes = '10.0 * num_comments / num_likes'
-        # XXX: 0.75 is an arbitrary value that seems to work.
-        weight_comments = '0.75 / ({0})'.format(weight_likes)
+        # calculate the outer fences of the comment count so that we can gauge
+        # comment outliers. media which generate a very large amount of comments
+        # are either 1) controversial or some kind of high engagement piece of
+        # media (eg. a giveaway) or 2) extremely popular.
+        # https://www.wikihow.com/Calculate-Outliers
+        q1_comments = self._get_q1('num_comments')
+        q3_comments = self._get_q3('num_comments')
+        iqr_comments = q3_comments - q1_comments
+        outer_comments = (
+                q1_comments - 3*iqr_comments,
+                q3_comments + 3*iqr_comments
+        )
 
-        # sort the data by a combination of likes/comments count so that we
-        # get a set that is ordered by most active first
+        # normalize the column
         # https://stats.stackexchange.com/a/70807
         # XXX: multiply by 1.0 to force floating point calculations (in case the
         # weights are not floats)
         normalized_fmt = '{weight} * 1.0 * ({col} - {min}) / ({max} - {min})'
-        normalized_likes = normalized_fmt.format(
-                weight=weight_likes,
-                col='num_likes',
-                min=min_likes,
-                max=max_likes,
-        )
         normalized_comments = normalized_fmt.format(
-                weight=weight_comments,
+                weight=1.0,
                 col='num_comments',
-                min=min_comments,
-                max=max_comments,
+                min=self._get_min('num_comments'),
+                max=self._get_max('num_comments'),
         )
-        order = '{0} + {1}'.format(normalized_likes, normalized_comments)
-        order += ' DESC'
+
+        order = ('CASE'
+                # exclude outlier comments. this assumes that outliers exceeding
+                # this threshold are either controversial or otherwise not
+                # indicative of the user's media.
+                ' WHEN num_comments - {0} >= {1} THEN 0'
+                ' ELSE {2} END DESC'.format(
+                    outer_comments[1],
+                    # somewhat arbitrary threshold to exclude outliers
+                    outer_comments[1] - outer_comments[0],
+
+                    # scale the likes count [0,1] based on how far/close the
+                    # comments count is to its maximum value.
+                    # ie, low comment count relative to max -> 0 * likes
+                    #     high comment count                -> 1 * likes
+                    normalized_comments + ' * num_likes',
+                )
+        )
+
         return order
 
     def get_top_media(self, num):
