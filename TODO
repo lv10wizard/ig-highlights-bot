@@ -293,6 +293,10 @@ O. ignore AutoModerator '@username' soft-links
         or better: ignore if .name.lower() in IGNORE_LIST
     O. test: parenthesis_username.pickle
 
+- determine why there is a 3 ~ 5s delay between the Replier removing the comment
+    from the repy-queue and calling ._reply() when instagram data is fetched
+    (just looking up from database does not incur this delay)
+    > is this delay system dependant?
 X. reply-queue per-comment logging
     > how to prevent spam the log though?
     >> handled in 821f2ea (kind of)

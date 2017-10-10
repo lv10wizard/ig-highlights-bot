@@ -134,7 +134,7 @@ class Replier(ProcessMixin, RedditInstanceMixin):
             with self.potential_subreddits:
                 self.potential_subreddits.delete(submission)
 
-    def _reply(self, comment, ig_list):
+    def _reply(self, comment, ig_list, ig_list_usernames):
         """
         Replies to a single comment with (potentially) multiple instagram user
         highlights
@@ -146,7 +146,7 @@ class Replier(ProcessMixin, RedditInstanceMixin):
         logger.id(logger.info, self,
                 'Replying to {color_comment}: {color_list}',
                 color_comment=reddit.display_id(comment),
-                color_list=ig_list,
+                color_list=ig_list_usernames,
         )
 
         reply_list = self.formatter.format(ig_list)
@@ -269,18 +269,23 @@ class Replier(ProcessMixin, RedditInstanceMixin):
                         self.reply_queue.update(comment)
 
                 else:
-                    # remove the comment from the reply-queue if no instagram
-                    # users were queued since there should be no further need
-                    # to process it.
+                    # remove the comment from the reply-queue if we got data for
+                    # all valid instagram users.
+                    # XXX: delete the comment from the reply-queue before
+                    # replying in case the program is terminated before the
+                    # reply. this way, worst case, the bot just doesn't reply
+                    # instead of potentially replying multiple times with the
+                    # same text which could happen if the program dies just
+                    # after replying but before reply-queue removal.
                     with self.reply_queue:
                         self.reply_queue.delete(comment)
 
                     ig_list = list(filter(None, ig_list))
+                    ig_list_usernames = [ig.user for ig in ig_list]
                     if len(ig_usernames) != len(ig_list):
                         # there were some private/non-user pages linked in the
                         # comment
-                        ig_list_usernames = set(ig.user for ig in ig_list)
-                        missing = set(ig_usernames) - ig_list_usernames
+                        missing = set(ig_usernames) - set(ig_list_usernames)
                         logger.id(logger.info, self,
                                 '[{color_comment}] Skipping #{num}'
                                 ' user{plural}: {color_missing} ...',
@@ -311,7 +316,7 @@ class Replier(ProcessMixin, RedditInstanceMixin):
                         ):
                             self._add_potential_subreddit(submission)
 
-                    self._reply(comment, ig_list)
+                    self._reply(comment, ig_list, ig_list_usernames)
 
     def _run_forever(self):
         # XXX: instantiated here so that the _reddit instance is constructed
