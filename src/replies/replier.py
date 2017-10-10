@@ -36,7 +36,7 @@ class Replier(ProcessMixin, RedditInstanceMixin):
         self.reply_history = ReplyDatabase()
         self.reply_queue = ReplyQueueDatabase()
 
-    def _get_instagram_data(self, comment):
+    def _get_instagram_data(self, comment, ig_usernames):
         """
         Returns a list of instagram data for each user linked-to by the comment
                 or None if there were no reply-able instagram usernames found
@@ -44,22 +44,6 @@ class Replier(ProcessMixin, RedditInstanceMixin):
                     terminated before it was able to remove the comment from
                     the queue database or if the comment was deleted)
         """
-        # this is (most likely) an extra network hit.
-        # it only needs to occur if queue processing was interrupted
-        # previously by eg. program termination.
-        # (this is also duplicated work but it ensures that comments are
-        #  replied-to properly; ie, all instagram users linked to by the
-        #  comment are responded to)
-        ig_usernames = self.filter.replyable_usernames(
-                comment,
-                # don't bother with preliminary checks; they should have
-                # already passed
-                prelim_check=False,
-                # no need to check the comment thread for too many bot
-                # replies because it should have already been checked
-                check_thread=False,
-        )
-
         if not ig_usernames:
             logger.id(logger.debug, self,
                     'No reply-able instagram usernames found in'
@@ -248,7 +232,22 @@ class Replier(ProcessMixin, RedditInstanceMixin):
             if mention_id:
                 mention = self._reddit.comment(mention_id)
 
-            ig_list = self._get_instagram_data(comment)
+            # this is (most likely) an extra network hit.
+            # it only needs to occur if queue processing was interrupted
+            # previously by eg. program termination.
+            # (this is also duplicated work but it ensures that comments are
+            #  replied-to properly; ie, all instagram users linked to by the
+            #  comment are responded to)
+            ig_usernames = self.filter.replyable_usernames(
+                    comment,
+                    # don't bother with preliminary checks; they should have
+                    # already passed
+                    prelim_check=False,
+                    # no need to check the comment thread for too many bot
+                    # replies because it should have already been checked
+                    check_thread=False,
+            )
+            ig_list = self._get_instagram_data(comment, ig_usernames)
 
             if ig_list is None:
                 # comment was probably deleted.
@@ -276,21 +275,29 @@ class Replier(ProcessMixin, RedditInstanceMixin):
                     with self.reply_queue:
                         self.reply_queue.delete(comment)
 
-                    orig_list = ig_list
                     ig_list = list(filter(None, ig_list))
-                    if len(orig_list) != len(ig_list):
+                    if len(ig_usernames) != len(ig_list):
                         # there were some private/non-user pages linked in the
                         # comment
-                        if not ig_list:
-                            # no user links to post
-                            return
-
-                        missing = set(orig_list) - set(ig_list)
+                        ig_list_usernames = set(ig.user for ig in ig_list)
+                        missing = set(ig_usernames) - ig_list_usernames
                         logger.id(logger.info, self,
-                                'Skipping replies for the following users:'
-                                '\n{color_missing}',
+                                '[{color_comment}] Skipping #{num}'
+                                ' user{plural}: {color_missing} ...',
+                                color_comment=reddit.display_id(comment),
+                                num=len(missing),
+                                plural=('' if len(missing) == 1 else 's'),
                                 color_missing=missing,
                         )
+
+                    if not ig_list:
+                        # no user links to post
+                        logger.id(logger.info, self,
+                                'Not replying to {color_comment}:'
+                                ' no instagram data to post!',
+                                color_comment=reddit.display_id(comment),
+                        )
+                        return
 
                     if mention:
                         # successfully summoned to a subreddit (ie, found an
