@@ -146,6 +146,12 @@ class InstagramDatabase(Database):
         # XXX: multiply by 1.0 to force floating point calculations (in case the
         # weights are not floats)
         normalized_fmt = '{weight} * 1.0 * ({col} - {min}) / ({max} - {min})'
+        normalized_likes = normalized_fmt.format(
+                weight=1.0,
+                col='num_likes',
+                min=self._get_min('num_likes'),
+                max=self._get_max('num_likes'),
+        )
         normalized_comments = normalized_fmt.format(
                 weight=1.0,
                 col='num_comments',
@@ -154,14 +160,15 @@ class InstagramDatabase(Database):
         )
 
         order = ('CASE'
-                # exclude outlier comments. this assumes that outliers exceeding
-                # this threshold are either controversial or otherwise not
-                # indicative of the user's media.
-                ' WHEN num_comments - {0} >= {1} THEN 0'
-                ' ELSE {2} END DESC'.format(
+                # exclude outlier comments
+                ' WHEN num_comments - {0} >= {1} AND {2} < 0.4 THEN 0'
+                ' ELSE {3} END DESC'.format(
                     outer_comments[1],
                     # somewhat arbitrary threshold to exclude outliers
                     outer_comments[1] - outer_comments[0],
+                    # only exclude if likes are low. highly liked posts are
+                    # usually prototypical of the user's overall media.
+                    normalized_likes,
 
                     # scale the likes count [0,1] based on how far/close the
                     # comments count is to its maximum value.
