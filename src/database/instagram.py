@@ -182,11 +182,15 @@ class InstagramDatabase(Database):
                     # normalize so that we can meaningfully compare the value
                     normalized_likes=normalized_likes,
 
-                    # scale the likes count [0,1] based on how far/close the
+                    # scale the likes count [0.1, 1] based on how far/close the
                     # comments count is to its maximum value.
-                    # ie, low comment count relative to max -> 0 * likes
+                    # ie, low comment count relative to max -> 0.1 * likes
                     #     high comment count                -> 1 * likes
-                    default_order=normalized_comments + ' * num_likes',
+                    # XXX: 0.1 is the capped scale lower bound to account for
+                    # the minimum num_comments being 0
+                    default_order=(
+                        'MAX(0.1, {0}) * num_likes'.format(normalized_comments)
+                    ),
                 )
         )
 
