@@ -161,20 +161,32 @@ class InstagramDatabase(Database):
 
         order = ('CASE'
                 # exclude outlier comments
-                ' WHEN num_comments - {0} >= {1} AND {2} < 0.25 THEN 0'
-                ' ELSE {3} END DESC'.format(
-                    outer_comments[1],
+                ' WHEN (num_comments - {fence} >= {outlier_threshold}'
+                # or media that has too high of a comment-to-like ratio
+                # (these usually are not prototypical of the user's posts)
+                ' OR 1.0 * (num_comments - {avg_comments}) / num_likes >= 0.08)'
+                # but only if the like-count isn't very high; highly liked posts
+                # are usually prototypical of the user's overall media.
+                ' AND {normalized_likes} < 0.25'
+                ' THEN 0'
+
+                ' ELSE {default_order} END DESC'.format(
+                    fence=outer_comments[1],
                     # somewhat arbitrary threshold to exclude outliers
-                    outer_comments[1] - outer_comments[0],
-                    # only exclude if likes are low. highly liked posts are
-                    # usually prototypical of the user's overall media.
-                    normalized_likes,
+                    # (this just ensures that it is indeed an outlier)
+                    outlier_threshold=outer_comments[1] - outer_comments[0],
+                    # somewhat arbitrary base amount from which to judge the
+                    # comments-to-likes ratio. this value makes the comparison
+                    # apply more specifically to the user.
+                    avg_comments=self._get_avg('num_comments'),
+                    # normalize so that we can meaningfully compare the value
+                    normalized_likes=normalized_likes,
 
                     # scale the likes count [0,1] based on how far/close the
                     # comments count is to its maximum value.
                     # ie, low comment count relative to max -> 0 * likes
                     #     high comment count                -> 1 * likes
-                    normalized_comments + ' * num_likes',
+                    default_order=normalized_comments + ' * num_likes',
                 )
         )
 
