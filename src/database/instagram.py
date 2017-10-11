@@ -161,7 +161,7 @@ class InstagramDatabase(Database):
 
         order = ('CASE'
                 # exclude outlier comments
-                ' WHEN num_comments - {0} >= {1} AND {2} < 0.4 THEN 0'
+                ' WHEN num_comments - {0} >= {1} AND {2} < 0.25 THEN 0'
                 ' ELSE {3} END DESC'.format(
                     outer_comments[1],
                     # somewhat arbitrary threshold to exclude outliers
