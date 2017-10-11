@@ -1,6 +1,10 @@
+import time
+
 from six import string_types
 
 from ._database import Database
+from src.config import parse_time
+from src.util import logger
 
 
 class InstagramQueueDatabase(Database):
@@ -11,6 +15,7 @@ class InstagramQueueDatabase(Database):
     """
 
     PATH = Database.PATH_FMT.format('ig-queue.db')
+    STALE_THRESHOLD = parse_time('1d')
 
     @staticmethod
     def _do_callback(callback, ig_usernames):
@@ -59,6 +64,7 @@ class InstagramQueueDatabase(Database):
             )
             return bool(cursor.fetchone())
 
+        self.__reset_stale_data()
         return self._do_callback(contains_user, ig_usernames)
 
     @property
@@ -66,16 +72,48 @@ class InstagramQueueDatabase(Database):
         return (
                 'queue('
                 '   ig_user TEXT PRIMARY KEY NOT NULL COLLATE NOCASE,'
-                '   last_id TEXT'
+                '   last_id TEXT,'
+                '   timestamp REAL NOT NULL'
                 ')'
         )
+
+    def __reset_stale_data(self):
+        """
+        Resets queued user data that is considered stale.
+        """
+        cursor = self._db.execute('SELECT ig_user, timestamp FROM queue')
+        # looping manually over each item instead of a single UPDATE ... WHERE
+        # query is probably slower but allows logging exactly which users were
+        # modified.
+        stale = set()
+        for row in cursor:
+            elapsed = time.time() - row['timestamp']
+            if elapsed >= InstagramQueueDatabase.STALE_THRESHOLD:
+                stale.add(row['ig_user'])
+
+        if stale:
+            logger.id(logger.debug, self,
+                    'Resetting last_id of #{num} user{plural}: {color}',
+                    num=len(stale),
+                    plural=('' if len(stale) == 1 else 's'),
+                    color=stale,
+            )
+            # reset the last_id of each stale user so that the next fetch for
+            # them starts from the beginning
+            with self._db:
+                for ig_user in stale:
+                    self._db.execute(
+                            'UPDATE queue SET last_id = ? timestamp = ?'
+                            ' WHERE ig_user = ?',
+                            (None, time.time(), ig_user),
+                    )
 
     def _insert(self, ig_user, last_id=None):
         if ig_user not in self:
             self._db.execute(
-                    'INSERT INTO queue(ig_user, last_id)'
-                    ' VALUES(?, ?)',
-                    (ig_user, last_id),
+                    'INSERT INTO queue(ig_user, last_id, timestamp)'
+                    ' VALUES(?, ?, ?)',
+                    (ig_user, last_id, time.time()),
             )
         else:
             self.update(ig_user, last_id)
@@ -91,8 +129,9 @@ class InstagramQueueDatabase(Database):
 
     def _update(self, ig_user, last_id=None):
         self._db.execute(
-                'UPDATE queue SET last_id = ? WHERE ig_user = ?',
-                (last_id, ig_user),
+                'UPDATE queue SET last_id = ?, timestamp = ?'
+                ' WHERE ig_user = ?',
+                (last_id, time.time(), ig_user),
         )
 
     def size(self):
@@ -107,6 +146,8 @@ class InstagramQueueDatabase(Database):
         Returns the last_id stored for the given ig_user
                 or None if the ig_user is not in the database
         """
+        self.__reset_stale_data()
+
         last_id = None
         cursor = self._db.execute(
                 'SELECT last_id FROM queue WHERE ig_user = ?',
