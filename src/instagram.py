@@ -118,6 +118,7 @@ class Instagram(object):
                 '|'.join(BASE_URLS),
                 _USERNAME_PTN,
             ),
+            flags=re.IGNORECASE,
     )
 
     IG_USER_REGEX = re.compile(
@@ -133,9 +134,49 @@ class Instagram(object):
             #     starting characters
                 _USERNAME_PTN,
             ),
+            flags=re.IGNORECASE,
     )
 
-    IG_USER_STRING_REGEX = re.compile(r'^({0})$'.format(_USERNAME_PTN))
+    _INSTAGRAM_KEYWORD = r'(?:insta(?:gram)?|ig)'
+    #                         \____________/  \
+    #                               |       match 'ig'
+    #                           match 'insta' or 'instagram'
+
+    # _IG_KEYWORD*: strings that are likely to indicate the the contained string
+    # has an instagram username in it.
+    _IG_KEYWORD_PREFIX = r'(?:{0}:?\s*)'.format(_INSTAGRAM_KEYWORD)
+    #                         \_/ \\_/
+    #                          |  / |
+    #                          |  \ optionally match any spaces
+    #                          | optionally match ':'
+    #                       match instagram keywords
+    _IG_KEYWORD_SUFFIX = r'(?:\s+on\s+{0}[!.]?)'.format(_INSTAGRAM_KEYWORD)
+    #                         \_________/\___/
+    #                              |       \
+    #                              |    optionally match '!' or '.'
+    #                         match ' on instagram'
+
+    HAS_IG_KEYWORD_REGEX = re.compile(
+            '(?!.*[?])(?:^{0})|(?:{1}$)'.format(
+                _IG_KEYWORD_PREFIX,
+                _IG_KEYWORD_SUFFIX,
+            ),
+            flags=re.IGNORECASE,
+    )
+    IG_USER_STRING_REGEX = re.compile(
+            r'^(?:{1})?@?({0})(?:{2})?$'.format(
+            # |\______/\_____/\______/ \
+            # |   |       |      |  match entire string
+            # |   |       |    optionally match ' on instagram'
+            # |   |    capture possible username string as group 1
+            # \  optionally match 'instagram: '
+            # match entire string
+                _USERNAME_PTN,
+                _IG_KEYWORD_PREFIX,
+                _IG_KEYWORD_SUFFIX,
+            ),
+            flags=re.IGNORECASE
+    )
 
     @staticmethod
     def has_server_error():
@@ -308,7 +349,26 @@ class Instagram(object):
             self.__cached_top_media = media
         return media
 
-    def __get_top_media(self, force_fetch=False, depth=0):
+    @property
+    def __username_is_ok(self):
+        """
+        Returns True if there is no cached database for the user or if the
+                user's cache is not flagged as bad (private, no-data, or non-
+                existant)
+        """
+        ok = True
+        if os.path.exists(self.__db_path):
+            try:
+                media_cache = self.__cache
+            except AttributeError:
+                media_cache = database.InstagramDatabase(self.__db_path)
+                self.__cache = media_cache
+
+            ok = not media_cache.is_flagged_as_bad
+
+        return ok
+
+    def __get_top_media(self, forced_fetch=False, depth=0):
         """
         Returns the user's most popular media (the exact number is defined in
                 the config)
@@ -323,17 +383,41 @@ class Instagram(object):
 
         data = False
         complete = True
-        # re-fetch the user's data if expired or we were given an initial
-        # last_id indicating that the user's last fetch was queued
-        if force_fetch or self.__is_expired or self.user in Instagram._ig_queue:
+        is_ok = self.__username_is_ok
+        if (
+                # the cache has expired (or doesn't exist)
+                self.__is_expired or (
+                    # or the cache is not flagged as bad and either
+                    is_ok and (
+                        # the fetch was forced
+                        forced_fetch
+                        # or the last fetch was interrupted
+                        or self.user in Instagram._ig_queue
+                        # XXX: these two cases should only happen if the cache
+                        # was never flagged as bad
+                    )
+                )
+        ):
             complete = self.__fetch_data()
             if not complete:
                 # fetch failed; return this value
                 data = complete
 
+        elif not is_ok:
+            logger.id(logger.debug, self,
+                    'Skipping fetch for {color_user}: flagged as bad.',
+                    color_user=self.user,
+            )
+
         # don't create a new database file if one does not exist;
         # we should only look up here
-        if complete and os.path.exists(self.__db_path):
+        if (
+                complete
+                and os.path.exists(self.__db_path)
+                # XXX: check again if the cache is ok in case the user changed
+                # their profile to private
+                and self.__username_is_ok
+        ):
             num_highlights = Instagram.cfg.num_highlights_per_ig_user
             try:
                 media_cache = self.__cache
@@ -363,6 +447,18 @@ class Instagram(object):
                                 path=self.__db_path,
                                 exc_info=True,
                         )
+
+                elif (
+                        hasattr(data, '__iter__')
+                        and database.InstagramDatabase.BAD_FLAG in data
+                ):
+                    # tried to get data for a user that was flagged as bad.
+                    # this shouldn't happen
+                    logger.id(logger.warn, self,
+                            'Attempted to return top-media for a private/'
+                            'non-profile/non-existant user!',
+                    )
+                    data = False
 
         return data
 
@@ -717,6 +813,18 @@ class Instagram(object):
                 self.__enqueue()
                 raise
 
+        if success is False:
+            try:
+                self.__cache.flag_as_bad()
+
+            except AttributeError:
+                # no cache was created.
+                # I don't think this should happen...
+                logger.id(logger.warn, self,
+                        'Could not flag as bad username!',
+                        # XXX: the exception info won't be very useful
+                        exc_info=True,
+                )
         return success
 
     def __parse_data(self, data, stop_at_first_duplicate=False):
@@ -742,15 +850,12 @@ class Instagram(object):
             self.__last_id = last_id
 
             try:
-                cache = self.__cache
-
+                self.__cache
             except AttributeError:
-                cache = database.InstagramDatabase(self.__db_path)
-                self.__cache = cache
+                self.__cache = database.InstagramDatabase(self.__db_path)
 
             try:
                 seen = self.__seen
-
             except AttributeError:
                 if not stop_at_first_duplicate:
                     # XXX: this is persistent in case the fetch is interrupted
@@ -758,7 +863,6 @@ class Instagram(object):
                     seen = database.InstagramDatabase(self.__seen_db_path)
                 else:
                     seen = None
-
                 self.__seen = seen
 
             with self.__cache:
@@ -842,13 +946,7 @@ class Instagram(object):
                     status=data['status'],
                     items=data['items'],
             )
-
-            # user may have changed profile to private
-            try:
-                cache = self.__cache
-            except AttributeError:
-                cache = None
-            self.__remove_cache_if_exists(self.__db_path, cache)
+            # user's profile may be private or may be a non-user page
             last_id = False
 
         return last_id

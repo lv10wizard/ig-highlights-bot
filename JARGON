@@ -1,0 +1,170 @@
+# This file contains one jargon regex per line.
+# Anything after '#' is a comment (ignored by code)
+# Empty lines and leading/trailing whitespace are also ignored.
+
+
+\d+[A-Za-z]+(?:\d+me)? # '2spooky4me', '3cute5me', etc
+(?:\d+me_?irl\d+)?me_?i+rl # 'me_irl', '2me_irl4meirl', etc
+afai(?:cr|cs|ct|k|r) # as far as i ...
+afk
+a[fs]af*p # 'afap', 'asap', 'asafp'
+a+h+
+aslp?
+atm
+a+w+
+awol
+b+a+e+
+badass
+(?:b+a+)?z+i+n+g+a*
+b+e+c+a+u+s+e+
+bitcoin
+br[bls]
+b+r+(?:[eau]+|e+w+|o{2,})h* # 'bruh', 'brooooo', 'breeeeehh', etc
+bs
+bsdm
+bsod
+btw
+b+u+l+(?:s+h+e*i+e*t+)? # 'bull', 'buuuullshiiitt', etc
+bu+t+e+r+f+a+c+e+
+cgi
+c+o{2,}l+ # 'cooooool', etc
+co+lsto+ry+b+r+(?:[eaou]+|e+w+)h* # coolstorybro
+c+u+t+i*e+(?:p+i+e+)?
+c+u+[sz]+
+d+a+(?:y+[au]*h*)?m+n*
+da+t?\w{3,} # 'datass', 'daaaateverything', 'dafuq', etc
+di+nga+li+ng
+dmhs
+d+u+d+e+
+d+u+h+
+eli5
+emoji
+e+n+h+a+n+c+e+
+(?:f+a+p+)+ # 'fap', 'fapfapfap', 'faaappp', etc
+f+a+k+e+
+f+a+m+
+ffs
+f+m+l+
+f+r+i+e+n+d+z+o+n+e+d*
+fubar
+f+u+(?:c+k+|h+)?
+fwiw
+g+a+g+
+g+a+y+
+g+[aou]+[hw]*[dt]+(?:d+a+(?:y+[au]*h*)?m+n*) # 'guhhd', 'gahdamn'
+g+b?t+f+o+ # get (blown) the fuck out
+[gj]e+[sz](?:u[sz])? # 'geez', 'jeez', 'gees', 'geeeezus', etc
+gf?g # good (fucking) game
+gf[uy] # go fuck yourself
+gj
+gl(?:hf)?
+g+o+t+e+m+ # 'gottem', 'gotem', 'goooottem', etc
+g+o+t+c+h+[au]+(?:f+a+m+)? # 'gotchufam', etc
+gracias
+grat[sz]+
+(?:he)?ded # 'heded', 'ded'
+h+(?:a+w+|o+)t+ # 'hooott', 'hawwwt', etc
+h+e+l+o+ # 'hellloooooooo', etc
+h*m+ # 'hmm', 'mmmm', etc
+hm\w # hold my ...
+h*u*n+g*f*h* # 'hnnngg', 'unghhh', 'nnggghh', 'unnggfffhh', etc
+h+o+w+
+hth # hope that helps
+i?ama
+ianal
+idf?[ck] # i don't (fucking) care/know
+iirc
+im(?:ns)h?o # in my (not so humble) opinion
+j+a+w+e+s+o+m+e+
+jk
+jesus(?:ch?rist)?
+kthxbye
+l+a+w+d+y*
+(?:lm)?ftfy # 'lmftfy', 'ftfy'
+lmgtfy
+lmk
+make\w+?again # 'make[words]again' #FuckDonaldTrump
+malware
+m+a+m+a+(?:[cs]+i+t+a+)?
+m*e+h+
+m[fr]w
+mma
+m+o+a*r+e* # 'moaaaarrr', 'morrreeee', etc
+mvp
+n+a+h+
+n+a+m+e+
+n+e+a+t+o*
+n+e+r+d+
+n+o*i+c+e+
+n+o+
+n?sf[lw]
+n+v+m+
+o[_\.\-]o # faces eg. 'o_O', 'o.o'
+o+h+
+o*k+(?:[ae]+y+)? # 'ok', 'ooooook', 'okey', etc
+otoh
+omw
+o+w+(?:i+e+)? # 'ow', 'oww', 'owww', etc
+p2p
+p+a+w*g+
+p+e+r+v+(?:e+r+t+)?
+(?:p+h+o+t+o+)?s+h+o+p+e+d+ # 'photoshopped', 'shopped', etc
+p+l+[sz]+
+pov
+ppl
+pwn(?:ed|t)?
+qft
+rtf?m # read the fine manual
+rule\d+ # 'rule34', etc
+s+c*h+w+i+f+t+y+
+s+c*h+l+u+r+p+
+s+h+e*i+e*t+ # 'shiieeeeet'
+(?:s+h+)?r+e+k+t+ # 'shrekt', 'rekt'
+smf?h
+snafu
+s+o+
+spo+py # 'spoopy', 'spoooopy', etc
+s+t+f+u+
+tb[hf]
+tb
+th?(?:ankz|n?x) # 'tnx', 'tx', 'thankz', 'tankz', 'thnx', ...
+t+h+i+c+ # T H I C C
+thott?(?:ie|y)? # 'thot', 'thottie', 'thotty'
+tfw
+tgif
+t+i+(?:g+h+t+|t+e+) # 'tight', 'tite'
+til
+tldr
+tmi
+tryna
+tty?[ls]
+ty(?:vm)?
+u+[hm]+(?:o+h+)? # 'uuuuuh', 'uuuuuhhhhh', 'uhoh', 'ummmm', etc
+vip
+vlog
+wa*i+f+(?:e*y+|u+) # 'waifuuuu', 'wifey', etc
+w+e+l+ # 'welllll', etc
+w+h*[au]+t+ # 'whaaaat', 'waaaaat', 'wuuuuuuuutttt', etc
+w+h*e+l+p+
+w+h*o+a+h*
+w*h*y+ # 'whyyyy', 'wwwhhhyyyyy', 'yyyyyyy', etc
+w*o{2,}f+ # 'oof', 'woof', 'wwoooof', etc
+wo+sh # 'woosh', 'wooooosh', etc
+wo+ps # 'woops', 'wooooops', etc
+w+o+w+(?:[sz]+[ae]+[hr]*)?[sz]? # 'wwwoooowww', 'wowserz', 'wowwza', etc
+wtc # where to cop
+w+t+[fh]+(?:o+m+f*g+)? # 'wtf', 'wwwtf', wtttttf', 'wtfomfg', etc
+y+[ae]+e*[hsy]+ # 'yaaaas', 'yeeeeesssss', 'yeahhhh', etc
+y+[aeu]+[hp]+ # 'yuuuhh', 'yeeeppp', yaaaahhh', etc
+y*[iu]+c+k+(?:i+e+|y+)? # 'ick', 'yucky', etc
+y+i+p+(?:i+e+|y+) # 'yippieeee', etc
+y+o+l+o+
+y+tho
+yw
+z*o+m+f*g+(?:w+t+f+)? # 'omg', 'ooomg', 'omfffg', 'omgwtf', etc
+z+o+m+ # 'zooooom', etc
+
+# XXX: not actually jargon but common misspellings
+anem # amen
+oop # oops
+

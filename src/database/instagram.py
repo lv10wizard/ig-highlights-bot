@@ -3,6 +3,7 @@ import os
 from six import string_types
 
 from ._database import Database
+from src.util import logger
 
 
 class InstagramDatabase(Database):
@@ -11,6 +12,8 @@ class InstagramDatabase(Database):
     """
 
     PATH = Database.PATH_FMT.format('instagram')
+
+    BAD_FLAG = ':+$%!!!!!~BAD~!~USERNAME~!!!!!%$+:'
 
     @property
     def _create_table_data(self):
@@ -213,6 +216,80 @@ class InstagramDatabase(Database):
                 media.append(row['link'])
 
         return media
+
+    @property
+    def is_flagged_as_bad(self):
+        """
+        Returns whether the cache is flagged as a bad user (private, no data, or
+                non-existant username)
+        """
+        cursor = self._db.execute(
+                'SELECT code FROM cache WHERE code = ?',
+                (InstagramDatabase.BAD_FLAG,),
+        )
+        return bool(cursor.fetchone())
+
+    def flag_as_bad(self, is_update=False):
+        """
+        Flags the cache as bad (private, no data, or non-existant user)
+        """
+        is_flagged = self.is_flagged_as_bad
+        if is_update or not is_flagged:
+            with self._db:
+                if not is_flagged:
+                    logger.id(logger.debug, self, 'Flagging as bad ...')
+                    # clear the cache so that the flag is the only element
+                    cursor = self._db.execute('DELETE * FROM cache')
+                    if cursor.rowcount > 0:
+                        # this probably means that the user made their account
+                        # private
+                        logger.id(logger.warn, self,
+                                'Removed #{num} row{plural}!',
+                                num=cursor.rowcount,
+                                plural=('' if cursor.rowcount == 1 else 's'),
+                        )
+                    # XXX: co-opt the existing columns to flag that the username
+                    # should not be retried any time soon.
+                    self._db.execute(
+                            'INSERT INTO'
+                            ' cache(code, link, num_likes, num_comments,'
+                            ' created) VALUES(?, ?, ?, ?, ?)',
+                            (
+                                InstagramDatabase.BAD_FLAG,
+                                InstagramDatabase.BAD_FLAG,
+                                -1,
+                                -1,
+                                time.time(),
+                            ),
+                    )
+
+                else:
+                    logger.id(logger.debug, self,
+                            'Username is still bad: updating flag time ...',
+                    )
+                    self._db.execute(
+                            'UPDATE SET created = ? WHERE code = ?',
+                            (time.time(), InstagramDatabase.BAD_FLAG),
+                    )
+
+        else:
+            cursor = self._db.execute(
+                    'SELECT created FROM cache WHERE code = ?',
+                    (InstagramDatabase.BAD_FLAG,),
+            )
+            row = cursor.fetchone()
+
+            msg = ['Attempted to flag as bad again!']
+            if row:
+                msg.append('(flagged @ {strftime})')
+                flag_time = row['created']
+            else:
+                flag_time = None
+            logger.id(logger.warn, self,
+                    ' '.join(msg),
+                    strftime='%m/%d, %H:%M:%S',
+                    strf_time=flag_time,
+            )
 
 
 __all__ = [

@@ -59,11 +59,32 @@ def parenthesis_user():
     return _load_pickle('parenthesis_user')
 
 @pytest.fixture(scope='session')
+def yassibenitez():
+    """
+    praw.models.Comment containing a soft-linked user
+    """
+    return _load_pickle('yassibenitez')
+
+@pytest.fixture(scope='session')
 def vyvan_le():
     """
     praw.models.Comment containing a soft-linked user without '@'
     """
     return _load_pickle('vyvan.le')
+
+@pytest.fixture(scope='session')
+def hanny_madani():
+    """
+    praw.models.Comment containing a soft-linked user without '@'
+    """
+    return _load_pickle('hanny_madani')
+
+@pytest.fixture(scope='session')
+def kaja_sbn():
+    """
+    praw.models.Comment containing a soft-linked user without '@'
+    """
+    return _load_pickle('kaja_sbn')
 
 @pytest.fixture(scope='session')
 def thanks_():
@@ -92,4 +113,11 @@ def whosethat():
     praw.models.Comment containing the string 'Who is that?'
     """
     return _load_pickle('whosethat')
+
+@pytest.fixture(scope='session')
+def on_insta_rant():
+    """
+    praw.models.Comment rant containing the string 'on Insta'
+    """
+    return _load_pickle('on_insta_rant')
 

@@ -16,12 +16,62 @@ from six.moves.urllib.parse import urlparse
 
 from src import reddit
 from src.config import parse_time
+from src.database import SubredditsDatabase
 from src.instagram import Instagram
 from src.util import (
         logger,
         remove_duplicates,
 )
 
+
+def load_jargon():
+    import os
+
+    from constants import JARGON_DEFAULTS_PATH
+
+    jargon = []
+    logger.id(logger.debug, __name__,
+            'Loading jargon from \'{path}\' ...',
+            path=JARGON_DEFAULTS_PATH,
+    )
+    try:
+        with open(JARGON_DEFAULTS_PATH, 'r') as fd:
+            for i, line in enumerate(fd):
+                try:
+                    comment_idx = line.index('#')
+                except ValueError:
+                    # no comment in line
+                    comment_idx = len(line)
+
+                # too spammy
+                # comment = line[comment_idx:].strip()
+                # if comment:
+                #     logger.id(logger.debug, __name__,
+                #             'Skipping comment: \'{comment}\'',
+                #             comment=comment,
+                #     )
+
+                regex = line[:comment_idx].strip()
+                if regex:
+                    # too spammy
+                    # logger.id(logger.debug, __name__,
+                    #         'Adding jargon: \'{regex}\'',
+                    #         regex=regex,
+                    # )
+                    if regex.endswith(','):
+                        logger.id(logger.warn, __name__,
+                                'line #{i} ends with \',\'!',
+                                i=i+1,
+                        )
+                    jargon.append(regex)
+
+    except (IOError, OSError):
+        logger.id(logger.exception, __name__,
+                'Failed to load jargon file: \'{path}\'!',
+                path=JARGON_DEFAULTS_PATH,
+        )
+
+    return jargon
 
 class _Cache(object):
     """
@@ -114,17 +164,67 @@ class Parser(object):
     _link_cache = _Cache('links')
     _username_cache = _Cache('usernames')
 
+    _subreddits = SubredditsDatabase(do_seed=False)
+
     _en_US = None # 'murican
     _en_GB = None # british
+    # XXX: internet acronyms evolve rapidly. this regex is not and will never
+    # be comprehensive.
+    _LAUGH_VOWELS = 'aeou'
+    _LAUGH_CONSONANTS = 'hjkxz'
+    _JARGON_VARIATIONS = [
+            # https://stackoverflow.com/a/16453542
+            '(?:l+[ouea]+)+l+z*', # 'lol', 'lllool', 'lololol', etc
+            #   / \_____/ | \ \
+            #   \    |    |  \ optionally match trailing 'z's
+            #   \    |    | match any number of trailing 'l's
+            #   /    |  repeat 'lo', 'llooooo', etc
+            #   \  match 'lol', 'lul', 'lel', lal'
+            #  match any number of leading 'l's
+
+            'r+o+t*f+l+', # 'rofl', 'rotfl', 'rooofl', etc
+            'l+m+f*a+o+', # 'lmao', 'lmfao', 'lmaooooo', etc
+    ]
+    _JARGON_FROM_FILE = load_jargon()
+    _JARGON_VARIATIONS_WHOLE = [
+            # https://stackoverflow.com/a/16453542
+            # 'haha', 'bahaha', 'jajaja', 'kekeke', etc
+            '\w?[{0}]*(?:[{1}][{0}]+r*)+[{1}]?'.format(
+            #\_______/\________________/   \
+            #    |             |       optionally match ending consonant
+            #    |    match any number of 'ha', 'haa', 'haaa', etc
+            # optionally match leading 'ba', 'baa', 'faaa', etc
+
+                _LAUGH_VOWELS,
+                _LAUGH_CONSONANTS,
+            ),
+    ] + _JARGON_FROM_FILE
+
+    for i, regex in enumerate(_JARGON_VARIATIONS_WHOLE):
+        _JARGON_VARIATIONS.append(r'\b{0}\b'.format(regex))
+
+    _JARGON_REGEX = re.compile(
+            '^{0}$'.format('|'.join(_JARGON_VARIATIONS)), flags=re.IGNORECASE
+    )
 
     @staticmethod
     def is_english(word):
+        """
+        Returns True if the word is an english word
+        """
         if not Parser._en_US:
             Parser._en_US = enchant.Dict('en_US')
         if not Parser._en_GB:
             Parser._en_GB = enchant.Dict('en_GB')
 
         return Parser._en_US.check(word) or Parser._en_GB.check(word)
+
+    @staticmethod
+    def is_jargon(word):
+        """
+        Returns True if the word looks like internet jargon
+        """
+        return Parser._JARGON_REGEX.search(word)
 
     def __init__(self, comment):
         self.comment = comment
@@ -235,20 +335,19 @@ class Parser(object):
                         usernames = Instagram.IG_USER_REGEX.findall(
                                 self.comment.body
                         )
-                        if not usernames:
-                            # try looking for non-dictionary word
-                            # XXX: this will only match if the comment
-                            # contains a single word. matching multiple random
-                            # strings would introduce many more false positives.
-                            body = self.comment.body.strip()
-                            if len(body.split()) == 1:
-                                match = Instagram.IG_USER_STRING_REGEX.search(
-                                        body
-                                )
-                                if match:
-                                    name = match.group(1)
-                                    if not Parser.is_english(name):
-                                        usernames.append(match.group(1))
+                        # TODO: this should not be turned on if the bot is
+                        # crawling any popular subreddit -- but how to determine
+                        # if a subreddit is popular?
+                        # XXX: turn off trying random-ish strings as usernames
+                        # if the bot is crawling /r/all or if we failed to load
+                        # the JARGON file
+                        if (
+                                not usernames
+                                and Parser._JARGON_FROM_FILE
+                                and 'all' not in Parser._subreddits
+                        ):
+                            # try looking for possible username strings
+                            usernames = self._get_potential_user_strings()
 
                         usernames = remove_duplicates(usernames)
                         if usernames:
@@ -263,6 +362,57 @@ class Parser(object):
             self.__ig_usernames = usernames
 
         return usernames.copy()
+
+    def _get_potential_user_strings(self):
+        """
+        Tries to find strings in the comment body that could be usernames.
+
+        Returns a list of username candidates
+        """
+        LENGTH_THRESHOLD = 4
+        usernames = []
+        # try looking for a non-dictionary, non-jargon word.
+        # XXX: matching a false positive will typically result in a
+        # private/no-data instagram user if not a 404. relying on the instagram
+        # user not having any data to prevent a reply is unwise.
+        body = self.comment.body.strip()
+        if (
+                # single word comment
+                len(body.split()) == 1
+                # comment looks like it could contain an instagram user
+                or Instagram.HAS_IG_KEYWORD_REGEX.search(body)
+        ):
+            matches = Instagram.IG_USER_STRING_REGEX.findall(body)
+            for name in matches:
+                # only include strings that could be usernames
+                if (
+                        # not too short (eg. 'aw')
+                        len(name) > LENGTH_THRESHOLD
+                        # is not some kind of jargon
+                        and not Parser.is_jargon(name)
+                        # is not an english word
+                        and not Parser.is_english(name)
+                ):
+                    usernames.append(name)
+
+                elif logger.is_enabled_for(logger.DEBUG):
+                    reason = '???'
+                    if len(name) > LENGTH_THRESHOLD:
+                        reason = 'too short ({0})'.format(len(name))
+                    elif Parser.is_jargon(name):
+                        match = Parser.is_jargon(name)
+                        reason = 'is jargon ({0})'.format(match.group(0))
+                    elif Parser.is_english(name):
+                        reason = 'is english ({0})'.format(name)
+
+                    logger.id(logger.debug, self,
+                            'Potential username, {color_name}, failed:'
+                            ' {reason}',
+                            color_name=name,
+                            reason=reason,
+                    )
+
+        return usernames
 
 
 __all__ = [

@@ -310,6 +310,26 @@ X. reply-queue per-comment logging
         - check word[0] == upper => 's'
         - check word[-2] != vowel => 'ies'
     (in case a database is changed significantly)
+- fix instagram 500-level codes spamming log
+- turn off Parser._get_potential_user_strings() if bot is scraping a popular
+  subreddit
+    - how to classify a subreddit as popular?
+        > maybe average(?) time between comments?
+? move instagram urls to separate file?
+- refactor instagram to package
+    the file is getting too large
+    - ratelimit handler
+    - fetch handler
+    ? queue handler
+    ? database handler
+? store last controversial check iteration time/delay in file
+    so that program restarts don't re-trigger an early controversial check
+- --shutdown or --kill or something so that the program can be terminated from
+    any directory/terminal
+
+- test stale ig queue
+- test replies
+
 ? include version in FOOTER? (probably just the {major}.{minor} if yes)
 ? push to github
     - if no: remove [Source](...) from FOOTER
