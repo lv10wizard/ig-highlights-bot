@@ -7,6 +7,7 @@ import sys
 
 from six import (
         binary_type,
+        iteritems,
         string_types,
 )
 
@@ -122,9 +123,18 @@ class Formatter(logging.Formatter):
         # XXX: handle color last because it alters the text
         handle_special_keyword('color', self.get_fg_color_msg)
 
+        # try to handle UnicodeEncodeError on string.format in py2.
+        # (this is extraneous work in python3)
+        encoded_args = []
+        encoded_kwargs = {}
+        for arg in record.args:
+            encoded_args.append(Formatter.__stringify(arg))
+        for key, val in iteritems(record.kwargs):
+            encoded_kwargs[key] = Formatter.__stringify(val)
+
         msg = Formatter.__stringify(record.msg)
         try:
-            record.msg = msg.format(*record.args, **record.kwargs)
+            record.msg = msg.format(*encoded_args, **encoded_kwargs)
         except (IndexError, KeyError, ValueError):
             # missing string.format arguments:
             # could be a typo or the msg could just contain '{}'
@@ -133,7 +143,7 @@ class Formatter(logging.Formatter):
                     msg, record.args, record.kwargs,
             )
             try:
-                record.msg = escaped_msg.format(*record.args, **record.kwargs)
+                record.msg = escaped_msg.format(*encoded_args, **encoded_kwargs)
 
             except Exception as e:
                 import traceback
