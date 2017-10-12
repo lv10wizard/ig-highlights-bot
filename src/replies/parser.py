@@ -385,26 +385,27 @@ class Parser(object):
             matches = Instagram.IG_USER_STRING_REGEX.findall(body)
             for name in matches:
                 # only include strings that could be usernames
-                if (
-                        # not too short (eg. 'aw')
-                        len(name) > LENGTH_THRESHOLD
-                        # is not some kind of jargon
-                        and not Parser.is_jargon(name)
-                        # is not an english word
-                        and not Parser.is_english(name)
-                ):
+                do_add = False
+                reason = '???'
+                # not too short
+                if len(name) <= 4:
+                    reason = 'too short ({0})'.format(len(name))
+                else:
+                    # not some kind of internet jagon
+                    match = Parser.is_jargon(name)
+                    if match:
+                        reason = 'is jargon: \'{0}\''.format(match.group(0))
+                    # not an english word
+                    elif Parser.is_english(name):
+                        reason = 'is english: \'{0}\''.format(name)
+
+                    else:
+                        do_add = True
+
+                if do_add:
                     usernames.append(name)
 
-                elif logger.is_enabled_for(logger.DEBUG):
-                    reason = '???'
-                    if len(name) > LENGTH_THRESHOLD:
-                        reason = 'too short ({0})'.format(len(name))
-                    elif Parser.is_jargon(name):
-                        match = Parser.is_jargon(name)
-                        reason = 'is jargon ({0})'.format(match.group(0))
-                    elif Parser.is_english(name):
-                        reason = 'is english ({0})'.format(name)
-
+                else:
                     logger.id(logger.debug, self,
                             'Potential username, {color_name}, failed:'
                             ' {reason}',
