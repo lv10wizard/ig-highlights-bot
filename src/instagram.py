@@ -75,7 +75,7 @@ class Instagram(object):
     _server_error_timestamp = 0
     _server_error_delay = 0
 
-    BASE_URLS = [
+    _BASE_URLS = [
             'instagram.com',
             'instagr.am',
 
@@ -86,7 +86,7 @@ class Instagram(object):
             'yotagram.com',
             'yooying.com',
     ]
-    BASE_URL = BASE_URLS[0]
+    BASE_URL = _BASE_URLS[0]
 
     # https://stackoverflow.com/a/33783840
     MEDIA_ENDPOINT = 'https://www.{0}/{{0}}/media'.format(BASE_URL)
@@ -106,22 +106,48 @@ class Instagram(object):
     #                  |    do not match if there are any consecutive periods
     #               first character must be a letter, number or underscore
 
-    IG_LINK_REGEX = re.compile(
-            r'(https?://(?:www[.])?(?:{0})/({1})/?$)'.format(
-            #  \_______/\_________/\_____/|\___/ \ \
-            #      |         |        |   |  |   / match end of string
-            #      |         |        |   |  | optionally match
-            #      |         |        |   |  \    trailing '/'
-            #      |         |        |   \  capture username
-            #      |         |        |  match path separator '/'
-            #      |         |  match domain variants
-            #      |      optionally match 'www.'
-            #    match scheme 'http://' or 'https://'
+    _BASE_URL_PTN = r'https?://(?:www[.])?(?:{0})'.format('|'.join(_BASE_URLS))
+    #                 \_______/\_________/\_____/
+    #                     |         |        \
+    #                     |         |     match domain variants
+    #                     |     optionally match leading 'www.'
+    #                   match scheme 'http://' or 'https://'
 
-                '|'.join(BASE_URLS),
+    _MEDIA_PATH_PTN = r'p'
+    _MEDIA_CODE_PTN = r'[\w\-]{2,}'
+    IG_LINK_REGEX = re.compile(
+            r'({0})/({1})/?(?!.*{2}/)(?:[?].+)?'.format(
+            # \___/|\___/ \\________/\________/
+            #   |  |  |   /    |          \
+            #   |  |  |   \    |      optionally match trailing queries
+            #   |  |  |   /  don't match if this is a media code
+            #   |  |  |  optionally match trailing '/'
+            #   |  |  \
+            #   |  |  capture username
+            #   | match path separator '/'
+            # capture base url
+
+                _BASE_URL_PTN,
                 _USERNAME_PTN,
+                _MEDIA_CODE_PTN,
             ),
             flags=re.IGNORECASE,
+    )
+
+    IG_LINK_QUERY_REGEX = re.compile(
+            r'({0})/{1}/{2}/[?].*?taken-by=({3}).*$'.format(
+            # \___/ \_/ \_/  | \__________________/
+            #   |    |   |   |           \
+            #   |    |   |   |  match query string & capture taken-by username
+            #   |    |   |  match '?'
+            #   |    |  match media code eg. 'BL7JX3LgxQ'
+            #   |  match media code path
+            # capture base url
+                _BASE_URL_PTN,
+                _MEDIA_PATH_PTN,
+                _MEDIA_CODE_PTN,
+                _USERNAME_PTN,
+            ),
     )
 
     IG_USER_REGEX = re.compile(

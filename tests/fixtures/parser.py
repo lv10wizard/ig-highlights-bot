@@ -87,6 +87,14 @@ def kaja_sbn():
     return _load_pickle('kaja_sbn')
 
 @pytest.fixture(scope='session')
+def jessicabolusi_medialink():
+    """
+    praw.models.Comment containing an instagram media link with a user profile
+    defined in its query
+    """
+    return _load_pickle('jessicabolusi_medialink')
+
+@pytest.fixture(scope='session')
 def thanks_():
     """
     praw.models.Comment containing the word 'Thanks'

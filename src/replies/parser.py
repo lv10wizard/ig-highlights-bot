@@ -265,16 +265,43 @@ class Parser(object):
                     # TODO? regex search for anything that looks like a link
                     links = []
                     for a in soup.find_all('a', href=True):
-                        # parse the url to strip any queries or fragments
+                        # parse the url to strip any fragments
                         parsed_url = urlparse(a['href'])
-                        url = '{0}://{1}{2}'.format(
-                                parsed_url.scheme,
-                                parsed_url.netloc,
-                                parsed_url.path,
+                        url = []
+                        if parsed_url.scheme:
+                            url.append('{0}://'.format(parsed_url.scheme))
+                        url.append(parsed_url.netloc)
+                        url.append(parsed_url.path)
+                        if parsed_url.query:
+                            url.append('?{0}'.format(parsed_url.query))
+                        url = ''.join(url)
+
+                        logger.id(logger.debug, self,
+                                'Testing link'
+                                ' \'{color_actual}\' => \'{color_sanitized}\'',
+                                color_actual=a['href'],
+                                color_sanitized=url,
                         )
+
                         match = Instagram.IG_LINK_REGEX.search(url)
                         if match:
+                            logger.id(logger.debug, self,
+                                    'Matched user profile link: {color_link}',
+                                    color_link=url,
+                            )
                             links.append(url)
+
+                        else:
+                            # try looking for the username in the query in case
+                            # it is a media link
+                            match = Instagram.IG_LINK_QUERY_REGEX.search(url)
+                            if match:
+                                logger.id(logger.debug, self,
+                                        'Matched query user profile link:'
+                                        ' {color_link}',
+                                        color_link=url,
+                                )
+                                links.append(url)
 
                     links = remove_duplicates(links)
                     # cache the links in case a new Parser is instantiated for
@@ -310,6 +337,11 @@ class Parser(object):
                     match = Instagram.IG_LINK_REGEX.search(link)
                     if match: # this check shouldn't be necessary
                         usernames.append(match.group(2))
+
+                    else:
+                        match = Instagram.IG_LINK_QUERY_REGEX.search(link)
+                        if match:
+                            usernames.append(match.group(2))
 
                 author = self.comment.author
                 author = author and author.name.lower()
@@ -348,15 +380,15 @@ class Parser(object):
                         ):
                             # try looking for possible username strings
                             usernames = self._get_potential_user_strings()
+                usernames = remove_duplicates(usernames)
 
-                        usernames = remove_duplicates(usernames)
-                        if usernames:
-                            logger.id(logger.info, self,
-                                    'Found #{num} username{plural}: {color}',
-                                    num=len(usernames),
-                                    plural=('' if len(usernames) == 1 else 's'),
-                                    color=usernames,
-                            )
+            if usernames:
+                logger.id(logger.info, self,
+                        'Found #{num} username{plural}: {color}',
+                        num=len(usernames),
+                        plural=('' if len(usernames) == 1 else 's'),
+                        color=usernames,
+                )
 
             Parser._username_cache[self.comment.id] = usernames
             self.__ig_usernames = usernames
