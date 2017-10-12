@@ -31,8 +31,9 @@ c+o{2,}l+ # 'cooooool', etc
 co+lsto+ry+b+r+(?:[eaou]+|e+w+)h* # coolstorybro
 c+u+t+i*e+(?:p+i+e+)?
 c+u+[sz]+
+d+a+f+u*(?:c*k*|q+) # 'dafuq', 'dafuuuuck', etc
 d+a+(?:y+[au]*h*)?m+n*
-da+t?\w{3,} # 'datass', 'daaaateverything', 'dafuq', etc
+d+a+t+\w{3,} # 'datass', 'daaaateverything', etc
 di+nga+li+ng
 dmhs
 d+u+d+e+
@@ -40,7 +41,7 @@ d+u+h+
 eli5
 emoji
 e+n+h+a+n+c+e+
-(?:f+a+p+)+ # 'fap', 'fapfapfap', 'faaappp', etc
+(?:f+a+p+s*)+ # 'fap', 'fapfapfap', 'faaappp', etc
 f+a+k+e+
 f+a+m+
 ffs
@@ -149,8 +150,8 @@ w+h*e+l+p+
 w+h*o+a+h*
 w*h*y+ # 'whyyyy', 'wwwhhhyyyyy', 'yyyyyyy', etc
 w*o{2,}f+ # 'oof', 'woof', 'wwoooof', etc
-wo+sh # 'woosh', 'wooooosh', etc
-wo+ps # 'woops', 'wooooops', etc
+w+h*o+s+h+ # 'woosh', 'wooooosh', 'whoosh', etc
+w*o+p+s* # 'woops', 'wooooops', 'oooops', 'oop', etc
 w+o+w+(?:[sz]+[ae]+[hr]*)?[sz]? # 'wwwoooowww', 'wowserz', 'wowwza', etc
 wtc # where to cop
 w+t+[fh]+(?:o+m+f*g+)? # 'wtf', 'wwwtf', wtttttf', 'wtfomfg', etc
@@ -158,6 +159,7 @@ y+[ae]+e*[hsy]+ # 'yaaaas', 'yeeeeesssss', 'yeahhhh', etc
 y+[aeu]+[hp]+ # 'yuuuhh', 'yeeeppp', yaaaahhh', etc
 y*[iu]+c+k+(?:i+e+|y+)? # 'ick', 'yucky', etc
 y+i+p+(?:i+e+|y+) # 'yippieeee', etc
+ymmv
 y+o+l+o+
 y+tho
 yw
@@ -166,5 +168,4 @@ z+o+m+ # 'zooooom', etc
 
 # XXX: not actually jargon but common misspellings
 anem # amen
-oop # oops
 

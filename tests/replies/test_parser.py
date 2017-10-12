@@ -100,10 +100,18 @@ def test_parser_matches_on_instagram_suffix(hanny_madani, kaja_sbn):
     'Photoshopped', 'Enhaaaaance', 'zooooommm', 'ooookey', 'Ooof.', 'schwifty',
     'lawwwwd', 'lawdyyy', 'goddamn', 'schlurp', 'gaaaggg', 'gaaaayyy',
     'nnnaaaaammee', 'makelinesstraightagain', 'wut', 'wat', 'Hhnnnnng', 'fml',
-    'HnnNNNGGG',
+    'HnnNNNGGG', 'Whoosh', 'wHOooOoosh',
 ])
 def test_parser_detects_jargon(word):
     assert Parser.is_jargon(word)
+
+@pytest.mark.parametrize('word', [
+    'Daring', 'gorgeous', 'beautiful', 'google', 'vyvan.le', 'Hanny_madani',
+    'kaja_sbn', 'haileypandolfi', 'viktoria_kay', 'linstahh', 'natalieannworth',
+    'tiffanie_marie', 'tiffanie.marie',
+])
+def test_parser_does_not_overmatch_jargon(word):
+    assert not Parser.is_jargon(word)
 
 def test_parser_does_not_match_thanks(thanks_):
     # 'Thanks'
