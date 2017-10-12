@@ -965,9 +965,9 @@ class Instagram(object):
                         Instagram._ig_queue.delete(self.user)
 
         elif not data['items']:
-            logger.id(logger.info, self,
-                    'No data. halting ...'
-                    '\nstatus = \'{status}\'\titems = {items}',
+            logger.id(logger.info, self, 'No data. halting ...')
+            logger.id(logger.debug, self,
+                    '\n\tstatus = \'{status}\'\titems = {items}\n',
                     status=data['status'],
                     items=data['items'],
             )
