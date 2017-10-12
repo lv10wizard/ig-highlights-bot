@@ -11,6 +11,7 @@ from bs4 import (
         BeautifulSoup,
         FeatureNotFound,
 )
+import enchant
 from six.moves.urllib.parse import urlparse
 
 from src import reddit
@@ -112,6 +113,18 @@ class Parser(object):
     # processes may create another version .. I think.
     _link_cache = _Cache('links')
     _username_cache = _Cache('usernames')
+
+    _en_US = None # 'murican
+    _en_GB = None # british
+
+    @staticmethod
+    def is_english(word):
+        if not Parser._en_US:
+            Parser._en_US = enchant.Dict('en_US')
+        if not Parser._en_GB:
+            Parser._en_GB = enchant.Dict('en_GB')
+
+        return Parser._en_US.check(word) or Parser._en_GB.check(word)
 
     def __init__(self, comment):
         self.comment = comment
@@ -218,12 +231,25 @@ class Parser(object):
                                 body=self.comment.body,
                         )
 
-                        usernames = [
-                                name for name in
-                                Instagram.IG_USER_REGEX.findall(
-                                    self.comment.body
+                        # try '@username'
+                        usernames = Instagram.IG_USER_REGEX.findall(
+                                self.comment.body
+                        )
+                        if not usernames:
+                            # try looking for non-dictionary word
+                            # XXX: this will only match if the comment
+                            # contains a single word. matching multiple random
+                            # strings would introduce many more false positives.
+                            body = self.comment.body.strip()
+                            if len(body.split()) == 1:
+                                match = Instagram.IG_USER_STRING_REGEX.search(
+                                        body
                                 )
-                        ]
+                                if match:
+                                    name = match.group(1)
+                                    if not Parser.is_english(name):
+                                        usernames.append(match.group(1))
+
                         usernames = remove_duplicates(usernames)
                         if usernames:
                             logger.id(logger.info, self,

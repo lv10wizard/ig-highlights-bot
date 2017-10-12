@@ -94,8 +94,14 @@ class Instagram(object):
     # not sure if information is outdated
     # XXX: periods cannot appear consecutively
     # eg. 'foo.b.a.r' is ok; 'foo..bar' is not
-    # XXX: periods cannot appear as the first character
-    _USERNAME_PTN = r'\w[\w\.]{,29}'
+    # XXX: periods cannot appear as the first character nor the last character
+    _USERNAME_PTN = r'\w(?!.*[.]{2,})[\w\.]{,29}(?<![.])'
+    #                  |\___________/\_________/\______/
+    #                  |      |           |         \
+    #                  |      |           |    don't match if ends with '.'
+    #                  |      |      match 0-29 letters, numbers, underscores
+    #                  |    do not match if there are any consecutive periods
+    #               first character must be a letter, number or underscore
 
     IG_LINK_REGEX = re.compile(
             r'(https?://(?:www[.])?(?:{0})/({1})/?$)'.format(
@@ -128,6 +134,8 @@ class Instagram(object):
                 _USERNAME_PTN,
             ),
     )
+
+    IG_USER_STRING_REGEX = re.compile(r'^({0})$'.format(_USERNAME_PTN))
 
     @staticmethod
     def has_server_error():
