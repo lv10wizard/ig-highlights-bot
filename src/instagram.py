@@ -821,13 +821,9 @@ class Instagram(object):
                 self.__cache.flag_as_bad()
 
             except AttributeError:
-                # no cache was created.
-                # I don't think this should happen...
-                logger.id(logger.warn, self,
-                        'Could not flag as bad username!',
-                        # XXX: the exception info won't be very useful
-                        exc_info=True,
-                )
+                self.__cache = database.InstagramDatabase(self.__db_path)
+                self.__cache.flag_as_bad()
+
         return success
 
     def __parse_data(self, data, stop_at_first_duplicate=False):

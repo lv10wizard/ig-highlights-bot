@@ -1,4 +1,5 @@
 import os
+import time
 
 from six import string_types
 
@@ -239,7 +240,7 @@ class InstagramDatabase(Database):
                 if not is_flagged:
                     logger.id(logger.debug, self, 'Flagging as bad ...')
                     # clear the cache so that the flag is the only element
-                    cursor = self._db.execute('DELETE * FROM cache')
+                    cursor = self._db.execute('DELETE FROM cache')
                     if cursor.rowcount > 0:
                         # this probably means that the user made their account
                         # private

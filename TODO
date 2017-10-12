@@ -326,6 +326,7 @@ X. reply-queue per-comment logging
     so that program restarts don't re-trigger an early controversial check
 - --shutdown or --kill or something so that the program can be terminated from
     any directory/terminal
+- why is 'Daring' considered jargon?
 
 - test stale ig queue
 - test replies
@@ -333,6 +334,7 @@ X. reply-queue per-comment logging
 ? include version in FOOTER? (probably just the {major}.{minor} if yes)
 ? push to github
     - if no: remove [Source](...) from FOOTER
+           ? remove link from FAQ
 ? fetch instagram data in a separate process
     - poll? callback? in replier to see if data is ready
 O. remove try/catch in mentions/messages _run_forever
