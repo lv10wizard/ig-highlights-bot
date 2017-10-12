@@ -79,9 +79,12 @@ class Instagram(object):
             'instagram.com',
             'instagr.am',
 
-            # random web interface to instagram
+            # random web interface(s) to instagram
             'instaliga.com',
+            'picbear.com',
+            'vibbi.com',
             'yotagram.com',
+            'yooying.com',
     ]
     BASE_URL = BASE_URLS[0]
 
