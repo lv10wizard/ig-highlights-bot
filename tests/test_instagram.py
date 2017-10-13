@@ -1,3 +1,5 @@
+import pytest
+
 from src.instagram import Instagram
 
 
@@ -47,15 +49,24 @@ def test_instagram_does_not_match_media_links(
             ig_media_link_no_trailing_slash.body.strip()
     )
 
-def test_instagram_matches_instagram_prefix(yassibenitez):
+def test_instagram_matches_instagram_prefix(
+        yassibenitez, coffeequeennn,
+):
     assert not Instagram.IG_LINK_REGEX.search(yassibenitez.body)
     assert not Instagram.IG_LINK_QUERY_REGEX.search(yassibenitez.body)
     user_match = Instagram.IG_USER_REGEX.search(yassibenitez.body)
     assert user_match
-    assert user_match.group(1) == 'yassibenitez'
+    assert 'yassibenitez' in user_match.groups()
     user_str_match = Instagram.IG_USER_STRING_REGEX.search(yassibenitez.body.strip())
     assert user_str_match
-    assert user_str_match.group(1) == 'yassibenitez'
+    assert user_str_match.group('prefix') == 'yassibenitez'
+
+    assert not Instagram.IG_LINK_REGEX.search(coffeequeennn.body)
+    assert not Instagram.IG_LINK_QUERY_REGEX.search(coffeequeennn.body)
+    assert not Instagram.IG_USER_REGEX.search(coffeequeennn.body)
+    user_str_match = Instagram.IG_USER_STRING_REGEX.search(coffeequeennn.body.strip())
+    assert user_str_match
+    assert user_str_match.group('prefix') == '_coffeequeennn'
 
 def test_isntagram_does_not_over_match_instagram_prefix(
         hanny_madani, kaja_sbn, eva_lo_dimelo, chaileeson, deliahatesyou,
@@ -65,35 +76,35 @@ def test_isntagram_does_not_over_match_instagram_prefix(
     assert not Instagram.IG_USER_REGEX.search(hanny_madani.body)
     user_str_match = Instagram.IG_USER_STRING_REGEX.search(hanny_madani.body.strip())
     assert user_str_match
-    assert not user_str_match.group(1)
+    assert not user_str_match.group('prefix')
 
     assert not Instagram.IG_LINK_REGEX.search(kaja_sbn.body)
     assert not Instagram.IG_LINK_QUERY_REGEX.search(kaja_sbn.body)
     assert not Instagram.IG_USER_REGEX.search(kaja_sbn.body)
     user_str_match = Instagram.IG_USER_STRING_REGEX.search(kaja_sbn.body.strip())
     assert user_str_match
-    assert not user_str_match.group(1)
+    assert not user_str_match.group('prefix')
 
     assert not Instagram.IG_LINK_REGEX.search(eva_lo_dimelo.body)
     assert not Instagram.IG_LINK_QUERY_REGEX.search(eva_lo_dimelo.body)
     assert not Instagram.IG_USER_REGEX.search(eva_lo_dimelo.body)
     user_str_match = Instagram.IG_USER_STRING_REGEX.search(eva_lo_dimelo.body.strip())
     assert user_str_match
-    assert not user_str_match.group(1)
+    assert not user_str_match.group('prefix')
 
     assert not Instagram.IG_LINK_REGEX.search(chaileeson.body)
     assert not Instagram.IG_LINK_QUERY_REGEX.search(chaileeson.body)
     assert not Instagram.IG_USER_REGEX.search(chaileeson.body)
     user_str_match = Instagram.IG_USER_STRING_REGEX.search(chaileeson.body.strip())
     assert user_str_match
-    assert not user_str_match.group(1)
+    assert not user_str_match.group('prefix')
 
     assert not Instagram.IG_LINK_REGEX.search(deliahatesyou.body)
     assert not Instagram.IG_LINK_QUERY_REGEX.search(deliahatesyou.body)
     assert not Instagram.IG_USER_REGEX.search(deliahatesyou.body)
     user_str_match = Instagram.IG_USER_STRING_REGEX.search(deliahatesyou.body.strip())
     assert user_str_match
-    assert not user_str_match.group(1)
+    assert not user_str_match.group('prefix')
 
 def test_instagram_matches_on_instagram_suffix(
         hanny_madani, kaja_sbn, eva_lo_dimelo, chaileeson, deliahatesyou,
@@ -103,35 +114,35 @@ def test_instagram_matches_on_instagram_suffix(
     assert not Instagram.IG_USER_REGEX.search(hanny_madani.body)
     user_str_match = Instagram.IG_USER_STRING_REGEX.search(hanny_madani.body.strip())
     assert user_str_match
-    assert 'Hanny_madani' in user_str_match.groups()
+    assert user_str_match.group('suffix') == 'Hanny_madani'
 
     assert not Instagram.IG_LINK_REGEX.search(kaja_sbn.body)
     assert not Instagram.IG_LINK_QUERY_REGEX.search(kaja_sbn.body)
     assert not Instagram.IG_USER_REGEX.search(kaja_sbn.body)
     user_str_match = Instagram.IG_USER_STRING_REGEX.search(kaja_sbn.body.strip())
     assert user_str_match
-    assert 'kaja_sbn' in user_str_match.groups()
+    assert user_str_match.group('suffix') == 'kaja_sbn'
 
     assert not Instagram.IG_LINK_REGEX.search(eva_lo_dimelo.body)
     assert not Instagram.IG_LINK_QUERY_REGEX.search(eva_lo_dimelo.body)
     assert not Instagram.IG_USER_REGEX.search(eva_lo_dimelo.body)
     user_str_match = Instagram.IG_USER_STRING_REGEX.search(eva_lo_dimelo.body.strip())
     assert user_str_match
-    assert 'eva_lo_dimelo' in user_str_match.groups()
+    assert user_str_match.group('suffix') == 'eva_lo_dimelo'
 
     assert not Instagram.IG_LINK_REGEX.search(chaileeson.body)
     assert not Instagram.IG_LINK_QUERY_REGEX.search(chaileeson.body)
     assert not Instagram.IG_USER_REGEX.search(chaileeson.body)
     user_str_match = Instagram.IG_USER_STRING_REGEX.search(chaileeson.body.strip())
     assert user_str_match
-    assert 'chaileeson' in user_str_match.groups()
+    assert user_str_match.group('suffix') == 'chaileeson'
 
     assert not Instagram.IG_LINK_REGEX.search(deliahatesyou.body)
     assert not Instagram.IG_LINK_QUERY_REGEX.search(deliahatesyou.body)
     assert not Instagram.IG_USER_REGEX.search(deliahatesyou.body)
     user_str_match = Instagram.IG_USER_STRING_REGEX.search(deliahatesyou.body.strip())
     assert user_str_match
-    assert 'Deliahatesyou' in user_str_match.groups()
+    assert user_str_match.group('suffix') == 'Deliahatesyou'
 
 def test_instagram_matches_user_linked_in_query(jessicabolusi_medialink):
     assert not Instagram.IG_LINK_REGEX.search(jessicabolusi_medialink.body)
@@ -173,11 +184,13 @@ def test_instagram_does_not_match_whosethat(whosethat):
     assert not Instagram.IG_USER_STRING_REGEX.search(whosethat.body.strip())
     assert not Instagram.HAS_IG_KEYWORD_REGEX.search(whosethat.body.strip())
 
+@pytest.mark.xfail
 def test_instagram_does_not_match_on_insta(on_insta_rant):
     # '[...] on Insta [...]'
     assert not Instagram.IG_LINK_REGEX.search(on_insta_rant.body)
     assert not Instagram.IG_LINK_QUERY_REGEX.search(on_insta_rant.body)
     assert not Instagram.IG_USER_REGEX.search(on_insta_rant.body)
-    assert Instagram.IG_USER_STRING_REGEX.search(on_insta_rant.body.strip())
+    # XXX: these fail (caught @ the parser level)
+    assert not Instagram.IG_USER_STRING_REGEX.search(on_insta_rant.body.strip())
     assert not Instagram.HAS_IG_KEYWORD_REGEX.search(on_insta_rant.body.strip())
 

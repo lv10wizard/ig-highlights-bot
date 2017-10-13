@@ -46,10 +46,16 @@ def test_parser_matches_non_english_word(vyvan_le):
     assert not p.ig_links
     assert p.ig_usernames == ['vyvan.le']
 
-def test_parser_matches_instagram_prefix(yassibenitez):
-    p = Parser(yassibenitez)
-    assert not p.ig_links
-    assert p.ig_usernames == ['yassibenitez']
+def test_parser_matches_instagram_prefix(
+        yassibenitez, coffeequeennn,
+):
+    Y = Parser(yassibenitez)
+    assert not Y.ig_links
+    assert Y.ig_usernames == ['yassibenitez']
+
+    C = Parser(coffeequeennn)
+    assert not C.ig_links
+    assert C.ig_usernames == ['_coffeequeennn']
 
 def test_parser_matches_on_instagram_suffix(
         hanny_madani, kaja_sbn, eva_lo_dimelo, chaileeson, deliahatesyou,
@@ -103,7 +109,7 @@ def test_parser_matches_user_linked_in_query(jessicabolusi_medialink):
     'nnnaaaaammee', 'makelinesstraightagain', 'wut', 'wat', 'Hhnnnnng', 'fml',
     'HnnNNNGGG', 'Whoosh', 'wHOooOoosh', 'Gatdaaaamn', 'Ooorah', 'Hoohrah',
     'Woahhhohoho', 'Woahhahahah', 'huehuehue', 'hueheuehuhheuheu',
-    'Beeyooteafull', 'bEeeauutiiifuuul',
+    'Beeyooteafull', 'bEeeauutiiifuuul', 'xoxoxoox', 'homie...',
 ])
 def test_parser_detects_jargon(word):
     assert Parser.is_jargon(word)

@@ -33,8 +33,9 @@ co+lsto+ry+b+r+(?:[eaou]+|e+w+)h* # coolstorybro
 c+u+t+i*e+(?:p+i+e+)?
 c+u+[sz]+
 d+a+f+u*(?:c*k*|q+) # 'dafuq', 'dafuuuuck', etc
-d+a+(?:y+[au]*h*)?m+n*
 d+a+t+\w{3,} # 'datass', 'daaaateverything', etc
+d+[ao]+w*g+
+d+a+(?:y+[au]*h*)?m+n*
 di+nga+li+ng
 dmhs
 d+u+d+e+
@@ -70,6 +71,7 @@ h+e+l+o+ # 'hellloooooooo', etc
 h*m+ # 'hmm', 'mmmm', etc
 hm\w # hold my ...
 h*o+h*r+a+h* # 'Oorah', 'OOohrah', 'Hoorah', etc
+h+o+m+(?:i+e+|y+) # 'homieeee', 'homeeeeyy', etc
 h+o+w+
 h*u*n+g*f*h* # 'hnnngg', 'unghhh', 'nnggghh', 'unnggfffhh', etc
 hth # hope that helps

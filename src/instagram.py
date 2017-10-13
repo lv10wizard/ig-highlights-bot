@@ -172,12 +172,29 @@ class Instagram(object):
 
     # _IG_KEYWORD*: strings that are likely to indicate that the inner substring
     # contains an instagram username.
-    _IG_KEYWORD_PREFIX = r'(?:\(?{0}\)?:?)\s*'.format(_INSTAGRAM_KEYWORD)
-    #                            \_/    \ \_/
-    #                             |     /  |
-    #                             |     \ optionally match any spaces
-    #                             |    optionally match ':'
-    #                           match instagram keywords
+    _IG_KEYWORD_PREFIX = [
+            # match eg. '(IG): ', 'isnta ', etc
+            r'\(?{0}\)?:?\s*'.format(_INSTAGRAM_KEYWORD),
+            #    \_/    \\_/
+            #     |     / |
+            #     |     \ optionally match any spaces
+            #     |   optionally match ':'
+            #    match instagram keywords
+
+            # match eg. 'I think this is their instagram ...'
+            #       or  'Her instagram name: ...'
+            r'(?:\w+\s+)*{0}(?:\s+\w+)*?:?\s+'.format(
+            # \_________/\_/\__________/ \  \
+            #      |      |      |       / match trailing spaces
+            #      |      |      |   optionally match ':'
+            #      |      |   match any extra words
+            #      |    match instagram keywords
+            #   match any leading words
+                _INSTAGRAM_KEYWORD,
+            ),
+    ]
+    _IG_KEYWORD_PREFIX = '|'.join(_IG_KEYWORD_PREFIX)
+
     _IG_KEYWORD_SUFFIX = r'\s+(?:on\s+{0}|\({0}\))[!.]?'.format(
     #                         \_________/ \______/\___/
     #                              |         |      \
@@ -198,13 +215,10 @@ class Instagram(object):
     IG_USER_STRING_REGEX = [
             # match a prefixed potential instagram username
             # eg. 'IG: foobar'
-            r'^(?:{1})@?({0})(?:\s+|$)'.format(
-            # |\_____/\_____/\_______/
-            # |   |      |       \
-            # |   |      |   only match if at the end of string or followed by
-            # |   |      |      spaces
-            # |   |      |
-            # |   |   capture possible username string
+            r'^(?:{1})@?(?P<prefix>{0})$'.format(
+            # |\_____/\_______________/ \
+            # |   |           |       only match if at the end of string
+            # |   |        capture possible username string
             # \ match instagram keywords prefix
             # only match if at the beginning of the string
                 _USERNAME_PTN, _IG_KEYWORD_PREFIX,
@@ -212,13 +226,13 @@ class Instagram(object):
 
             # match a suffixed potential instagram username
             # eg. 'this is foobar on insta'
-            r'(?:^|\s+)@?({0})(?:{1})(?:\s+|$)'.format(
-            # \_______/\_____/\_____/\_______/
-            #     |       |      |      \
-            #     |       |      |   only match if at the end of the string
-            #     |       |      |     or followed by spaces
-            #     |       |      |
-            #     |       |    match instagram keywords suffix
+            r'(?:^|\s+)@?(?P<suffix>{0})(?:{1})(?:\s+|$)'.format(
+            # \_______/\_______________/\_____/\_______/
+            #     |            |           |      \
+            #     |            |           |   only match if at the end of the
+            #     |            |           |     string or followed by spaces
+            #     |            |           |
+            #     |            |       match instagram keywords suffix
             #     |     capture possible username string
             #   only match if at the beginning of the string or preceded by
             #       spaces
