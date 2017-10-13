@@ -108,6 +108,13 @@ def chaileeson():
     return _load_pickle('chaileeson')
 
 @pytest.fixture(scope='session')
+def deliahatesyou():
+    """
+    praw.models.Comment containing a soft-linked user without '@' (... (IG))
+    """
+    return _load_pickle('deliahatesyou')
+
+@pytest.fixture(scope='session')
 def jessicabolusi_medialink():
     """
     praw.models.Comment containing an instagram media link with a user profile

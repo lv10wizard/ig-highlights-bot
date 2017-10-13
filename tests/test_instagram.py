@@ -57,8 +57,46 @@ def test_instagram_matches_instagram_prefix(yassibenitez):
     assert user_str_match
     assert user_str_match.group(1) == 'yassibenitez'
 
+def test_isntagram_does_not_over_match_instagram_prefix(
+        hanny_madani, kaja_sbn, eva_lo_dimelo, chaileeson, deliahatesyou,
+):
+    assert not Instagram.IG_LINK_REGEX.search(hanny_madani.body)
+    assert not Instagram.IG_LINK_QUERY_REGEX.search(hanny_madani.body)
+    assert not Instagram.IG_USER_REGEX.search(hanny_madani.body)
+    user_str_match = Instagram.IG_USER_STRING_REGEX.search(hanny_madani.body.strip())
+    assert user_str_match
+    assert not user_str_match.group(1)
+
+    assert not Instagram.IG_LINK_REGEX.search(kaja_sbn.body)
+    assert not Instagram.IG_LINK_QUERY_REGEX.search(kaja_sbn.body)
+    assert not Instagram.IG_USER_REGEX.search(kaja_sbn.body)
+    user_str_match = Instagram.IG_USER_STRING_REGEX.search(kaja_sbn.body.strip())
+    assert user_str_match
+    assert not user_str_match.group(1)
+
+    assert not Instagram.IG_LINK_REGEX.search(eva_lo_dimelo.body)
+    assert not Instagram.IG_LINK_QUERY_REGEX.search(eva_lo_dimelo.body)
+    assert not Instagram.IG_USER_REGEX.search(eva_lo_dimelo.body)
+    user_str_match = Instagram.IG_USER_STRING_REGEX.search(eva_lo_dimelo.body.strip())
+    assert user_str_match
+    assert not user_str_match.group(1)
+
+    assert not Instagram.IG_LINK_REGEX.search(chaileeson.body)
+    assert not Instagram.IG_LINK_QUERY_REGEX.search(chaileeson.body)
+    assert not Instagram.IG_USER_REGEX.search(chaileeson.body)
+    user_str_match = Instagram.IG_USER_STRING_REGEX.search(chaileeson.body.strip())
+    assert user_str_match
+    assert not user_str_match.group(1)
+
+    assert not Instagram.IG_LINK_REGEX.search(deliahatesyou.body)
+    assert not Instagram.IG_LINK_QUERY_REGEX.search(deliahatesyou.body)
+    assert not Instagram.IG_USER_REGEX.search(deliahatesyou.body)
+    user_str_match = Instagram.IG_USER_STRING_REGEX.search(deliahatesyou.body.strip())
+    assert user_str_match
+    assert not user_str_match.group(1)
+
 def test_instagram_matches_on_instagram_suffix(
-        hanny_madani, kaja_sbn, eva_lo_dimelo, chaileeson,
+        hanny_madani, kaja_sbn, eva_lo_dimelo, chaileeson, deliahatesyou,
 ):
     assert not Instagram.IG_LINK_REGEX.search(hanny_madani.body)
     assert not Instagram.IG_LINK_QUERY_REGEX.search(hanny_madani.body)
@@ -87,6 +125,13 @@ def test_instagram_matches_on_instagram_suffix(
     user_str_match = Instagram.IG_USER_STRING_REGEX.search(chaileeson.body.strip())
     assert user_str_match
     assert 'chaileeson' in user_str_match.groups()
+
+    assert not Instagram.IG_LINK_REGEX.search(deliahatesyou.body)
+    assert not Instagram.IG_LINK_QUERY_REGEX.search(deliahatesyou.body)
+    assert not Instagram.IG_USER_REGEX.search(deliahatesyou.body)
+    user_str_match = Instagram.IG_USER_STRING_REGEX.search(deliahatesyou.body.strip())
+    assert user_str_match
+    assert 'Deliahatesyou' in user_str_match.groups()
 
 def test_instagram_matches_user_linked_in_query(jessicabolusi_medialink):
     assert not Instagram.IG_LINK_REGEX.search(jessicabolusi_medialink.body)

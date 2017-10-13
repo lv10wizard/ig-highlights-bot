@@ -172,17 +172,20 @@ class Instagram(object):
 
     # _IG_KEYWORD*: strings that are likely to indicate that the inner substring
     # contains an instagram username.
-    _IG_KEYWORD_PREFIX = r'(?:{0}:?\s*)'.format(_INSTAGRAM_KEYWORD)
-    #                         \_/ \\_/
-    #                          |  / |
-    #                          |  \ optionally match any spaces
-    #                          | optionally match ':'
-    #                       match instagram keywords
-    _IG_KEYWORD_SUFFIX = r'(?:\s+on\s+{0}[!.]?)'.format(_INSTAGRAM_KEYWORD)
-    #                         \_________/\___/
-    #                              |       \
-    #                              |    optionally match '!' or '.'
+    _IG_KEYWORD_PREFIX = r'(?:\(?{0}\)?:?)\s*'.format(_INSTAGRAM_KEYWORD)
+    #                            \_/    \ \_/
+    #                             |     /  |
+    #                             |     \ optionally match any spaces
+    #                             |    optionally match ':'
+    #                           match instagram keywords
+    _IG_KEYWORD_SUFFIX = r'\s+(?:on\s+{0}|\({0}\))[!.]?'.format(
+    #                         \_________/ \______/\___/
+    #                              |         |      \
+    #                              |         |  optionally match '!' or '.'
+    #                              |     match eg. '(IG)'
     #                         match ' on instagram'
+            _INSTAGRAM_KEYWORD,
+    )
 
     HAS_IG_KEYWORD_REGEX = re.compile(
             '(?!.*[?])(?:^{0})|(?:{1}$)'.format(
