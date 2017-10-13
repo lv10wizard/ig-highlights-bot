@@ -22,7 +22,7 @@ class Formatter(object):
             '&#32;Did&#32;I&#32;get&#32;something&#32;wrong?'
             '&#32;Downvote&#32;to&#32;delete.'
             '&#32;[[Contact]({contact_url})]'
-            '&#32;[[Source]({source_url})]'
+            # '&#32;[[Source]({source_url})]'
             '&#32;[[Block]({blacklist_url})]'
             '&#32;[[FAQ]({help_url})]'
     )
