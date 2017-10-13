@@ -855,9 +855,13 @@ class Instagram(object):
                         )
                         logger.id(logger.debug, self,
                                 'Setting Instagram delay = {delay}'
-                                ' (t={timestamp})',
+                                ' (expires @ {strftime})',
                                 delay=Instagram._server_error_delay,
-                                timestamp=Instagram._server_error_timestamp,
+                                strftime='%m/%d, %H:%M:%S',
+                                strf_time=(
+                                    Instagram._server_error_timestamp
+                                    + Instagram._server_error_delay
+                                ),
                         )
 
                         self.__enqueue()

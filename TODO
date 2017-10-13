@@ -334,6 +334,8 @@ O. match 's?he\'s {username} on insta'
     >> broadened how matching works
 
 - fix instagram 500-level code delay logging spam
+    > can't handle at replier level because users may be cached
+        but sort of have to handle there since spam starts at that level
 
 O. try finding usernames per line
     O. [IG_USER_STRING_REGEX.search(text.strip()) for text in comment.body.split('\n')]
