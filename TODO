@@ -327,10 +327,11 @@ X. reply-queue per-comment logging
 - --shutdown or --kill or something so that the program can be terminated from
     any directory/terminal
 O. why is 'Daring' considered jargon?
-- match 's?he\'s {username} on insta'
-    - make prefix/suffix a single list of fmt
-    - make helper func that string.formats each fmt in list for
+O. match 's?he\'s {username} on insta'
+    X. make prefix/suffix a single list of fmt
+    X. make helper func that string.formats each fmt in list for
         HAS_IG_KEYWORD, IG_USER_STRING
+    >> broadened how matching works
 
 - test stale ig queue
 - test replies

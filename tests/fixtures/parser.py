@@ -68,7 +68,7 @@ def parenthesis_user():
 @pytest.fixture(scope='session')
 def yassibenitez():
     """
-    praw.models.Comment containing a soft-linked user
+    praw.models.Comment containing a soft-linked user (IG: ...)
     """
     return _load_pickle('yassibenitez')
 
@@ -82,16 +82,30 @@ def vyvan_le():
 @pytest.fixture(scope='session')
 def hanny_madani():
     """
-    praw.models.Comment containing a soft-linked user without '@'
+    praw.models.Comment containing a soft-linked user without '@' (... on instagram)
     """
     return _load_pickle('hanny_madani')
 
 @pytest.fixture(scope='session')
 def kaja_sbn():
     """
-    praw.models.Comment containing a soft-linked user without '@'
+    praw.models.Comment containing a soft-linked user without '@' (... on instagram)
     """
     return _load_pickle('kaja_sbn')
+
+@pytest.fixture(scope='session')
+def eva_lo_dimelo():
+    """
+    praw.models.Comment containing a soft-linked user without '@' (... on IG)
+    """
+    return _load_pickle('eva_lo_dimelo')
+
+@pytest.fixture(scope='session')
+def chaileeson():
+    """
+    praw.models.Comment containing a soft-linked user without '@' (... on instagram)
+    """
+    return _load_pickle('chaileeson')
 
 @pytest.fixture(scope='session')
 def jessicabolusi_medialink():

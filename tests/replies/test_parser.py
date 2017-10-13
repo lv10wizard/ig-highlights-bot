@@ -51,7 +51,9 @@ def test_parser_matches_instagram_prefix(yassibenitez):
     assert not p.ig_links
     assert p.ig_usernames == ['yassibenitez']
 
-def test_parser_matches_on_instagram_suffix(hanny_madani, kaja_sbn):
+def test_parser_matches_on_instagram_suffix(
+        hanny_madani, kaja_sbn, eva_lo_dimelo, chaileeson,
+):
     H = Parser(hanny_madani)
     assert not H.ig_links
     assert H.ig_usernames == ['Hanny_madani']
@@ -59,6 +61,14 @@ def test_parser_matches_on_instagram_suffix(hanny_madani, kaja_sbn):
     K = Parser(kaja_sbn)
     assert not K.ig_links
     assert K.ig_usernames == ['kaja_sbn']
+
+    E = Parser(eva_lo_dimelo)
+    assert not E.ig_links
+    assert E.ig_usernames == ['eva_lo_dimelo']
+
+    C = Parser(chaileeson)
+    assert not C.ig_links
+    assert C.ig_usernames == ['chaileeson']
 
 def test_parser_matches_user_linked_in_query(jessicabolusi_medialink):
     J = Parser(jessicabolusi_medialink)

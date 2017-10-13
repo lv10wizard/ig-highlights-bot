@@ -170,8 +170,8 @@ class Instagram(object):
     #                               |       match 'ig'
     #                           match 'insta' or 'instagram'
 
-    # _IG_KEYWORD*: strings that are likely to indicate the the contained string
-    # has an instagram username in it.
+    # _IG_KEYWORD*: strings that are likely to indicate that the inner substring
+    # contains an instagram username.
     _IG_KEYWORD_PREFIX = r'(?:{0}:?\s*)'.format(_INSTAGRAM_KEYWORD)
     #                         \_/ \\_/
     #                          |  / |
@@ -192,12 +192,15 @@ class Instagram(object):
             flags=re.IGNORECASE,
     )
     IG_USER_STRING_REGEX = re.compile(
-            r'^(?:{1})?@?({0})(?:{2})?$'.format(
-            # |\______/\_____/\______/ \
-            # |   |       |      |  match entire string
-            # |   |       |    optionally match ' on instagram'
-            # |   |    capture possible username string as group 1
-            # \  optionally match 'instagram: '
+            r'^(?:{1})@?({0})|(?:^|\s+)@?({0})(?:{2})?$'.format(
+            # |\_____/\_____/ \_______/\_____/\______/ \
+            # |    |      |       |       |       |  match to end of the string
+            # |    |      |       |       |    optionally match ' on instagram'
+            # |    |      |       | capture possible username as group 2
+            # |    |      |     only match if at the start of the string or
+            # |    |      |         preceded by spaces
+            # |    |   capture possible username string as group 1
+            # \  match 'instagram: '
             # match entire string
                 _USERNAME_PTN,
                 _IG_KEYWORD_PREFIX,

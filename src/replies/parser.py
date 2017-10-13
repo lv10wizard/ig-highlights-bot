@@ -3,6 +3,7 @@ from errno import (
         ECONNABORTED,
         EPIPE,
 )
+import itertools
 import multiprocessing
 import re
 import time
@@ -419,8 +420,15 @@ class Parser(object):
                 # comment looks like it could contain an instagram user
                 or Instagram.HAS_IG_KEYWORD_REGEX.search(body)
         ):
-            matches = Instagram.IG_USER_STRING_REGEX.findall(body)
+            # flatten the list of matches
+            # https://stackoverflow.com/a/8481590
+            matches = list(itertools.chain.from_iterable(
+                    Instagram.IG_USER_STRING_REGEX.findall(body)
+            ))
             for name in matches:
+                if not name:
+                    continue
+
                 # only include strings that could be usernames
                 do_add = False
                 reason = '???'
