@@ -217,7 +217,12 @@ class Parser(object):
         if not Parser._en_GB:
             Parser._en_GB = enchant.Dict('en_GB')
 
-        return Parser._en_US.check(word) or Parser._en_GB.check(word)
+        return (
+                Parser._en_US.check(word)
+                or Parser._en_US.check(word.capitalize())
+                or Parser._en_GB.check(word)
+                or Parser._en_GB.check(word.capitalize())
+        )
 
     @staticmethod
     def is_jargon(word):
