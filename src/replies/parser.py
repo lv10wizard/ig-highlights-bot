@@ -190,9 +190,9 @@ class Parser(object):
     _JARGON_VARIATIONS_WHOLE = [
             # https://stackoverflow.com/a/16453542
             # 'haha', 'bahaha', 'jajaja', 'kekeke', etc
-            '\w?[{0}]*(?:[{1}][{0}]+r*)+[{1}]?'.format(
-            #\_______/\________________/   \
-            #    |             |       optionally match ending consonant
+            '\w?[{0}]*(?:[{1}]+[{0}]+r*)+[{1}]?'.format(
+            #\_______/\_________________/   \
+            #    |             |         optionally match ending consonant
             #    |    match any number of 'ha', 'haa', 'haaa', etc
             # optionally match leading 'ba', 'baa', 'faaa', etc
 

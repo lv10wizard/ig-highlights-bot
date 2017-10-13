@@ -88,6 +88,7 @@ def test_parser_matches_user_linked_in_query(jessicabolusi_medialink):
     'lawwwwd', 'lawdyyy', 'goddamn', 'schlurp', 'gaaaggg', 'gaaaayyy',
     'nnnaaaaammee', 'makelinesstraightagain', 'wut', 'wat', 'Hhnnnnng', 'fml',
     'HnnNNNGGG', 'Whoosh', 'wHOooOoosh', 'Gatdaaaamn', 'Ooorah', 'Hoohrah',
+    'Woahhhohoho', 'Woahhahahah', 'huehuehue', 'hueheuehuhheuheu',
 ])
 def test_parser_detects_jargon(word):
     assert Parser.is_jargon(word)
