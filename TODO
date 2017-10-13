@@ -324,7 +324,7 @@ X. reply-queue per-comment logging
     ? database handler
 ? store last controversial check iteration time/delay in file
     so that program restarts don't re-trigger an early controversial check
-- --shutdown or --kill or something so that the program can be terminated from
+O. --shutdown or --kill or something so that the program can be terminated from
     any directory/terminal
 O. why is 'Daring' considered jargon?
 O. match 's?he\'s {username} on insta'

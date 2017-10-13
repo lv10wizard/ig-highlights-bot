@@ -18,6 +18,7 @@ from src import (
 from src.util import logger
 
 
+SHUTDOWN        = 'shutdown'
 ADD_SUBREDDIT   = 'add-subreddit'
 RM_SUBREDDIT    = 'rm-subreddit'
 ADD_BLACKLIST   = 'add-blacklist'
@@ -45,6 +46,53 @@ try:
     ])
 except OSError:
     IG_DB_CHOICES = []
+
+def shutdown(cfg, do_shutdown=True):
+    import sys
+    if sys.platform == 'win32':
+        from signal import CTRL_C_EVENT as SIGINT
+    else:
+        from signal import SIGINT
+
+    from src.mixins.proc import get_pid_file
+
+    fail_msg = 'Could not determine bot\'s pid (is the bot running?)'
+    bot_pid_file = get_pid_file('IgHighlightsBot')
+    if not bot_pid_file:
+        logger.info(fail_msg)
+        return
+
+    try:
+        with open(bot_pid_file, 'r') as fd:
+            main_pid = fd.read()
+    except (IOError, OSError):
+        logger.exception(fail_msg)
+        return
+
+    try:
+        main_pid = int(main_pid)
+    except (TypeError, ValueError):
+        msg = [fail_msg, '{path} contents: \'{content}\'']
+        logger.exception('\n'.join(msg),
+                path=bot_pid_file,
+                content=main_pid,
+        )
+        return
+
+    confirm = input('Shutdown bot (pid={0})? [Y/n] '.format(main_pid))
+    if confirm == 'Y':
+        logger.info('Shutting down bot ({color_pid}) ...', color_pid=main_pid)
+
+        try:
+            os.kill(main_pid, SIGINT)
+
+        except OSError:
+            logger.exception('Could not shutdown the bot ({color_pid})!',
+                    color_pid=main_pid,
+            )
+
+    else:
+        logger.info('Leaving the bot alive ({color_pid})', color_pid=main_pid)
 
 def add_subreddit(cfg, *subreddits):
     subreddits_db = database.SubredditsDatabase(do_seed=False)
@@ -284,6 +332,7 @@ def handle(cfg, args):
         return arg_str.replace('_', '-')
 
     handlers = {
+            SHUTDOWN: shutdown,
             ADD_SUBREDDIT: add_subreddit,
             RM_SUBREDDIT: rm_subreddit,
             ADD_BLACKLIST: add_blacklist,
@@ -355,6 +404,10 @@ def parse():
     )
     parser.add_argument('-N', '--logging-no-color', action='store_true',
             help='Turn off logging colors (this overrides the config setting)',
+    )
+
+    parser.add_argument('--{0}'.format(SHUTDOWN), action='store_true',
+            help='Kills the bot process and all sub-processes.',
     )
 
     parser.add_argument('--{0}'.format(ADD_SUBREDDIT),
