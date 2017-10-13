@@ -74,6 +74,16 @@ def test_parser_matches_on_instagram_suffix(
     assert not D.ig_links
     assert D.ig_usernames == ['Deliahatesyou']
 
+def test_parser_matches_multiline_user_string(capbarista_multiline_prefix):
+    C = Parser(capbarista_multiline_prefix)
+    assert not C.ig_links
+    assert C.ig_usernames == ['capbarista']
+
+def test_parser_does_not_match_multiline_random_text(multiline_random):
+    p = Parser(multiline_random)
+    assert not p.ig_links
+    assert not p.ig_usernames
+
 def test_parser_matches_user_linked_in_query(jessicabolusi_medialink):
     J = Parser(jessicabolusi_medialink)
     assert J.ig_links
@@ -127,6 +137,12 @@ def test_parser_does_not_match_perfection(perfection_):
 def test_parser_does_not_match_whosethat(whosethat):
     # 'Who is that? '
     p = Parser(whosethat)
+    assert not p.ig_links
+    assert not p.ig_usernames
+
+def test_parser_does_not_match_on_insta_rant(on_insta_rant):
+    # '[...] him on Insta or facebook [...]'
+    p = Parser(on_insta_rant)
     assert not p.ig_links
     assert not p.ig_usernames
 

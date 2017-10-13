@@ -409,22 +409,28 @@ class Parser(object):
         """
         LENGTH_THRESHOLD = 4
         usernames = []
+        body_split = self.comment.body.split('\n')
         # try looking for a non-dictionary, non-jargon word.
         # XXX: matching a false positive will typically result in a
         # private/no-data instagram user if not a 404. relying on the instagram
         # user not having any data to prevent a reply is unwise.
-        body = self.comment.body.strip()
         if (
                 # single word comment
-                len(body.split()) == 1
+                len(self.comment.body.strip().split()) == 1
                 # comment looks like it could contain an instagram user
-                or Instagram.HAS_IG_KEYWORD_REGEX.search(body)
+                or any(
+                    Instagram.HAS_IG_KEYWORD_REGEX.search(text.strip())
+                    for text in body_split
+                )
         ):
-            # flatten the list of matches
-            # https://stackoverflow.com/a/8481590
-            matches = list(itertools.chain.from_iterable(
-                    Instagram.IG_USER_STRING_REGEX.findall(body)
-            ))
+            matches = []
+            for text in body_split:
+                # flatten the list of matches
+                # https://stackoverflow.com/a/8481590
+                matches += list(itertools.chain.from_iterable(
+                        Instagram.IG_USER_STRING_REGEX.findall(text.strip())
+                ))
+
             for name in matches:
                 if not name:
                     continue

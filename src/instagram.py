@@ -194,22 +194,47 @@ class Instagram(object):
             ),
             flags=re.IGNORECASE,
     )
-    IG_USER_STRING_REGEX = re.compile(
-            r'^(?:{1})@?({0})|(?:^|\s+)@?({0})(?:{2})?$'.format(
-            # |\_____/\_____/ \_______/\_____/\______/ \
-            # |    |      |       |       |       |  match to end of the string
-            # |    |      |       |       |    optionally match ' on instagram'
-            # |    |      |       | capture possible username as group 2
-            # |    |      |     only match if at the start of the string or
-            # |    |      |         preceded by spaces
-            # |    |   capture possible username string as group 1
-            # \  match 'instagram: '
-            # match entire string
-                _USERNAME_PTN,
-                _IG_KEYWORD_PREFIX,
-                _IG_KEYWORD_SUFFIX,
+
+    IG_USER_STRING_REGEX = [
+            # match a prefixed potential instagram username
+            # eg. 'IG: foobar'
+            r'^(?:{1})@?({0})(?:\s+|$)'.format(
+            # |\_____/\_____/\_______/
+            # |   |      |       \
+            # |   |      |   only match if at the end of string or followed by
+            # |   |      |      spaces
+            # |   |      |
+            # |   |   capture possible username string
+            # \ match instagram keywords prefix
+            # only match if at the beginning of the string
+                _USERNAME_PTN, _IG_KEYWORD_PREFIX,
             ),
-            flags=re.IGNORECASE
+
+            # match a suffixed potential instagram username
+            # eg. 'this is foobar on insta'
+            r'(?:^|\s+)@?({0})(?:{1})(?:\s+|$)'.format(
+            # \_______/\_____/\_____/\_______/
+            #     |       |      |      \
+            #     |       |      |   only match if at the end of the string
+            #     |       |      |     or followed by spaces
+            #     |       |      |
+            #     |       |    match instagram keywords suffix
+            #     |     capture possible username string
+            #   only match if at the beginning of the string or preceded by
+            #       spaces
+                _USERNAME_PTN, _IG_KEYWORD_SUFFIX
+            ),
+
+            # match a possible instagram username if it is the only word
+            r'^@?({0})$'.format(_USERNAME_PTN),
+            # |\_____/ \
+            # |   |  only match entire word
+            # \  capture possible username string
+            # only match entire word
+    ]
+    IG_USER_STRING_REGEX = re.compile(
+            '|'.join(IG_USER_STRING_REGEX),
+            flags=re.IGNORECASE,
     )
 
     @staticmethod

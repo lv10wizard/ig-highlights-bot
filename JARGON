@@ -157,6 +157,7 @@ w*o+p+s* # 'woops', 'wooooops', 'oooops', 'oop', etc
 w+o+w+(?:[sz]+[ae]+[hr]*)?[sz]? # 'wwwoooowww', 'wowserz', 'wowwza', etc
 wtc # where to cop
 w+t+[fh]+(?:o+m+f*g+)? # 'wtf', 'wwwtf', wtttttf', 'wtfomfg', etc
+(?:x+o+)+x*
 y+[ae]+e*[hsy]+ # 'yaaaas', 'yeeeeesssss', 'yeahhhh', etc
 y+[aeu]+[hp]+ # 'yuuuhh', 'yeeeppp', yaaaahhh', etc
 y*[iu]+c+k+(?:i+e+|y+)? # 'ick', 'yucky', etc

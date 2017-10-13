@@ -333,6 +333,22 @@ O. match 's?he\'s {username} on insta'
         HAS_IG_KEYWORD, IG_USER_STRING
     >> broadened how matching works
 
+- fix instagram 500-level code delay logging spam
+
+O. try finding usernames per line
+    O. [IG_USER_STRING_REGEX.search(text.strip()) for text in comment.body.split('\n')]
+        X. filter(None, ...)
+        >> no need
+- parse submission titles for possible instagram user strings
+    ? parse submission links?
+    ? parse submission selftext?
+    - submissions process?
+        > can't rely on every submission having a comment
+    - need database to store submissions
+    ? refactor replies.db ?
+        > I think the column name, comment_fullname, is wrong but should work
+            besides that
+
 - test stale ig queue
 - test replies
 

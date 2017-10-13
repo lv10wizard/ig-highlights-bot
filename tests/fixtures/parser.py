@@ -115,6 +115,21 @@ def deliahatesyou():
     return _load_pickle('deliahatesyou')
 
 @pytest.fixture(scope='session')
+def capbarista_multiline_prefix():
+    """
+    praw.models.Comment containing a soft-linked user without '@'
+    (IG: ...)
+    """
+    return _load_pickle('capbarista_multiline_prefix')
+
+@pytest.fixture(scope='session')
+def multiline_random():
+    """
+    praw.models.Comment containing non-instagram related multiline text
+    """
+    return _load_pickle('multiline_random')
+
+@pytest.fixture(scope='session')
 def jessicabolusi_medialink():
     """
     praw.models.Comment containing an instagram media link with a user profile

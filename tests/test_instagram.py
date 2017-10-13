@@ -178,6 +178,6 @@ def test_instagram_does_not_match_on_insta(on_insta_rant):
     assert not Instagram.IG_LINK_REGEX.search(on_insta_rant.body)
     assert not Instagram.IG_LINK_QUERY_REGEX.search(on_insta_rant.body)
     assert not Instagram.IG_USER_REGEX.search(on_insta_rant.body)
-    assert not Instagram.IG_USER_STRING_REGEX.search(on_insta_rant.body.strip())
+    assert Instagram.IG_USER_STRING_REGEX.search(on_insta_rant.body.strip())
     assert not Instagram.HAS_IG_KEYWORD_REGEX.search(on_insta_rant.body.strip())
 
