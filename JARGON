@@ -68,8 +68,9 @@ h+(?:a+w+|o+)t+ # 'hooott', 'hawwwt', etc
 h+e+l+o+ # 'hellloooooooo', etc
 h*m+ # 'hmm', 'mmmm', etc
 hm\w # hold my ...
-h*u*n+g*f*h* # 'hnnngg', 'unghhh', 'nnggghh', 'unnggfffhh', etc
+h*o+h*r+a+h* # 'Oorah', 'OOohrah', 'Hoorah', etc
 h+o+w+
+h*u*n+g*f*h* # 'hnnngg', 'unghhh', 'nnggghh', 'unnggfffhh', etc
 hth # hope that helps
 i?ama
 ianal

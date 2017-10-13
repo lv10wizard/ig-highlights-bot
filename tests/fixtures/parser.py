@@ -52,6 +52,13 @@ def ig_media_link():
     return _load_pickle('medialink')
 
 @pytest.fixture(scope='session')
+def ig_media_link_no_trailing_slash():
+    """
+    praw.models.Comment containing a instagram media link with no trailing slash
+    """
+    return _load_pickle('medialink_notrailingslash')
+
+@pytest.fixture(scope='session')
 def parenthesis_user():
     """
     praw.models.Comment posted by AutoModerator containing a soft-linked user

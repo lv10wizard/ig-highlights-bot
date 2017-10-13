@@ -77,7 +77,7 @@ def test_parser_matches_user_linked_in_query(jessicabolusi_medialink):
     'Photoshopped', 'Enhaaaaance', 'zooooommm', 'ooookey', 'Ooof.', 'schwifty',
     'lawwwwd', 'lawdyyy', 'goddamn', 'schlurp', 'gaaaggg', 'gaaaayyy',
     'nnnaaaaammee', 'makelinesstraightagain', 'wut', 'wat', 'Hhnnnnng', 'fml',
-    'HnnNNNGGG', 'Whoosh', 'wHOooOoosh',
+    'HnnNNNGGG', 'Whoosh', 'wHOooOoosh', 'Gatdaaaamn', 'Ooorah', 'Hoohrah',
 ])
 def test_parser_detects_jargon(word):
     assert Parser.is_jargon(word)

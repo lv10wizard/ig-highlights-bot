@@ -116,12 +116,11 @@ class Instagram(object):
     _MEDIA_PATH_PTN = r'p'
     _MEDIA_CODE_PTN = r'[\w\-]{2,}'
     IG_LINK_REGEX = re.compile(
-            r'({0})/({1})/?(?!.*{2}/)(?:[?].+)?'.format(
-            # \___/|\___/ \\________/\________/
-            #   |  |  |   /    |          \
-            #   |  |  |   \    |      optionally match trailing queries
-            #   |  |  |   /  don't match if this is a media code
-            #   |  |  |  optionally match trailing '/'
+            r'({0})/({1})(?!/{2}/?)(?:/[?].+)?'.format(
+            # \___/|\___/\________/\_________/
+            #   |  |  |      |           \
+            #   |  |  |      |      optionally match trailing queries
+            #   |  |  |    don't match if this is a media code
             #   |  |  \
             #   |  |  capture username
             #   | match path separator '/'

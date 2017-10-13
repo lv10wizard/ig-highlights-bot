@@ -1,17 +1,51 @@
 from src.instagram import Instagram
 
 
+def test_instagram_matches_links(haileypandolfi, viktoria_kay):
+    assert Instagram.IG_LINK_REGEX.search(haileypandolfi.body)
+    assert not Instagram.IG_LINK_QUERY_REGEX.search(haileypandolfi.body)
+    assert not Instagram.IG_USER_REGEX.search(haileypandolfi.body)
+    assert not Instagram.IG_USER_STRING_REGEX.search(haileypandolfi.body.strip())
+    assert not Instagram.HAS_IG_KEYWORD_REGEX.search(haileypandolfi.body.strip())
+
+    assert Instagram.IG_LINK_REGEX.search(viktoria_kay.body)
+    assert not Instagram.IG_LINK_QUERY_REGEX.search(viktoria_kay.body)
+    assert not Instagram.IG_USER_REGEX.search(viktoria_kay.body)
+    assert not Instagram.IG_USER_STRING_REGEX.search(viktoria_kay.body.strip())
+    assert not Instagram.HAS_IG_KEYWORD_REGEX.search(viktoria_kay.body.strip())
+
 def test_instagram_ignores_automod(parenthesis_user):
     assert not Instagram.IG_LINK_REGEX.search(parenthesis_user.body)
     assert not Instagram.IG_LINK_QUERY_REGEX.search(parenthesis_user.body)
     assert Instagram.IG_USER_REGEX.search(parenthesis_user.body)
     assert not Instagram.IG_USER_STRING_REGEX.search(parenthesis_user.body.strip())
+    assert not Instagram.HAS_IG_KEYWORD_REGEX.search(parenthesis_user.body.strip())
 
 def test_instagram_matches_non_english_word(vyvan_le):
     assert not Instagram.IG_LINK_REGEX.search(vyvan_le.body)
     assert not Instagram.IG_LINK_QUERY_REGEX.search(vyvan_le.body)
     assert not Instagram.IG_USER_REGEX.search(vyvan_le.body)
+    assert not Instagram.HAS_IG_KEYWORD_REGEX.search(vyvan_le.body.strip())
     assert Instagram.IG_USER_STRING_REGEX.search(vyvan_le.body.strip())
+
+def test_instagram_does_not_match_media_links(
+        ig_media_link, ig_media_link_no_trailing_slash
+):
+    assert not Instagram.IG_LINK_REGEX.search(ig_media_link.body)
+    assert not Instagram.IG_LINK_QUERY_REGEX.search(ig_media_link.body)
+    assert not Instagram.IG_USER_REGEX.search(ig_media_link.body)
+    assert not Instagram.HAS_IG_KEYWORD_REGEX.search(ig_media_link.body.strip())
+    assert not Instagram.IG_USER_STRING_REGEX.search(ig_media_link.body.strip())
+
+    assert not Instagram.IG_LINK_REGEX.search(ig_media_link_no_trailing_slash.body)
+    assert not Instagram.IG_LINK_QUERY_REGEX.search(ig_media_link_no_trailing_slash.body)
+    assert not Instagram.IG_USER_REGEX.search(ig_media_link_no_trailing_slash.body)
+    assert not Instagram.HAS_IG_KEYWORD_REGEX.search(
+            ig_media_link_no_trailing_slash.body.strip()
+    )
+    assert not Instagram.IG_USER_STRING_REGEX.search(
+            ig_media_link_no_trailing_slash.body.strip()
+    )
 
 def test_instagram_matches_instagram_prefix(yassibenitez):
     assert not Instagram.IG_LINK_REGEX.search(yassibenitez.body)
