@@ -89,13 +89,14 @@ def test_parser_matches_user_linked_in_query(jessicabolusi_medialink):
     'nnnaaaaammee', 'makelinesstraightagain', 'wut', 'wat', 'Hhnnnnng', 'fml',
     'HnnNNNGGG', 'Whoosh', 'wHOooOoosh', 'Gatdaaaamn', 'Ooorah', 'Hoohrah',
     'Woahhhohoho', 'Woahhahahah', 'huehuehue', 'hueheuehuhheuheu',
+    'Beeyooteafull', 'bEeeauutiiifuuul',
 ])
 def test_parser_detects_jargon(word):
     assert Parser.is_jargon(word)
 
 @pytest.mark.parametrize('word', [
-    'Daring', 'gorgeous', 'beautiful', 'google', 'vyvan.le', 'Hanny_madani',
-    'kaja_sbn', 'haileypandolfi', 'viktoria_kay', 'linstahh', 'natalieannworth',
+    'Daring', 'gorgeous', 'google', 'vyvan.le', 'Hanny_madani', 'kaja_sbn',
+    'haileypandolfi', 'viktoria_kay', 'linstahh', 'natalieannworth',
     'tiffanie_marie', 'tiffanie.marie', 'jessicabolusi',
 ])
 def test_parser_does_not_overmatch_jargon(word):

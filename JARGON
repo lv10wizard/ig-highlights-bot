@@ -17,6 +17,7 @@ b+a+e+
 badass
 (?:b+a+)?z+i+n+g+a*
 b+e+c+a+u+s+e+
+b+e+(?:a+u+|y+[ou]+)t+[aei]+f+u+l+ # 'beautifullll', 'beeeeyoouteeaafulllll'
 bitcoin
 br[bls]
 b+r+(?:[eau]+|e+w+|o{2,})h* # 'bruh', 'brooooo', 'breeeeehh', etc
