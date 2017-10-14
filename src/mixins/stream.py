@@ -97,8 +97,25 @@ class StreamMixin(RedditInstanceMixin):
             pass
 
     @property
+    def __is_alive(self):
+        """
+        Returns True if the stream should continue running
+        """
+        try:
+            return not (
+                    # check the _killed flag in case it is a bool
+                    self._killed and (
+                        # check the _killed.is_set method in case it is an Event
+                        hasattr(self._killed, 'is_set')
+                        and self._killed.is_set()
+                    )
+            )
+        except AttributeError:
+            return True
+
+    @property
     def stream(self):
-        while True:
+        while self.__is_alive:
             try:
                 for thing in self._stream:
                     yield thing
@@ -127,6 +144,14 @@ class StreamMixin(RedditInstanceMixin):
                 )
                 if is_retryable:
                     self.__sleep(self.__delay)
+                    # XXX: have to restart the stream because the generator
+                    # will no longer generate elements
+                    logger.id(logger.info, self, 'Restarting stream ...')
+                    try:
+                        del self._cached_stream
+                    except AttributeError:
+                        # this shouldn't happen
+                        pass
                 else:
                     raise
             else:
@@ -157,7 +182,7 @@ class _SubredditsStreamMixin(StreamMixin):
         to be re-parsed.
         """
         try:
-            the_stream = self.__cached_stream
+            the_stream = self._cached_stream
         except AttributeError:
             the_stream = None
 
@@ -175,7 +200,10 @@ class _SubredditsStreamMixin(StreamMixin):
                 # (the database file could have been modified with nothing)
                 diff = subs_from_db.symmetric_difference(current_subreddits)
 
-                if bool(diff):
+                # force an update regardless of the diff if there is no cached
+                # stream (this may happen if the previously cached stream was
+                # discarded due to a praw GET error)
+                if bool(diff) or the_stream is None:
                     new = subs_from_db - current_subreddits
                     if new:
                         logger.id(logger.info, self,
@@ -211,7 +239,7 @@ class _SubredditsStreamMixin(StreamMixin):
                                 subreddits_obj.stream, self._stream_type
                         )
                         the_stream = stream_func(pause_after=self._pause_after)
-                        self.__cached_stream = the_stream
+                        self._cached_stream = the_stream
                         self.__current_subreddits = subs_from_db
 
                 else:
