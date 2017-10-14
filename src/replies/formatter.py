@@ -96,7 +96,7 @@ class Formatter(object):
             media = ig.top_media
             for i, media_link in enumerate(media):
                 logger.id(logger.debug, self,
-                        '[{i:>{pad}}/{num}] {color_user}: adding {link}',
+                        '[{i:>{pad}}/{num}] {color_user}: {link}',
                         i=i+1,
                         pad=get_padding(len(media)),
                         num=len(media),
