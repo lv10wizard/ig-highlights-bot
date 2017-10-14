@@ -125,7 +125,8 @@ def test_parser_matches_user_linked_in_query(jessicabolusi_medialink):
     'HnnNNNGGG', 'Whoosh', 'wHOooOoosh', 'Gatdaaaamn', 'Ooorah', 'Hoohrah',
     'Woahhhohoho', 'Woahhahahah', 'huehuehue', 'hueheuehuhheuheu',
     'Beeyooteafull', 'bEeeauutiiifuuul', 'xoxoxoox', 'homie...', 'automata',
-    'selfie', 'selfey', 'selfy', 'pelfie',
+    'selfie', 'selfey', 'selfy', 'pelfie', 'jeeebus', 'JEEESUS!', 'jesuscrhist',
+    'jesuschirst', 'beeyotch',
 ])
 def test_parser_detects_jargon(word):
     assert Parser.is_jargon(word)

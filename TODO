@@ -358,6 +358,7 @@ O. parse submission titles for possible instagram user strings
     O. update sidebar
     O. update readme
     O. update app description
+- parse submission from mentions
 ? parse comments' submissions from comment stream if not parsed yet?
 ? separate submissions/comments min length for potential username matches
 
@@ -366,6 +367,8 @@ O. parse submission titles for possible instagram user strings
     - test comments are stored properly
     - test submissions are stored properly
 - test ratelimit still works
+- test mentions
+- test messages
 
 ? include version in FOOTER? (probably just the {major}.{minor} if yes)
 ? push to github

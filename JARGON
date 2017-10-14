@@ -20,6 +20,7 @@ badass
 (?:b+a+)?z+i+n+g+a*
 b+e+c+a+u+s+e+
 b+e+(?:a+u+|y+[ou]+)t+[aei]+f+u+l+ # 'beautifullll', 'beeeeyoouteeaafulllll'
+b+[ei]+a*y*[ao]+t*c+h+ # 'beeyyyooootch', etc
 bitcoin
 br[bls]
 b+r+(?:[eau]+|e+w+|o{2,})h* # 'bruh', 'brooooo', 'breeeeehh', etc
@@ -83,8 +84,8 @@ idf?[ck] # i don't (fucking) care/know
 iirc
 im(?:ns)h?o # in my (not so humble) opinion
 j+a+w+e+s+o+m+e+
+j+e+[bs]+u+s+(?:c+r*h*i*r*i*s+t+)?
 jk
-jesus(?:ch?rist)?
 kthxbye
 l+a+w+d+y*
 (?:lm)?ftfy # 'lmftfy', 'ftfy'
