@@ -126,6 +126,7 @@ rtf?m # read the fine manual
 rule\d+ # 'rule34', etc
 s+c*h+w+i+f+t+y+
 s+c*h+l+u+r+p+
+s+e+l+f+(?:p+i+c+|s+h+o+t+)?
 s+h+e*i+e*t+ # 'shiieeeeet'
 (?:s+h+)?r+e+k+t+ # 'shrekt', 'rekt'
 smf?h
