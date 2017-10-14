@@ -98,7 +98,7 @@ class Instagram(object):
     # XXX: periods cannot appear consecutively
     # eg. 'foo.b.a.r' is ok; 'foo..bar' is not
     # XXX: periods cannot appear as the first character nor the last character
-    _USERNAME_PTN = r'\w(?!.*[.]{2,})[\w\.]{,29}(?<![.])'
+    USERNAME_PTN = r'\w(?!.*[.]{2,})[\w\.]{,29}(?<![.])'
     #                  |\___________/\_________/\______/
     #                  |      |           |         \
     #                  |      |           |    don't match if ends with '.'
@@ -127,7 +127,7 @@ class Instagram(object):
             # capture base url
 
                 _BASE_URL_PTN,
-                _USERNAME_PTN,
+                USERNAME_PTN,
                 _MEDIA_CODE_PTN,
             ),
             flags=re.IGNORECASE,
@@ -145,7 +145,7 @@ class Instagram(object):
                 _BASE_URL_PTN,
                 _MEDIA_PATH_PTN,
                 _MEDIA_CODE_PTN,
-                _USERNAME_PTN,
+                USERNAME_PTN,
             ),
     )
 
@@ -160,7 +160,7 @@ class Instagram(object):
             #       |      -- basically limit guesses at username matches
             #     match start of string or whitespace or a set of acceptable
             #     starting characters
-                _USERNAME_PTN,
+                USERNAME_PTN,
             ),
             flags=re.IGNORECASE,
     )
@@ -221,7 +221,7 @@ class Instagram(object):
             # |   |        capture possible username string
             # \ match instagram keywords prefix
             # only match if at the beginning of the string
-                _USERNAME_PTN, _IG_KEYWORD_PREFIX,
+                USERNAME_PTN, _IG_KEYWORD_PREFIX,
             ),
 
             # match a suffixed potential instagram username
@@ -236,11 +236,11 @@ class Instagram(object):
             #     |     capture possible username string
             #   only match if at the beginning of the string or preceded by
             #       spaces
-                _USERNAME_PTN, _IG_KEYWORD_SUFFIX
+                USERNAME_PTN, _IG_KEYWORD_SUFFIX
             ),
 
             # match a possible instagram username if it is the only word
-            r'^@?({0})$'.format(_USERNAME_PTN),
+            r'^@?({0})$'.format(USERNAME_PTN),
             # |\_____/ \
             # |   |  only match entire word
             # \  capture possible username string

@@ -4,6 +4,7 @@ from constants import (
         HELP_URL,
         REPO_URL,
 )
+from src.instagram import Instagram
 from src.util import (
         get_padding,
         logger,
@@ -16,7 +17,9 @@ class Formatter(object):
     """
 
     COMMENT_CHARACTER_LIMIT = 1e4
-    HEADER_FMT = '[@{user}]({link}) highlights:'
+    # tag usernames in the bot's replies so we can parse them back out easily
+    USER_TAG = '[](#ig@{user})'
+    HEADER_FMT = '{0}[@{{user}}]({{link}}) highlights:'.format(USER_TAG)
     FOOTER_FMT = (
             '---\n^I&#32;am&#32;a&#32;bot.'
             '&#32;Did&#32;I&#32;get&#32;something&#32;wrong?'
@@ -41,22 +44,24 @@ class Formatter(object):
         import re
 
         try:
-            header_re = Formatter.HEADER_REGEX
+            user_re = Formatter.USER_TAG_REGEX
         except AttributeError:
-            # escape special characters so we can format the header into a
+            # escape special characters so we can format the user-tag into a
             # regex pattern
-            escaped_header = re.sub(
+            escaped_user_tag = re.sub(
                     # match any '[', ']', '(', or ')'
                     r'([\[\]\(\)])',
                     # escape the matched character
                     r'\\\1',
-                    Formatter.HEADER_FMT
+                    Formatter.USER_TAG
             )
-            pattern = escaped_header.format(user='([\w\.]+)', link='.+')
-            header_re = re.compile(pattern)
-            Formatter.HEADER_REGEX = header_re
+            pattern = escaped_user_tag.format(
+                    user='({0})'.format(Instagram.USERNAME_PTN)
+            )
+            user_re = re.compile(pattern)
+            Formatter.USER_TAG_REGEX = user_re
 
-        return header_re.findall(body)
+        return user_re.findall(body)
 
     def __init__(self, username):
         # wrap the string in a list so it is easier to work with
