@@ -4,6 +4,7 @@
 
 
 \d+[A-Za-z]+(?:\d+me)? # '2spooky4me', '3cute5me', etc
+\welf(?:ie|e?y) # 'selfie', 'pelfie', 'selfy', etc
 (?:\d+me_?irl\d+)?me_?i+rl # 'me_irl', '2me_irl4meirl', etc
 afai(?:cr|cs|ct|k|r) # as far as i ...
 afk
@@ -11,6 +12,7 @@ a[fs]af*p # 'afap', 'asap', 'asafp'
 a+h+
 aslp?
 atm
+a+u+t+o+m+a+t+a+ # 'automata' (pychant doesn't consider this as english)
 a+w+
 awol
 b+a+e+
