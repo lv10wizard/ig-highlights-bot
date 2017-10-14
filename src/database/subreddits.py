@@ -17,7 +17,7 @@ class SubredditsDatabase(Database):
     Storage of subreddits to fetch comment streams from
     """
 
-    PATH = Database.PATH_FMT.format('subreddits.db')
+    PATH = 'subreddits.db'
 
     @staticmethod
     def get_subreddit_name(thing):
@@ -31,14 +31,14 @@ class SubredditsDatabase(Database):
             name = None
         return name
 
-    def __init__(self, do_seed=None):
+    def __init__(self, do_seed=None, *args, **kwargs):
+        Database.__init__(self, *args, **kwargs)
+
         if do_seed is None:
             do_seed = not os.path.exists(
                     Database.resolve_path(SubredditsDatabase.PATH)
             )
         self.do_seed = bool(do_seed)
-
-        Database.__init__(self, SubredditsDatabase.PATH)
 
     @property
     def _db(self):

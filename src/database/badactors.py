@@ -10,10 +10,10 @@ class BadActorsDatabase(Database):
     worthy of a temp ban (eg. linking to many 404s in a "short" timeframe)
     """
 
-    PATH = Database.PATH_FMT.format('bad-actors.db')
+    PATH = 'bad-actors.db'
 
-    def __init__(self, cfg):
-        Database.__init__(self, BadActorsDatabase.PATH)
+    def __init__(self, cfg, *args, **kwargs):
+        Database.__init__(self, *args, **kwargs)
         self.cfg = cfg
 
     def __contains__(self, thing):

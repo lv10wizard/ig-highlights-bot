@@ -13,7 +13,7 @@ class RedditRateLimitQueueDatabase(Database):
     This class aims to be process-safe but I'm not sure it is in all cases.
     """
 
-    PATH = Database.PATH_FMT.format('reddit-queue.db')
+    PATH = 'reddit-queue.db'
 
     __has_elements = multiprocessing.Event()
 
@@ -24,9 +24,6 @@ class RedditRateLimitQueueDatabase(Database):
         except AttributeError:
             # probably fullname string
             return thing
-
-    def __init__(self):
-        Database.__init__(self, RedditRateLimitQueueDatabase.PATH)
 
     def __contains__(self, thing):
         cursor = self._db.execute(

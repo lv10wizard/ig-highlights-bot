@@ -11,6 +11,7 @@ from six import (
         string_types,
 )
 
+import constants
 from constants import DATA_ROOT_DIR
 from src import config
 from src.util import logger
@@ -127,6 +128,7 @@ class Database(object):
     """
 
     PATH_FMT = os.path.join(DATA_ROOT_DIR, 'data', '{0}')
+    DRY_RUN_PATH_FMT = os.path.join(DATA_ROOT_DIR, 'data', 'dry_run', '{0}')
 
     TABLENAME_RE = re.compile(r'^(\w+)\s*[(]')
     COLUMN_RE = re.compile(r'\s*(\w+).+?')
@@ -149,8 +151,33 @@ class Database(object):
                 # passed some random error?
                 raise
 
-    def __init__(self, path):
-        self.path = path
+    @staticmethod
+    def format_path(basename, dry_run=None):
+        if dry_run is None:
+            dry_run = constants.dry_run
+
+        # use the derived class's static PATH variable for the file path
+        if not dry_run:
+            return Database.PATH_FMT.format(basename)
+        else:
+            return Database.DRY_RUN_PATH_FMT.format(basename)
+
+    def __init__(self, dry_run=None):
+        """
+        dry_run (bool, optional) - overridable dry_run flag in case a derived
+                class never wants to use the dry_run specific path
+        """
+        if dry_run is None:
+            dry_run = constants.dry_run
+        self.path = Database.format_path(self.PATH, dry_run)
+
+    @property
+    def path(self):
+        # XXX: let AttributeError through; it shouldn't happen.
+        return self._path
+    @path.setter
+    def path(self, path):
+        self._path = path
         self._resolved_path = Database.resolve_path(path)
         self._dirname = os.path.dirname(path)
         self._resolved_dirname = Database.resolve_path(self._dirname)

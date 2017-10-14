@@ -18,6 +18,8 @@ from src import (
 from src.util import logger
 
 
+DRY_RUN         = 'dry-run'
+
 SHUTDOWN        = 'shutdown'
 ADD_SUBREDDIT   = 'add-subreddit'
 RM_SUBREDDIT    = 'rm-subreddit'
@@ -38,7 +40,8 @@ except ValueError:
     # database class renamed? this shouldn't happen
     pass
 
-resolved_igdb_path = config.resolve_path(database.InstagramDatabase.PATH)
+igdb_path = database.Database.format_path(database.InstagramDatabase.PATH)
+resolved_igdb_path = config.resolve_path(igdb_path)
 try:
     IG_DB_CHOICES = sorted([
             name for name in os.listdir(resolved_igdb_path)
@@ -46,6 +49,12 @@ try:
     ])
 except OSError:
     IG_DB_CHOICES = []
+
+def to_opt_str(arg_str):
+    return arg_str.replace('-', '_')
+def to_cmdline(arg_str):
+    return arg_str.replace('_', '-')
+
 
 def shutdown(cfg, do_shutdown=True):
     import sys
@@ -111,8 +120,13 @@ def add_subreddit(cfg, *subreddits):
                             exc_info=True,
                     )
 
+                else:
+                    logger.info('Successfully added \'{sub_name}\'!',
+                            sub_name=reddit.prefix_subreddit(sub_name),
+                    )
+
             else:
-                logger.debug('Cannot add \'{sub_name}\': already added!',
+                logger.info('Cannot add \'{sub_name}\': already added!',
                         sub_name=sub_name,
                 )
 
@@ -125,8 +139,12 @@ def rm_subreddit(cfg, *subreddits):
             if sub_name in subreddits_db:
                 with subreddits_db:
                     subreddits_db.delete(sub_name)
+
+                logger.info('Successfully removed \'{sub_name}\'!',
+                        sub_name=reddit.prefix_subreddit(sub_name),
+                )
             else:
-                logger.debug('Cannot remove \'{sub_name}\': not in database!',
+                logger.info('Cannot remove \'{sub_name}\': not in database!',
                         sub_name=sub_name,
                 )
 
@@ -286,9 +304,13 @@ def print_database(cfg, *databases):
                     db_name=db_name,
             )
         else:
-            resolved_path = database.Database.resolve_path(db_class.PATH)
+            path = database.Database.format_path(db_class.PATH)
+            resolved_path = database.Database.resolve_path(path)
             if os.path.exists(resolved_path):
                 do_print_database(resolved_path)
+
+            else:
+                logger.info('No database file: \'{path}\'', path=path)
 
 def print_instagram_database(cfg, order, *user_databases):
     if '*' in user_databases:
@@ -326,11 +348,6 @@ def print_instagram_database(cfg, order, *user_databases):
             )
 
 def handle(cfg, args):
-    def to_opt_str(arg_str):
-        return arg_str.replace('-', '_')
-    def to_cmdline(arg_str):
-        return arg_str.replace('_', '-')
-
     handlers = {
             SHUTDOWN: shutdown,
             ADD_SUBREDDIT: add_subreddit,
@@ -383,7 +400,7 @@ def parse():
     parser.add_argument('-c', '--config', metavar='PATH',
             help='Custom config path; default: {0}'.format(config.Config.PATH),
     )
-    parser.add_argument('-d', '--dry-run', action='store_true',
+    parser.add_argument('-d', '--{0}'.format(DRY_RUN), action='store_true',
             help='Runs the bot normally but disables it from replying to'
             ' comments',
     )

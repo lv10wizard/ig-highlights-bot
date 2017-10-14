@@ -10,10 +10,7 @@ class PotentialSubredditsDatabase(Database):
     subreddits.
     """
 
-    PATH = Database.PATH_FMT.format('to-add-subreddits.db')
-
-    def __init__(self):
-        Database.__init__( self, PotentialSubredditsDatabase.PATH)
+    PATH = 'to-add-subreddits.db'
 
     @property
     def _create_table_data(self):

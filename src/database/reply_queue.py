@@ -8,7 +8,7 @@ class ReplyQueueDatabase(Database):
     Persistent queue of comments the bot should reply to
     """
 
-    PATH = Database.PATH_FMT.format('reply-queue.db')
+    PATH = 'reply-queue.db'
 
     @staticmethod
     def get_fullname(thing):
@@ -16,9 +16,6 @@ class ReplyQueueDatabase(Database):
             return thing.fullname
         except AttributeError:
             return thing
-
-    def __init__(self):
-        Database.__init__(self, ReplyQueueDatabase.PATH)
 
     def __contains__(self, thing):
         cursor = self._db.execute(

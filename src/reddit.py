@@ -15,6 +15,7 @@ from six import (
 )
 from six.moves import input
 
+import constants
 from constants import (
         AUTHOR,
         PREFIX_SUBREDDIT,
@@ -467,8 +468,12 @@ class Reddit(praw.Reddit):
 
             try:
                 logger.id(logger.info, self,
-                        'Rate limited! Queueing {color_thing} ...',
+                        'Rate-limited! Queueing {color_thing}'
+                        ' (expires @ {time} = {strftime}) ...',
                         color_thing=display_fullname(thing),
+                        time=self.__rate_limited.remaining,
+                        strftime='%H:%M:%S',
+                        strf_time=self.__rate_limited.value,
                 )
                 with self.__rate_limit_queue:
                     self.__rate_limit_queue.insert(
@@ -491,6 +496,70 @@ class Reddit(praw.Reddit):
 
         return success
 
+    def __dry_run_test(self):
+        """
+        "Randomly" chooses whether to throw an exception or do nothing if the
+        bot is running as a dry_run
+        """
+        ran_test = False
+        if constants.dry_run:
+            try:
+                self.__dry_run_test_number *= 2
+            except AttributeError:
+                self.__dry_run_test_number = 1
+            num_call = self.__dry_run_test_number
+
+            def raise_forbidden():
+                import requests
+
+                # fake a Forbidden response
+                fake_response = requests.Response()
+                fake_response.reason = 'DRY-RUN FORBIDDEN TEST'
+                fake_response.status_code = 403
+                logger.id(logger.info, self,
+                        'Dry run: raising Forbidden: {reason} ...',
+                        reason=fake_response.reason,
+                )
+                raise Forbidden(fake_response)
+
+            # base decision off the number of times this method has been called
+            if num_call == 1:
+                raise_forbidden()
+                ran_test = True
+
+            else:
+                import random
+
+                # lower the chance of raising a ratelimit exception as the
+                # number of calls increases (100% the first time)
+                decision = random.randint(2, num_call)
+                if decision == 2:
+                    # throw a fake rate-limit exception
+                    err_type = Reddit.RATELIMIT_ERR[0]
+                    logger.id(logger.info, self,
+                            'Dry run: raising {err_type} ...',
+                            err_type=err_type,
+                    )
+                    err = [
+                            err_type,
+
+                            'you are doing that too much.'
+                            ' try again in {0} minutes.'.format(
+                                random.randint(1, 4)
+                            ),
+
+                            None,
+                    ]
+                    raise praw.exceptions.APIException(*err)
+                    ran_test = True
+
+                elif decision == 3:
+                    raise_forbidden()
+                    ran_test = True
+
+        # pretty sure this isn't needed
+        return ran_test
+
     def send_debug_pm(self, subject, body):
         """
         Sends a pm to the AUTHOR reddit account
@@ -499,8 +568,11 @@ class Reddit(praw.Reddit):
             if self.is_rate_limited:
                 logger.id(logger.debug, self,
                         'Rate-limited! Skipping sending debug pm:'
-                        ' \'{subject}\'',
+                        ' \'{subject}\' (expires @ {time} = {strftime})',
                         subject=subject,
+                        time=self.__rate_limited.remaining,
+                        strftime='%H:%M:%S',
+                        strf_time=self.__rate_limited.value,
                 )
                 return
 
@@ -625,7 +697,14 @@ class Reddit(praw.Reddit):
                 )
 
                 try:
-                    thing.reply(body)
+                    if not constants.dry_run:
+                        thing.reply(body)
+                    else:
+                        if not self.__dry_run_test():
+                            logger.id(logger.info, self,
+                                    'Dry run: skipping reply to {color_thing}',
+                                    color_thing=display_id(thing),
+                            )
 
                 except (AttributeError, TypeError) as e:
                     logger.id(logger.warn, self,

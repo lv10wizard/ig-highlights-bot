@@ -14,7 +14,7 @@ class InstagramQueueDatabase(Database):
     data sense)
     """
 
-    PATH = Database.PATH_FMT.format('ig-queue.db')
+    PATH = 'ig-queue.db'
     STALE_THRESHOLD = parse_time('1d')
 
     @staticmethod
@@ -53,8 +53,8 @@ class InstagramQueueDatabase(Database):
 
         return result
 
-    def __init__(self):
-        Database.__init__(self, InstagramQueueDatabase.PATH)
+    def __init__(self, dry_run=False, *args, **kwargs):
+        Database.__init__(self, dry_run=False, *args, **kwargs)
 
     def __contains__(self, ig_usernames):
         def contains_user(ig_user):

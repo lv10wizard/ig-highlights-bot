@@ -30,7 +30,7 @@ class IgHighlightsBot(RunForeverMixin, SubredditsCommentStreamMixin):
     processes and crawls comments from subreddits in the subreddits database.
     """
 
-    def __init__(self, cfg, dry_run):
+    def __init__(self, cfg):
         self._killed = False
         # this is created here so that any process can flag that the account
         # is rate-limited.
@@ -38,23 +38,29 @@ class IgHighlightsBot(RunForeverMixin, SubredditsCommentStreamMixin):
         SubredditsCommentStreamMixin.__init__(self, cfg, rate_limited)
 
         self.blacklist = blacklist.Blacklist(cfg)
-        self.ratelimit_handler = ratelimit.RateLimitHandler(cfg, rate_limited)
-        self.controversial = controversial.Controversial(cfg, rate_limited)
-        self.submissions = submissions.Submissions(
-                cfg, rate_limited, self.blacklist
+        self.ratelimit_handler = ratelimit.RateLimitHandler(
+                cfg, rate_limited,
         )
-        self.messages = messages.Messages(cfg, rate_limited, self.blacklist)
+        self.controversial = controversial.Controversial(
+                cfg, rate_limited,
+        )
+        self.submissions = submissions.Submissions(
+                cfg, rate_limited, self.blacklist,
+        )
+        self.messages = messages.Messages(
+                cfg, rate_limited, self.blacklist,
+        )
         self.mentions = mentions.Mentions(
-                cfg, rate_limited, self.blacklist, dry_run,
+                cfg, rate_limited, self.blacklist,
         )
         self.replier = replies.Replier(
-                cfg, rate_limited, self.blacklist, dry_run,
+                cfg, rate_limited, self.blacklist,
         )
 
         # initialize stuff that requires correct credentials
         instagram.Instagram.initialize(cfg, self._reddit.username)
         self.filter = replies.Filter(
-                cfg, self._reddit.username_raw, self.blacklist
+                cfg, self._reddit.username_raw, self.blacklist,
         )
 
     def __str__(self):

@@ -536,33 +536,31 @@ class Instagram(object):
 
         return data
 
+    def __format_db_path(self, is_fetching=False):
+        result = ''
+        if self.user:
+            path = database.Database.format_path(
+                    database.InstagramDatabase.PATH,
+                    dry_run=False,
+            )
+            basename = '{0}.db' if not is_fetching else '.{0}.fetching.db'
+            path = os.path.join(path, basename.format(self.user))
+            result = database.Database.resolve_path(path)
+        return result
+
     @property
     def __db_path(self):
         """
         Returns the user's database file path
         """
-        if self.user:
-            path = os.path.join(
-                    database.InstagramDatabase.PATH,
-                    '{0}.db'.format(self.user),
-            )
-            return database.Database.resolve_path(path)
-        return ''
+        return self.__format_db_path()
 
     @property
     def __seen_db_path(self):
         """
         Returns the user's in-progress fetch database file path
         """
-        if self.user:
-            path = os.path.join(
-                    database.InstagramDatabase.PATH,
-                    # instagram usernames cannot start with a '.' so this
-                    # shouldn't clash with an actual username
-                    '.{0}.fetching.db'.format(self.user),
-            )
-            return database.Database.resolve_path(path)
-        return ''
+        return self.__format_db_path(True)
 
     @property
     def __is_expired(self):

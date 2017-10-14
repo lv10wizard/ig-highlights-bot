@@ -12,9 +12,16 @@ class InstagramDatabase(Database):
     Cached instagram user data
     """
 
-    PATH = Database.PATH_FMT.format('instagram')
+    PATH = 'instagram'
 
     BAD_FLAG = ':+$%!!!!!~BAD~!~USERNAME~!!!!!%$+:'
+
+    def __init__(self, path, dry_run=False, *args, **kwargs):
+        # XXX: take a dry_run argument in case one is passed, but don't use it
+        # don't split instagram by run-mode
+        Database.__init__(self, dry_run=False, *args, **kwargs)
+        # override the path since this class defines per-user functionality
+        self.path = path
 
     @property
     def _create_table_data(self):

@@ -25,11 +25,10 @@ class Replier(ProcessMixin, RedditInstanceMixin):
     separate process so that stream fetching processes are never interrupted.
     """
 
-    def __init__(self, cfg, rate_limited, blacklist, dry_run):
+    def __init__(self, cfg, rate_limited, blacklist):
         ProcessMixin.__init__(self)
         RedditInstanceMixin.__init__(self, cfg, rate_limited)
 
-        self.dry_run = dry_run
         self.blacklist = blacklist
         self.subreddits = SubredditsDatabase()
         self.potential_subreddits = PotentialSubredditsDatabase()
@@ -177,14 +176,6 @@ class Replier(ProcessMixin, RedditInstanceMixin):
                 plural=('y' if len(lengths) == 1 else 'ies'),
                 lengths=lengths,
         )
-
-        if self.dry_run:
-            logger.id(logger.info, self,
-                    'Dry run: skipping repl{plural} to {color_thing}',
-                    plural=('y' if len(reply_list) == 1 else 'ies'),
-                    color_thing=reddit.display_id(thing),
-            )
-            return
 
         for body, ig_usernames in reply_list:
             if self._reddit.do_reply(thing, body, self._killed):

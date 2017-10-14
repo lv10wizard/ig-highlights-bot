@@ -6,10 +6,7 @@ class MentionsDatabase(Database):
     Database of seen mention comments.
     """
 
-    PATH = Database.PATH_FMT.format('mentions.db')
-
-    def __init__(self):
-        Database.__init__(self, MentionsDatabase.PATH)
+    PATH = 'mentions.db'
 
     @property
     def _create_table_data(self):

@@ -20,7 +20,7 @@ class BlacklistDatabase(Database):
     Storage of blacklisted subreddits/users
     """
 
-    PATH = Database.PATH_FMT.format('blacklist.db')
+    PATH = 'blacklist.db'
 
     PERMANENT = -1
 
@@ -29,14 +29,14 @@ class BlacklistDatabase(Database):
     TYPE_SUBREDDIT = '__subreddit__'
     TYPE_USER      = '__user__'
 
-    def __init__(self, cfg, do_seed=None):
+    def __init__(self, cfg, do_seed=None, *args, **kwargs):
+        Database.__init__(self, *args, **kwargs)
+
         if do_seed is None:
             do_seed = not os.path.exists(
                     Database.resolve_path(BlacklistDatabase.PATH)
             )
         self.do_seed = bool(do_seed)
-
-        Database.__init__(self, BlacklistDatabase.PATH)
         self.cfg = cfg
 
     @property

@@ -10,10 +10,12 @@ class InstagramRateLimitDatabase(Database):
     Internal instagram rate-limit data
     """
 
-    PATH = Database.PATH_FMT.format('ig-ratelimit.db')
+    PATH = 'ig-ratelimit.db'
 
-    def __init__(self, max_age):
-        Database.__init__(self, InstagramRateLimitDatabase.PATH)
+    def __init__(self, max_age, dry_run=False, *args, **kwargs):
+        # never use a dry_run ratelimit database (we only want a single db
+        # tracking the instagram ratelimit regardless of run-mode)
+        Database.__init__(self, dry_run=False, *args, **kwargs)
         self.max_age = parse_time(max_age)
 
     @property

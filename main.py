@@ -8,6 +8,7 @@ from six import (
 )
 
 import args
+import constants
 from constants import __DEBUG__
 from src import config
 from src.util import logger
@@ -93,6 +94,9 @@ if __name__ == '__main__':
     init_logger()
     options = args.parse()
 
+    # assign the dry_run arg as a "global" of sorts so that it doesn't have to
+    # be passed to everything
+    constants.dry_run = options['dry_run']
     cfg = config.Config(options['config'])
     if args.handle(cfg, options):
         sys.exit(0)
@@ -100,7 +104,7 @@ if __name__ == '__main__':
     init_logger(cfg, options)
 
     from src.bot import IgHighlightsBot
-    ig_highlights_bot = IgHighlightsBot(cfg, options['dry_run'])
+    ig_highlights_bot = IgHighlightsBot(cfg)
     try:
         ig_highlights_bot.run_forever()
 

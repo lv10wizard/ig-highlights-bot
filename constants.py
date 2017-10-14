@@ -92,3 +92,5 @@ HELP_URL = 'https://redd.it/74dtgu'
 PREFIX_SUBREDDIT = 'r/'
 PREFIX_USER = 'u/'
 
+dry_run = False
+
