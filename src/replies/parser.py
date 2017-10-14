@@ -1,3 +1,4 @@
+import abc
 import ctypes
 from errno import (
         ECONNABORTED,
@@ -13,6 +14,11 @@ from bs4 import (
         FeatureNotFound,
 )
 import enchant
+from praw.models import (
+        Comment,
+        Submission,
+)
+from six import add_metaclass
 from six.moves.urllib.parse import urlparse
 
 from src import reddit
@@ -76,13 +82,13 @@ def load_jargon():
 
 class _Cache(object):
     """
-    Inter-process parsed comment cache
+    Inter-process parsed thing cache
     """
 
     _manager = multiprocessing.Manager()
 
     # the amount of time before the cache is cleared.
-    # too long and the bot may miss any edits to the comment
+    # too long and the bot may miss any edits to the thing
     # (and the cache may start to impact memory significantly),
     # too short and the number of potential network hits rises.
     EXPIRE_TIME = parse_time('15m')
@@ -137,7 +143,7 @@ class _Cache(object):
                     'Clearing cache (#{num}) ...',
                     num=len(self.cache),
             )
-            # XXX: this may cause a comment to be parsed back-to-back if it was
+            # XXX: this may cause a thing to be parsed back-to-back if it was
             # parsed just before clear()
             try:
                 self.cache.clear()
@@ -148,12 +154,311 @@ class _Cache(object):
                     raise
             self._expire_timer.value = time.time()
 
-class Parser(object):
+@add_metaclass(abc.ABCMeta)
+class _ParserStrategy(object):
     """
-    Parses reddit comments for instagram user links
+    Parsing strategy abstract class
     """
 
-    # list of authors whose comments should not be parsed for soft-links
+    @staticmethod
+    def sanitize_link(link):
+        """
+        Sanitizes the link url
+        """
+        # parse the url to strip any fragments
+        parsed_url = urlparse(link)
+        url = []
+        if parsed_url.scheme:
+            url.append('{0}://'.format(parsed_url.scheme))
+        url.append(parsed_url.netloc)
+        url.append(parsed_url.path)
+        if parsed_url.query:
+            url.append('?{0}'.format(parsed_url.query))
+        return ''.join(url)
+
+    def __init__(self, thing):
+        self.thing = thing
+
+    def __str__(self):
+        return ':'.join([
+            self.__class__.__name__,
+            reddit.display_id(self.thing)
+        ])
+
+    @abc.abstractmethod
+    def _parse_links(self):
+        """ Strategy-specific link parsing """
+
+    @abc.abstractproperty
+    def _thing_text(self):
+        """ Returns the thing's text (comment.body or submission.title) """
+
+    @abc.abstractproperty
+    def _thing_html(self):
+        """
+        Returns the thing's text as html
+        (comment.body_html or submission.selftext_html)
+        """
+
+    def _link_matches(self, link):
+        """
+        Returns True if the link should be added to the list of parsed links
+        """
+        result = False
+        url = _ParserStrategy.sanitize_link(link)
+
+        logger.id(logger.debug, self,
+                'Testing link'
+                ' \'{color_actual}\' => \'{color_sanitized}\'',
+                color_actual=link,
+                color_sanitized=url,
+        )
+
+        match = Instagram.IG_LINK_REGEX.search(url)
+        if match:
+            logger.id(logger.debug, self,
+                    'Matched user profile link: {color_link}',
+                    color_link=url,
+            )
+            result = True
+
+        else:
+            # try looking for the username in the query in case
+            # it is a media link
+            match = Instagram.IG_LINK_QUERY_REGEX.search(url)
+            if match:
+                logger.id(logger.debug, self,
+                        'Matched query user profile link:'
+                        ' {color_link}',
+                        color_link=url,
+                )
+                result = True
+
+        return result
+
+    def _parse_links_from_html(self):
+        """
+        Parses links from the thing's html
+
+        Returns a list of parsed urls
+        """
+        links = []
+        try:
+            soup = BeautifulSoup(self._thing_html, 'lxml')
+        except FeatureNotFound:
+            soup = BeautifulSoup(self._thing_html, 'html.parser')
+
+        # Note: this only considers valid links in the body's text
+        # TODO? regex search for anything that looks like a link
+        for a in soup.find_all('a', href=True):
+            if self._link_matches(a['href']):
+                links.append(a['href'])
+
+        return links
+
+    def parse_links(self):
+        """
+        Returns a list of links found in thing
+        """
+        links = Parser._link_cache[self.thing.fullname]
+        if links is None:
+            logger.id(logger.debug, self,
+                    'Parsing {thing} ...',
+                    thing=reddit.get_type_from_fullname(self.thing.fullname),
+            )
+
+            links = remove_duplicates(self._parse_links())
+            # cache the links in case a new Parser is instantiated for
+            # the same thing, potentially from a different process
+            Parser._link_cache[self.thing.fullname] = links
+            if links:
+                logger.id(logger.info, self,
+                        'Found #{num} link{plural}: {color}',
+                        num=len(links),
+                        plural=('' if len(links) == 1 else 's'),
+                        color=links,
+                )
+
+        return links
+
+    def parse_usernames(self):
+        """
+        Returns a list of unique usernames corresponding to parse_links
+        """
+        usernames = Parser._username_cache[self.thing.fullname]
+        if usernames is None:
+            usernames = []
+            # look for usernames from links first since they are all but
+            # guaranteed to be accurate
+            for link in self.parse_links():
+                match = Instagram.IG_LINK_REGEX.search(link)
+                if match:
+                    usernames.append(match.group(2))
+
+                else:
+                    match = Instagram.IG_LINK_QUERY_REGEX.search(link)
+                    if match:
+                        usernames.append(match.group(2))
+
+            author = self.thing.author
+            author = author and author.name.lower()
+
+            if not usernames and author not in Parser.IGNORE:
+                # try looking username-like strings in the thing in
+                # case the user soft-linked one or more usernames
+                # eg. '@angiegoesboom'
+
+                # XXX: this will increase the frequency of 404s from general
+                # bad matches and may cause the bot to link incorrect user
+                # data if someone soft-links eg. a twitter user and a
+                # different person owns the same username on instagram.
+                logger.id(logger.debug, self,
+                        '\nLooking for soft-linked users in text:'
+                        ' \'{text}\'\n',
+                        text=self._thing_text,
+                )
+
+                # try '@username'
+                usernames = Instagram.IG_USER_REGEX.findall(self._thing_text)
+                # TODO: this should not be turned on if the bot is
+                # crawling any popular subreddit -- but how to determine
+                # if a subreddit is popular?
+                # XXX: turn off trying random-ish strings as usernames
+                # if the bot is crawling /r/all or if we failed to load
+                # the JARGON file
+                if (
+                        not usernames
+                        and Parser._JARGON_FROM_FILE
+                        and 'all' not in Parser._subreddits
+                ):
+                    # try looking for possible username strings
+                    usernames = self._get_potential_user_strings()
+
+            usernames = remove_duplicates(usernames)
+            Parser._username_cache[self.thing.fullname] = usernames
+
+            if usernames:
+                logger.id(logger.info, self,
+                        'Found #{num} username{plural}: {color}',
+                        num=len(usernames),
+                        plural=('' if len(usernames) == 1 else 's'),
+                        color=usernames,
+                )
+
+        return usernames.copy()
+
+    def _get_potential_user_strings(self):
+        """
+        Tries to find strings in the thing body that could be usernames.
+
+        Returns a list of username candidates
+        """
+        LENGTH_THRESHOLD = 4
+        usernames = []
+        body_split = self._thing_text.split('\n')
+        # try looking for a non-dictionary, non-jargon word.
+        # XXX: matching a false positive will typically result in a
+        # private/no-data instagram user if not a 404. relying on the instagram
+        # user not having any data to prevent a reply is unwise.
+        if (
+                # single word in thing
+                len(self._thing_text.strip().split()) == 1
+                # thing looks like it could contain an instagram user
+                or any(
+                    Instagram.HAS_IG_KEYWORD_REGEX.search(text.strip())
+                    for text in body_split
+                )
+        ):
+            matches = []
+            for text in body_split:
+                # flatten the list of matches
+                # https://stackoverflow.com/a/8481590
+                matches += list(itertools.chain.from_iterable(
+                        Instagram.IG_USER_STRING_REGEX.findall(text.strip())
+                ))
+
+            for name in matches:
+                if not name:
+                    continue
+
+                # only include strings that could be usernames
+                do_add = False
+                reason = '???'
+                # not too short
+                if len(name) <= 4:
+                    reason = 'too short ({0})'.format(len(name))
+                else:
+                    # not some kind of internet jagon
+                    match = Parser.is_jargon(name)
+                    if match:
+                        reason = 'is jargon: \'{0}\''.format(match.group(0))
+                    # not an english word
+                    elif Parser.is_english(name):
+                        reason = 'is english: \'{0}\''.format(name)
+
+                    else:
+                        do_add = True
+
+                if do_add:
+                    usernames.append(name)
+
+                else:
+                    logger.id(logger.debug, self,
+                            'Potential username, {color_name}, failed:'
+                            ' {reason}',
+                            color_name=name,
+                            reason=reason,
+                    )
+
+        return usernames
+
+class _CommentParser(_ParserStrategy):
+    """
+    Comment parsing strategy
+    """
+    @property
+    def _thing_text(self):
+        return self.thing.body
+
+    @property
+    def _thing_html(self):
+        return self.thing.body_html
+
+    def _parse_links(self):
+        return self._parse_links_from_html()
+
+class _SubmissionParser(_ParserStrategy):
+    """
+    Submission parsing strategy
+    """
+    @property
+    def _thing_text(self):
+        # treat the title as part of the self-post (assuming the submission is
+        # a self-post)
+        result = [self.thing.title]
+        if self.thing.selftext:
+            result.append(self.thing.selftext)
+        return '\n'.join(result)
+
+    @property
+    def _thing_html(self):
+        # non- self-posts' .selftext returns None
+        return self.thing.selftext_html or ''
+
+    def _parse_links(self):
+        links = self._parse_links_from_html()
+        # check the post's url in case it links to an instagram profile
+        if self._link_matches(self.thing.url):
+            links.append(self.thing.url)
+
+        return links
+
+class Parser(object):
+    """
+    Parses reddit things for instagram user links
+    """
+
+    # list of authors whose things should not be parsed for soft-links
     # XXX: these should be in lower-case
     IGNORE = [
             'automoderator',
@@ -232,94 +537,39 @@ class Parser(object):
         """
         return Parser._JARGON_REGEX.search(word)
 
-    def __init__(self, comment):
-        self.comment = comment
+    def __init__(self, thing):
+        self.thing = thing
+        if isinstance(thing, Comment):
+            self._strategy = _CommentParser(thing)
+        elif isinstance(thing, Submission):
+            self._strategy = _SubmissionParser(thing)
+        else:
+            self._strategy = None
+            logger.id(logger.warn, self,
+                    'Unhandled thing: {color_thing}',
+                    color_thing=thing.__repr__(),
+            )
 
     def __str__(self):
-        result = [self.__class__.__name__]
-        if not self.comment:
-            result.append('<invalid comment>')
-        else:
-            result.append(reddit.display_id(self.comment))
+        result = [self.__class__.__name__, reddit.display_id(self.thing)]
+        if not self._strategy:
+            result.append('<invalid>')
         return ':'.join(result)
 
     @property
     def ig_links(self):
         """
-        Returns a list of unique instagram links in the comment
+        Returns a list of unique instagram links in the thing
         """
         try:
             links = self.__ig_links
 
         except AttributeError:
-            if not self.comment:
+            if not self._strategy:
                 links = []
-
             else:
-                links = Parser._link_cache[self.comment.id]
-                if links is None:
-                    logger.id(logger.debug, self, 'Parsing comment ...')
+                links = self._strategy.parse_links()
 
-                    try:
-                        soup = BeautifulSoup(self.comment.body_html, 'lxml')
-                    except FeatureNotFound:
-                        soup = BeautifulSoup(
-                                self.comment.body_html, 'html.parser'
-                        )
-
-                    # Note: this only considers valid links in the body's text
-                    # TODO? regex search for anything that looks like a link
-                    links = []
-                    for a in soup.find_all('a', href=True):
-                        # parse the url to strip any fragments
-                        parsed_url = urlparse(a['href'])
-                        url = []
-                        if parsed_url.scheme:
-                            url.append('{0}://'.format(parsed_url.scheme))
-                        url.append(parsed_url.netloc)
-                        url.append(parsed_url.path)
-                        if parsed_url.query:
-                            url.append('?{0}'.format(parsed_url.query))
-                        url = ''.join(url)
-
-                        logger.id(logger.debug, self,
-                                'Testing link'
-                                ' \'{color_actual}\' => \'{color_sanitized}\'',
-                                color_actual=a['href'],
-                                color_sanitized=url,
-                        )
-
-                        match = Instagram.IG_LINK_REGEX.search(url)
-                        if match:
-                            logger.id(logger.debug, self,
-                                    'Matched user profile link: {color_link}',
-                                    color_link=url,
-                            )
-                            links.append(url)
-
-                        else:
-                            # try looking for the username in the query in case
-                            # it is a media link
-                            match = Instagram.IG_LINK_QUERY_REGEX.search(url)
-                            if match:
-                                logger.id(logger.debug, self,
-                                        'Matched query user profile link:'
-                                        ' {color_link}',
-                                        color_link=url,
-                                )
-                                links.append(url)
-
-                    links = remove_duplicates(links)
-                    # cache the links in case a new Parser is instantiated for
-                    # the same comment, potentially from a different process
-                    Parser._link_cache[self.comment.id] = links
-                    if links:
-                        logger.id(logger.info, self,
-                                'Found #{num} link{plural}: {color}',
-                                num=len(links),
-                                plural=('' if len(links) == 1 else 's'),
-                                color=links,
-                        )
             # cache a reference to the links on the instance in case the
             # object is long-lived
             self.__ig_links = links
@@ -335,136 +585,13 @@ class Parser(object):
             usernames = self.__ig_usernames
 
         except AttributeError:
-            usernames = []
-            if self.comment:
-                # look for usernames from links first since they are all but
-                # guaranteed to be accurate
-                for link in self.ig_links:
-                    match = Instagram.IG_LINK_REGEX.search(link)
-                    if match: # this check shouldn't be necessary
-                        usernames.append(match.group(2))
-
-                    else:
-                        match = Instagram.IG_LINK_QUERY_REGEX.search(link)
-                        if match:
-                            usernames.append(match.group(2))
-
-                author = self.comment.author
-                author = author and author.name.lower()
-
-                if not usernames and author not in Parser.IGNORE:
-                    # try looking username-like strings in the comment body in
-                    # case the user soft-linked one or more usernames
-                    # eg. '@angiegoesboom'
-
-                    # XXX: this will increase the frequency of 404s from general
-                    # bad matches and may cause the bot to link incorrect user
-                    # data if someone soft-links eg. a twitter user and a
-                    # different person owns the same username on instagram.
-                    usernames = Parser._username_cache[self.comment.id]
-                    if usernames is None:
-                        logger.id(logger.debug, self,
-                                '\nLooking for soft-linked users in body:'
-                                ' \'{body}\'\n',
-                                body=self.comment.body,
-                        )
-
-                        # try '@username'
-                        usernames = Instagram.IG_USER_REGEX.findall(
-                                self.comment.body
-                        )
-                        # TODO: this should not be turned on if the bot is
-                        # crawling any popular subreddit -- but how to determine
-                        # if a subreddit is popular?
-                        # XXX: turn off trying random-ish strings as usernames
-                        # if the bot is crawling /r/all or if we failed to load
-                        # the JARGON file
-                        if (
-                                not usernames
-                                and Parser._JARGON_FROM_FILE
-                                and 'all' not in Parser._subreddits
-                        ):
-                            # try looking for possible username strings
-                            usernames = self._get_potential_user_strings()
-                usernames = remove_duplicates(usernames)
-
-            if usernames:
-                logger.id(logger.info, self,
-                        'Found #{num} username{plural}: {color}',
-                        num=len(usernames),
-                        plural=('' if len(usernames) == 1 else 's'),
-                        color=usernames,
-                )
-
-            Parser._username_cache[self.comment.id] = usernames
+            if not self._strategy:
+                usernames = []
+            else:
+                usernames = self._strategy.parse_usernames()
             self.__ig_usernames = usernames
 
         return usernames.copy()
-
-    def _get_potential_user_strings(self):
-        """
-        Tries to find strings in the comment body that could be usernames.
-
-        Returns a list of username candidates
-        """
-        LENGTH_THRESHOLD = 4
-        usernames = []
-        body_split = self.comment.body.split('\n')
-        # try looking for a non-dictionary, non-jargon word.
-        # XXX: matching a false positive will typically result in a
-        # private/no-data instagram user if not a 404. relying on the instagram
-        # user not having any data to prevent a reply is unwise.
-        if (
-                # single word comment
-                len(self.comment.body.strip().split()) == 1
-                # comment looks like it could contain an instagram user
-                or any(
-                    Instagram.HAS_IG_KEYWORD_REGEX.search(text.strip())
-                    for text in body_split
-                )
-        ):
-            matches = []
-            for text in body_split:
-                # flatten the list of matches
-                # https://stackoverflow.com/a/8481590
-                matches += list(itertools.chain.from_iterable(
-                        Instagram.IG_USER_STRING_REGEX.findall(text.strip())
-                ))
-
-            for name in matches:
-                if not name:
-                    continue
-
-                # only include strings that could be usernames
-                do_add = False
-                reason = '???'
-                # not too short
-                if len(name) <= 4:
-                    reason = 'too short ({0})'.format(len(name))
-                else:
-                    # not some kind of internet jagon
-                    match = Parser.is_jargon(name)
-                    if match:
-                        reason = 'is jargon: \'{0}\''.format(match.group(0))
-                    # not an english word
-                    elif Parser.is_english(name):
-                        reason = 'is english: \'{0}\''.format(name)
-
-                    else:
-                        do_add = True
-
-                if do_add:
-                    usernames.append(name)
-
-                else:
-                    logger.id(logger.debug, self,
-                            'Potential username, {color_name}, failed:'
-                            ' {reason}',
-                            color_name=name,
-                            reason=reason,
-                    )
-
-        return usernames
 
 
 __all__ = [

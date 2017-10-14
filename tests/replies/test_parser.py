@@ -4,10 +4,25 @@ import pytest
 from src.replies import Parser
 
 
-def test_parser_init(linstahh):
-    p = Parser(linstahh)
-    assert bool(p.comment)
-    assert isinstance(p.comment, praw.models.Comment)
+def test_parser_init(
+        linstahh, selfpost_warm_welcome, post_lenabarista_imgur,
+        post_coffeecutie_beachvibes_imgur,
+):
+    L = Parser(linstahh)
+    assert bool(L.thing)
+    assert isinstance(L.thing, praw.models.Comment)
+
+    W = Parser(selfpost_warm_welcome)
+    assert bool(W.thing)
+    assert isinstance(W.thing, praw.models.Submission)
+
+    LB = Parser(post_lenabarista_imgur)
+    assert bool(LB.thing)
+    assert isinstance(LB.thing, praw.models.Submission)
+
+    CC = Parser(post_coffeecutie_beachvibes_imgur)
+    assert bool(CC.thing)
+    assert isinstance(CC.thing, praw.models.Submission)
 
 def test_parser_ig_users_only(linstahh, natalieannworth, tiffanie_marie):
     L = Parser(linstahh)
@@ -151,4 +166,64 @@ def test_parser_does_not_match_on_insta_rant(on_insta_rant):
     p = Parser(on_insta_rant)
     assert not p.ig_links
     assert not p.ig_usernames
+
+def test_parser_does_not_match_post_based_dawg(post_based_dawg_ireddit):
+    # 'Based dawg'
+    p = Parser(post_based_dawg_ireddit)
+    assert not p.ig_links
+    assert not p.ig_usernames
+
+def test_parser_does_not_match_post_poor_hank(post_poor_hank_imgur):
+    # 'poor hank'
+    p = Parser(post_poor_hank_imgur)
+    assert not p.ig_links
+    assert not p.ig_usernames
+
+def test_parser_does_not_match_post_sju(post_sju_gfycat):
+    # 'Sara Jean Underwood'
+    p = Parser(post_sju_gfycat)
+    assert not p.ig_links
+    assert not p.ig_usernames
+
+def test_parser_does_not_match_selfpost_warm_welcome(selfpost_warm_welcome):
+    # 'warm welcome'
+    p = Parser(selfpost_warm_welcome)
+    assert not p.ig_links
+    assert not p.ig_usernames
+
+def test_parser_does_not_match_post_pussy_slip(post_pussy_slip_imgur):
+    # 'Pussy slip'
+    p = Parser(post_pussy_slip_imgur)
+    assert not p.ig_links
+    assert not p.ig_usernames
+
+def test_parser_does_match_post_jamie_ig(post_jamie_ig_imgur):
+    # 'Jamie (IG: @jamie_baristaxo) at Hillbilly Hotties Silver Lake in Everett, WA'
+    p = Parser(post_jamie_ig_imgur)
+    assert not p.ig_links
+    assert p.ig_usernames == ['jamie_baristaxo']
+
+def test_parser_does_match_post_lenabarista(post_lenabarista_imgur):
+    # 'Lena.barista'
+    p = Parser(post_lenabarista_imgur)
+    assert not p.ig_links
+    assert p.ig_usernames == ['Lena.barista']
+
+def test_parser_does_match_post_deliahatesyou_ig(post_deliahatesyou_ig_imgur):
+    # 'Deliahatesyou (IG)'
+    p = Parser(post_deliahatesyou_ig_imgur)
+    assert not p.ig_links
+    assert p.ig_usernames == ['Deliahatesyou']
+
+def test_parser_does_match_post_katiesintheclouds_ig(post_katiesintheclouds_ig_imgur):
+    # 'Katiesintheclouds (IG)'
+    p = Parser(post_katiesintheclouds_ig_imgur)
+    assert not p.ig_links
+    assert p.ig_usernames == ['Katiesintheclouds']
+
+def test_parser_does_match_post_coffeecutie_beachvibes(post_coffeecutie_beachvibes_imgur):
+    # '@_coffeecutie #beachvibes [MIC]'
+    p = Parser(post_coffeecutie_beachvibes_imgur)
+    assert not p.ig_links
+    assert p.ig_usernames == ['_coffeecutie']
 

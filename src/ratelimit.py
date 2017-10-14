@@ -258,107 +258,52 @@ class RateLimitHandler(ProcessMixin, RedditInstanceMixin):
 
             if element:
                 fullname, body = element
-                fullname_split = reddit.split_fullname(fullname)
-                if isinstance(fullname_split, list):
-                    # get the thing name from its prefix
-                    type_prefix, thing_id = fullname_split
-                    try:
-                        thing_name = self._reddit._kinds[type_prefix]
-                    except KeyError:
-                        logger.id(logger.warn, self,
-                                'Unrecognized thing type: \'{type}\'',
-                                type=type_prefix,
-                                exc_info=True,
-                        )
 
-                    else:
-                        thing = None
-
-                        # get the thing object
-                        if hasattr(self._reddit, thing_name):
-                            # comment, submission, subreddit, redditor
-                            thing_class = getattr(self._reddit, thing_name)
-                            thing = thing_class(thing_id)
-
-                        elif hasattr(praw.models, thing_name.capitalize()):
-                            # message
-                            # Note: this object is woefully incomplete; eg. it
-                            # does not have 'body' or 'author', etc
-                            thing_class = getattr(
-                                    praw.models,
-                                    thing_name.capitalize()
-                            )
-                            thing = thing_class(self._reddit, None)
-                            thing.id = thing_id
-
-                        if thing:
-                            logger.id(logger.info, self,
-                                    'Processing {color_thing} ...',
-                                    color_thing=reddit.display_fullname(thing),
-                            )
-                            # only handle specific types of things
-                            if isinstance(thing, RateLimitHandler.VALID_THINGS):
-                                # Note: we may be rate-limited again
-                                if self._reddit.do_reply(
-                                        thing, body, self._killed,
-                                ):
-                                    # remove the element from the queue database
-                                    with self.rate_limit_queue:
-                                        self.rate_limit_queue.delete(
-                                                thing, body
-                                        )
-
-                                    # try to add the thing to the reply history
-                                    # (but only if we can find instagram users
-                                    #  in the body)
-                                    ig_users = replies.Formatter.ig_users_in(
-                                            body
-                                    )
-                                    if ig_users:
-                                        try:
-                                            with self.reply_history:
-                                                self.reply_history.insert(
-                                                        thing, ig_users,
-                                                )
-
-                                        except database.UniqueConstraintFailed:
-                                            display = reddit.display_fullname(
-                                                    thing
-                                            )
-                                            logger.id(logger.warn, self,
-                                                    'Duplicate instagram user'
-                                                    ' posted in'
-                                                    ' {color_submission}!'
-                                                    ' (users={color_users})',
-                                                    color_submission=display,
-                                                    color_users=ig_users,
-                                                    exc_info=True,
-                                            )
-                                handled = True
-
-                            else:
-                                logger.id(logger.info, self,
-                                        'Skipping {color_thing}:'
-                                        ' invalid type={type}',
-                                        color_thing=reddit.display_fullname(
-                                            thing
-                                        ),
-                                        type=type(thing),
+                thing = self._reddit.get_thing_from_fullname(fullname)
+                if thing:
+                    logger.id(logger.info, self,
+                            'Processing {color_thing} ...',
+                            color_thing=reddit.display_fullname(thing),
+                    )
+                    # only handle specific types of things
+                    if isinstance(thing, RateLimitHandler.VALID_THINGS):
+                        # Note: we may be rate-limited again
+                        if self._reddit.do_reply(
+                                thing, body, self._killed,
+                        ):
+                            # remove the element from the queue database
+                            with self.rate_limit_queue:
+                                self.rate_limit_queue.delete(
+                                        thing, body
                                 )
 
-                        else:
-                            logger.id(logger.debug, self,
-                                    'Failed to construct \'{thing_name}\''
-                                    ' object!',
-                                    thing_name=thing_name,
+                            # try to add the thing to the reply history
+                            # (but only if we can find instagram users
+                            #  in the body)
+                            ig_users = replies.Formatter.ig_users_in(
+                                    body
                             )
+                            if ig_users:
+                                try:
+                                    with self.reply_history:
+                                        self.reply_history.insert(
+                                                thing, ig_users,
+                                        )
 
-                else:
-                    # random thing inserted into queue
-                    logger.id(logger.debug, self,
-                            'Unrecognized fullname: \'{fullname}\'',
-                            fullname=fullname,
-                    )
+                                except database.UniqueConstraintFailed:
+                                    display = reddit.display_fullname(
+                                            thing
+                                    )
+                                    logger.id(logger.warn, self,
+                                            'Duplicate instagram user'
+                                            ' posted in'
+                                            ' {color_submission}!'
+                                            ' (users={color_users})',
+                                            color_submission=display,
+                                            color_users=ig_users,
+                                            exc_info=True,
+                                    )
+                        handled = True
 
                 if not handled:
                     logger.id(logger.debug, self,

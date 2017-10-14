@@ -1,4 +1,5 @@
 from ._database import Database
+from src.util import logger
 
 
 class ReplyDatabase(Database):
@@ -16,7 +17,7 @@ class ReplyDatabase(Database):
         return (
                 'comments('
                 '   uid INTEGER PRIMARY KEY NOT NULL,'
-                '   comment_fullname TEXT NOT NULL,'
+                '   replied_fullname TEXT NOT NULL,'
                 '   submission_fullname TEXT NOT NULL,'
                 # case-insensitive
                 # https://stackoverflow.com/a/973785
@@ -27,7 +28,9 @@ class ReplyDatabase(Database):
                 ')'
         )
 
-    def _insert(self, comment, ig_list):
+    def _insert(self, thing, ig_list):
+        from src import reddit
+
         def get_user(ig):
             try:
                 return ig.user
@@ -35,11 +38,23 @@ class ReplyDatabase(Database):
                 # probably a string
                 return ig
 
+        submission = reddit.get_submission_for(thing)
+        if not submission:
+            # TODO? raise? not recording a reply could result in the bot
+            # replying multiple times to the same thing
+            logger.id(logger.warn, self,
+                    'Could not insert {color_thing} ({color_list}):'
+                    ' no submission found!',
+                    color_thing=reddit.display_id(thing),
+                    color_list=ig_list,
+            )
+            return
+
         if isinstance(ig_list, (list, tuple)):
             values = [
                     (
-                        comment.fullname,
-                        comment.submission.fullname,
+                        thing.fullname,
+                        submission.fullname,
                         get_user(ig),
                     )
                     for ig in ig_list
@@ -48,29 +63,29 @@ class ReplyDatabase(Database):
             # assume ig_list is a single Instagram instance
             values = [
                     (
-                        comment.fullname,
-                        comment.submission.fullname,
+                        thing.fullname,
+                        submission.fullname,
                         get_user(ig_list),
                     )
             ]
 
         self._db.executemany(
                 'INSERT INTO comments('
-                '   comment_fullname, submission_fullname, ig_user'
+                '   replied_fullname, submission_fullname, ig_user'
                 ') VALUES(?, ?, ?)', values,
         )
 
-    def replied_comments_for_submission(self, submission):
+    def replied_things_for_submission(self, submission):
         """
-        Returns a set of comment fullnames that the bot has replied to for a
+        Returns a set of thing fullnames that the bot has replied to for a
         given post
         """
         cursor = self._db.execute(
-                'SELECT comment_fullname FROM comments'
+                'SELECT replied_fullname FROM comments'
                 ' WHERE submission_fullname = ?',
                 (submission.fullname,),
         )
-        return set([row['comment_fullname'] for row in cursor])
+        return set([row['replied_fullname'] for row in cursor])
 
     def replied_ig_users_for_submission(self, submission):
         """
@@ -83,14 +98,14 @@ class ReplyDatabase(Database):
         )
         return set([row['ig_user'] for row in cursor])
 
-    def has_replied(self, comment):
+    def has_replied(self, thing):
         """
-        Returns True if the bot has replied to the specified comment
+        Returns True if the bot has replied to the specified thing
         """
         cursor = self._db.execute(
-                'SELECT comment_fullname FROM comments'
-                ' WHERE comment_fullname = ?',
-                (comment.fullname,),
+                'SELECT replied_fullname FROM comments'
+                ' WHERE replied_fullname = ?',
+                (thing.fullname,),
         )
         return bool(cursor.fetchone())
 

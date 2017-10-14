@@ -117,8 +117,9 @@ def display_id(thing):
 
 def display_fullname(thing):
     if hasattr(thing, 'fullname'):
+        split = split_fullname(thing.fullname)
         try:
-            thing_type = Reddit._kinds[thing.fullname.split('_', 1)[0]]
+            thing_type = Reddit._kinds[split[0]]
         except KeyError:
             thing_type = '???'
 
@@ -139,6 +140,39 @@ def split_fullname(fullname):
     if isinstance(fullname, string_types) and '_' in fullname:
         return fullname.split('_', 1)
     return fullname
+
+def get_type_from_fullname(fullname):
+    """
+    Returns one of 'comment', 'message', 'subreddit', 'submission', 'redditor'
+                based on the fullname
+
+            or None if no type could be determined
+    """
+    result = None
+    split = split_fullname(fullname)
+    if isinstance(split, list):
+        try:
+            result = Reddit._kinds[split[0]]
+        except KeyError:
+            logger.id(logger.debug, split[0],
+                    'Failed to determine type from fullname=\'{fullname}\'!',
+                    fullname=fullname,
+                    exc_info=True,
+            )
+
+    return result
+
+def get_submission_for(thing):
+    """
+    Returns the praw.models.Submission for the give thing
+            or None if the thing has no submission
+    """
+    if isinstance(thing, praw.models.Comment):
+        return thing.submission
+    elif isinstance(thing, praw.models.Submission):
+        return thing
+
+    return None
 
 def get_ancestor_tree(comment, to_lower=True):
     """
@@ -625,6 +659,70 @@ class Reddit(praw.Reddit):
 
         return success
 
+    def get_thing_from_fullname(self, fullname):
+        """
+        Returns a praw.models.* object constructed from its fullname
+                eg. 't1_foobar' -> praw.models.Comment(id='foobar')
+        """
+        thing = None
+        thing_name = get_type_from_fullname(fullname)
+        if thing_name:
+            thing_prefix, thing_id = split_fullname(fullname)
+
+            try:
+                if hasattr(self, thing_name):
+                    # comment, submission, subreddit, redditor
+                    thing_class = getattr(self, thing_name)
+                    thing = thing_class(thing_id)
+
+                    # XXX: this doesn't work for subreddits and redditors since
+                    # the reddit object expects the display name to construct
+                    # these objects
+                    if (
+                            isinstance(thing, praw.models.Subreddit)
+                            or isinstance(thing, praw.models.Redditor)
+                    ):
+                        logger.id(logger.debug, self,
+                                'Unhandled type: {color_name}'
+                                ' ({color_fullname})',
+                                color_name=thing_name,
+                                color_fullname=fullname,
+                        )
+                        thing = None
+
+                elif hasattr(praw.models, thing_name.capitalize()):
+                    # message
+                    # XXX: this object is woefully incomplete; it does not have
+                    # eg. 'body', 'author', etc
+                    thing_class = getattr(praw.models, thing_name.capitalize())
+                    thing = thing_class(self, None)
+                    thing.id = thing_id
+
+                else:
+                    logger.id(logger.debug, self,
+                            'Unknown thing type: \'{color_name}\''
+                            ' ({color_fullname})',
+                            color_name=thing_name,
+                            color_fullname=fullname,
+                    )
+
+            except AttributeError:
+                # this shouldn't happen
+                logger.id(logger.exception, self,
+                        'Failed to construct {color_name} from'
+                        ' fullname=\'{color_fullname}\'!',
+                        color_name=thing_name,
+                        color_fullname=fullname,
+                )
+
+        else:
+            logger.id(logger.debug, self,
+                    'Unrecognized fullname=\'{color_fullname}\'',
+                    color_fullname=fullname,
+            )
+
+        return thing
+
 
 __all__ = [
         'split_prefixed_name',
@@ -639,6 +737,10 @@ __all__ = [
         'unpack_subreddits',
         'display_id',
         'display_fullname',
+        'author',
+        'split_fullname',
+        'get_type_from_fullname',
+        'get_submission_for',
         'get_ancestor_tree',
         'Reddit',
 ]

@@ -1,6 +1,6 @@
 ## Instagram Highlight Reddit Bot
 
-Replies to reddit comments linking to instagram account(s) with each instagram
+Replies to reddit posts/comments referencing instagram accounts with each
 user's most popular media.
 
 #### Dependencies

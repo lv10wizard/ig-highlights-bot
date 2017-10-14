@@ -322,6 +322,7 @@ X. reply-queue per-comment logging
     - fetch handler
     ? queue handler
     ? database handler
+? refactor parser to package ?
 ? store last controversial check iteration time/delay in file
     so that program restarts don't re-trigger an early controversial check
 O. --shutdown or --kill or something so that the program can be terminated from
@@ -341,18 +342,29 @@ O. try finding usernames per line
     O. [IG_USER_STRING_REGEX.search(text.strip()) for text in comment.body.split('\n')]
         X. filter(None, ...)
         >> no need
-- parse submission titles for possible instagram user strings
-    ? parse submission links?
-    ? parse submission selftext?
-    - submissions process?
+O. parse submission titles for possible instagram user strings
+    O. parse submission .url?
+    O. parse submission .selftext?
+    O. parse submission .title
+    O. submissions process?
         > can't rely on every submission having a comment
-    - need database to store submissions
-    ? refactor replies.db ?
-        > I think the column name, comment_fullname, is wrong but should work
-            besides that
+    X. need database to store submissions
+        >> just re-parse; shouldn't be a huge issue
+    O. store replies properly
+        ? refactor replies.db ?
+            > I think the column name, comment_fullname, is wrong but should
+                work besides that
+    O. update faq
+    O. update sidebar
+    O. update readme
+    O. update app description
+? parse comments' submissions from comment stream if not parsed yet?
 
 - test stale ig queue
 - test replies
+    - test comments are stored properly
+    - test submissions are stored properly
+- test ratelimit still works
 
 ? include version in FOOTER? (probably just the {major}.{minor} if yes)
 ? push to github

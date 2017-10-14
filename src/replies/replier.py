@@ -36,19 +36,19 @@ class Replier(ProcessMixin, RedditInstanceMixin):
         self.reply_history = ReplyDatabase()
         self.reply_queue = ReplyQueueDatabase()
 
-    def _get_instagram_data(self, comment, ig_usernames):
+    def _get_instagram_data(self, thing, ig_usernames):
         """
-        Returns a list of instagram data for each user linked-to by the comment
+        Returns a list of instagram data for each user linked-to by the thing
                 or None if there were no reply-able instagram usernames found
-                    in the comment (this may happen if the program was
-                    terminated before it was able to remove the comment from
-                    the queue database or if the comment was deleted)
+                    in the thing (this may happen if the program was
+                    terminated before it was able to remove the thing from
+                    the queue database or if the thing was deleted)
         """
         if not ig_usernames:
             logger.id(logger.debug, self,
                     'No reply-able instagram usernames found in'
-                    ' {color_comment}!',
-                    color_comment=reddit.display_id(comment),
+                    ' {color_thing}!',
+                    color_thing=reddit.display_id(thing),
             )
             return None
 
@@ -68,7 +68,7 @@ class Replier(ProcessMixin, RedditInstanceMixin):
             # if 404 in ig.status_codes:
             #     # linked to a non-existent user; probably a typo but the
             #     # user could be trying to troll
-            #     self.blacklist.increment_bad_actor(comment)
+            #     self.blacklist.increment_bad_actor(thing)
 
         return ig_list
 
@@ -134,9 +134,9 @@ class Replier(ProcessMixin, RedditInstanceMixin):
             with self.potential_subreddits:
                 self.potential_subreddits.delete(submission)
 
-    def _reply(self, comment, ig_list, ig_list_usernames):
+    def _reply(self, thing, ig_list, ig_list_usernames):
         """
-        Replies to a single comment with (potentially) multiple instagram user
+        Replies to a single thing with (potentially) multiple instagram user
         highlights
 
         Returns True if successfully replied one or more times
@@ -144,8 +144,8 @@ class Replier(ProcessMixin, RedditInstanceMixin):
         success = False
 
         logger.id(logger.info, self,
-                'Replying to {color_comment}: {color_list}',
-                color_comment=reddit.display_id(comment),
+                'Replying to {color_thing}: {color_list}',
+                color_thing=reddit.display_id(thing),
                 color_list=ig_list_usernames,
         )
 
@@ -153,10 +153,10 @@ class Replier(ProcessMixin, RedditInstanceMixin):
         if len(reply_list) > self.cfg.max_replies_per_comment:
             # too many replies formed
             logger.id(logger.info, self,
-                    '{color_comment} (by {color_author}) almost made me reply'
+                    '{color_thing} (by {color_author}) almost made me reply'
                     ' #{num} times: skipping.',
-                    color_comment=reddit.display_id(comment),
-                    color_author=reddit.author(comment),
+                    color_thing=reddit.display_id(thing),
+                    color_author=reddit.author(thing),
                     num=len(reply_list),
             )
             # TODO? temporarily blacklist user? (may be trying to break bot)
@@ -165,10 +165,10 @@ class Replier(ProcessMixin, RedditInstanceMixin):
             return
 
         logger.id(logger.info, self,
-                'Replying #{num} time{plural} to {color_comment} ...',
+                'Replying #{num} time{plural} to {color_thing} ...',
                 num=len(reply_list),
                 plural=('' if len(reply_list) == 1 else 's'),
-                color_comment=reddit.display_id(comment),
+                color_thing=reddit.display_id(thing),
         )
 
         lengths = [len(body) for body, _ in reply_list]
@@ -180,26 +180,26 @@ class Replier(ProcessMixin, RedditInstanceMixin):
 
         if self.dry_run:
             logger.id(logger.info, self,
-                    'Dry run: skipping repl{plural} to {color_comment}',
+                    'Dry run: skipping repl{plural} to {color_thing}',
                     plural=('y' if len(reply_list) == 1 else 'ies'),
-                    color_comment=reddit.display_id(comment),
+                    color_thing=reddit.display_id(thing),
             )
             return
 
         for body, ig_usernames in reply_list:
-            if self._reddit.do_reply(comment, body, self._killed):
+            if self._reddit.do_reply(thing, body, self._killed):
                 # only require a single reply to succeed to consider this method
                 # a success
                 success = True
                 try:
-                    self.reply_history.insert(comment, ig_usernames)
+                    self.reply_history.insert(thing, ig_usernames)
                 except UniqueConstraintFailed:
                     # this probably means that there is a bug in filter
                     logger.id(logger.warn, self,
                             'Duplicate instagram user posted in'
                             ' {color_submission}! (users={color_users})',
                             color_submission=reddit.display_fullname(
-                                comment.submission
+                                reddit.get_submission_for(thing),
                             ),
                             color_user=ig_usernames,
                             exc_info=True,
@@ -221,13 +221,24 @@ class Replier(ProcessMixin, RedditInstanceMixin):
                 # queue is empty
                 break
 
-            comment_id, mention_id = data
-            if comment_id in seen:
+            fullname, mention_id = data
+            if fullname in seen:
                 # all elements in the queue were processed
                 break
 
-            seen.add(comment_id)
-            comment = self._reddit.comment(comment_id)
+            seen.add(fullname)
+            thing = self._reddit.get_thing_from_fullname(fullname)
+            if not thing:
+                logger.id(logger.warn, self,
+                        'Unrecognized fullname: \'{color_fullname}\'.'
+                        ' Removing from queue ...',
+                        color_fullname=fullname,
+                )
+                with self.reply_queue:
+                    self.reply_queue.delete(fullname)
+
+                continue
+
             mention = None
             if mention_id:
                 mention = self._reddit.comment(mention_id)
@@ -235,11 +246,11 @@ class Replier(ProcessMixin, RedditInstanceMixin):
             # this is (most likely) an extra network hit.
             # it only needs to occur if queue processing was interrupted
             # previously by eg. program termination.
-            # (this is also duplicated work but it ensures that comments are
+            # (this is also duplicated work but it ensures that things are
             #  replied-to properly; ie, all instagram users linked to by the
-            #  comment are responded to)
+            #  thing are responded to)
             ig_usernames = self.filter.replyable_usernames(
-                    comment,
+                    thing,
                     # don't bother with preliminary checks; they should have
                     # already passed
                     prelim_check=False,
@@ -247,49 +258,48 @@ class Replier(ProcessMixin, RedditInstanceMixin):
                     # replies because it should have already been checked
                     check_thread=False,
             )
-            ig_list = self._get_instagram_data(comment, ig_usernames)
+            ig_list = self._get_instagram_data(thing, ig_usernames)
 
             if ig_list is None:
-                # comment was probably deleted.
+                # thing was probably deleted.
                 logger.id(logger.debug, self,
-                        'No instagram users found in \'{color_comment}!'
+                        'No instagram users found in \'{color_thing}!'
                         ' Removing from reply-queue ...',
-                        color_comment=reddit.display_id(comment),
+                        color_thing=reddit.display_id(thing),
                 )
                 with self.reply_queue:
-                    self.reply_queue.delete(comment)
+                    self.reply_queue.delete(thing)
 
             elif ig_list:
                 if None in ig_list:
                     # at least one user's fetch was interrupted.
-                    # the comment was queued: cycle it to the back of the queue
-                    # so we can check if we can reply immediately to other
-                    # comments.
+                    # cycle it to the back of the queue so we can check if we
+                    # can reply immediately to other things.
                     with self.reply_queue:
-                        self.reply_queue.update(comment)
+                        self.reply_queue.update(thing)
 
                 else:
-                    # remove the comment from the reply-queue if we got data for
+                    # remove the thing from the reply-queue if we got data for
                     # all valid instagram users.
-                    # XXX: delete the comment from the reply-queue before
+                    # XXX: delete the thing from the reply-queue before
                     # replying in case the program is terminated before the
                     # reply. this way, worst case, the bot just doesn't reply
                     # instead of potentially replying multiple times with the
                     # same text which could happen if the program dies just
                     # after replying but before reply-queue removal.
                     with self.reply_queue:
-                        self.reply_queue.delete(comment)
+                        self.reply_queue.delete(thing)
 
                     ig_list = list(filter(None, ig_list))
                     ig_list_usernames = [ig.user for ig in ig_list]
                     if len(ig_usernames) != len(ig_list):
                         # there were some private/non-user pages linked in the
-                        # comment
+                        # thing
                         missing = set(ig_usernames) - set(ig_list_usernames)
                         logger.id(logger.info, self,
-                                '[{color_comment}] Skipping #{num}'
+                                '[{color_thing}] Skipping #{num}'
                                 ' user{plural}: {color_missing} ...',
-                                color_comment=reddit.display_id(comment),
+                                color_thing=reddit.display_id(thing),
                                 num=len(missing),
                                 plural=('' if len(missing) == 1 else 's'),
                                 color_missing=missing,
@@ -298,16 +308,16 @@ class Replier(ProcessMixin, RedditInstanceMixin):
                     if not ig_list:
                         # no user links to post
                         logger.id(logger.info, self,
-                                'Not replying to {color_comment}:'
+                                'Not replying to {color_thing}:'
                                 ' no instagram data to post!',
-                                color_comment=reddit.display_id(comment),
+                                color_thing=reddit.display_id(thing),
                         )
                         return
 
                     if mention:
                         # successfully summoned to a subreddit (ie, found an
                         # instagram user page link)
-                        submission = comment.submission
+                        submission = reddit.get_submission_for(thing)
                         if (
                                 # don't try to add if the threshold is negative
                                 self.cfg.add_subreddit_threshold >= 0
@@ -316,7 +326,7 @@ class Replier(ProcessMixin, RedditInstanceMixin):
                         ):
                             self._add_potential_subreddit(submission)
 
-                    self._reply(comment, ig_list, ig_list_usernames)
+                    self._reply(thing, ig_list, ig_list_usernames)
 
     def _run_forever(self):
         # XXX: instantiated here so that the _reddit instance is constructed

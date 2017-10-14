@@ -10,13 +10,20 @@ class ReplyQueueDatabase(Database):
 
     PATH = Database.PATH_FMT.format('reply-queue.db')
 
+    @staticmethod
+    def get_fullname(thing):
+        try:
+            return thing.fullname
+        except AttributeError:
+            return thing
+
     def __init__(self):
         Database.__init__(self, ReplyQueueDatabase.PATH)
 
-    def __contains__(self, comment):
+    def __contains__(self, thing):
         cursor = self._db.execute(
-                'SELECT comment_id FROM queue WHERE comment_id = ?',
-                (comment.id,),
+                'SELECT thing_fullname FROM queue WHERE thing_fullname = ?',
+                (ReplyQueueDatabase.get_fullname(thing),),
         )
         return bool(cursor.fetchone())
 
@@ -24,29 +31,33 @@ class ReplyQueueDatabase(Database):
     def _create_table_data(self):
         return (
                 'queue('
-                '   comment_id TEXT PRIMARY KEY NOT NULL,'
+                '   thing_fullname TEXT PRIMARY KEY NOT NULL,'
                 '   timestamp REAL NOT NULL,'
                 '   mention_id TEXT'
                 ')'
         )
 
-    def _insert(self, comment, mention=None):
+    def _insert(self, thing, mention=None):
         self._db.execute(
-                'INSERT INTO queue(comment_id, timestamp, mention_id)'
+                'INSERT INTO queue(thing_fullname, timestamp, mention_id)'
                 ' VALUES(?, ?, ?)',
-                (comment.id, time.time(), mention and mention.id),
+                (
+                    ReplyQueueDatabase.get_fullname(thing),
+                    time.time(),
+                    mention and mention.id
+                ),
         )
 
-    def _update(self, comment):
+    def _update(self, thing):
         self._db.execute(
-                'UPDATE queue SET timestamp = ? WHERE comment_id = ?',
-                (time.time(), comment.id),
+                'UPDATE queue SET timestamp = ? WHERE thing_fullname = ?',
+                (time.time(), ReplyQueueDatabase.get_fullname(thing)),
         )
 
-    def _delete(self, comment):
+    def _delete(self, thing):
         self._db.execute(
-                'DELETE FROM queue WHERE comment_id = ?',
-                (comment.id,),
+                'DELETE FROM queue WHERE thing_fullname = ?',
+                (ReplyQueueDatabase.get_fullname(thing),),
         )
 
     def size(self):
@@ -55,16 +66,17 @@ class ReplyQueueDatabase(Database):
 
     def get(self):
         """
-        Returns (comment_id, mention_id) of the oldest record in the database
+        Returns (thing_fullname, mention_id) of the oldest record in the
+                    database
                 or None if the queue is empty
         """
         cursor = self._db.execute(
-                'SELECT comment_id, mention_id FROM queue'
+                'SELECT thing_fullname, mention_id FROM queue'
                 ' ORDER BY timestamp ASC'
         )
         row = cursor.fetchone()
         if row:
-            return (row['comment_id'], row['mention_id'])
+            return (row['thing_fullname'], row['mention_id'])
         return None
 
 

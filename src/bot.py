@@ -2,7 +2,6 @@ import re
 import signal
 import time
 
-from prawcore.exceptions import Redirect
 from six import iteritems
 
 from src import (
@@ -14,19 +13,16 @@ from src import (
         ratelimit,
         reddit,
         replies,
-)
-from src.database import (
-        ReplyQueueDatabase,
-        SubredditsDatabase,
+        submissions,
 )
 from src.mixins import (
         RunForeverMixin,
-        StreamMixin,
+        SubredditsCommentStreamMixin,
 )
 from src.util import logger
 
 
-class IgHighlightsBot(RunForeverMixin, StreamMixin):
+class IgHighlightsBot(RunForeverMixin, SubredditsCommentStreamMixin):
     """
     Instagram Highlights reddit bot class
 
@@ -39,15 +35,14 @@ class IgHighlightsBot(RunForeverMixin, StreamMixin):
         # this is created here so that any process can flag that the account
         # is rate-limited.
         rate_limited = ratelimit.Flag()
-        StreamMixin.__init__(self, cfg, rate_limited)
+        SubredditsCommentStreamMixin.__init__(self, cfg, rate_limited)
 
-        self.ratelimit_handler = ratelimit.RateLimitHandler(cfg, rate_limited)
-
-        self.reply_queue = ReplyQueueDatabase()
-        self.subreddits = SubredditsDatabase(do_seed=True)
         self.blacklist = blacklist.Blacklist(cfg)
-
+        self.ratelimit_handler = ratelimit.RateLimitHandler(cfg, rate_limited)
         self.controversial = controversial.Controversial(cfg, rate_limited)
+        self.submissions = submissions.Submissions(
+                cfg, rate_limited, self.blacklist
+        )
         self.messages = messages.Messages(cfg, rate_limited, self.blacklist)
         self.mentions = mentions.Mentions(
                 cfg, rate_limited, self.blacklist, dry_run,
@@ -101,12 +96,14 @@ class IgHighlightsBot(RunForeverMixin, StreamMixin):
 
         self.ratelimit_handler.kill()
         self.controversial.kill()
+        self.submissions.kill()
         self.messages.kill()
         self.mentions.kill()
         self.replier.kill()
 
         self.ratelimit_handler.join()
         self.controversial.join()
+        self.submissions.join()
         self.messages.join()
         self.mentions.join()
         self.replier.join()
@@ -114,82 +111,6 @@ class IgHighlightsBot(RunForeverMixin, StreamMixin):
         # XXX: kill the main process last so that daemon processes aren't
         # killed at inconvenient times
         self._killed = True
-
-    @property
-    def _stream(self):
-        """
-        Cached subreddits.comments stream. This will update the stream generator
-        if the subreddits database has been modified.
-
-        Note: renewing the stream will cause some comments to be re-parsed.
-        """
-        try:
-            comment_stream = self.__cached_comment_stream
-
-        except AttributeError:
-            comment_stream = None
-
-        if comment_stream is None or self.subreddits.is_dirty:
-            with self.subreddits.updating():
-                logger.id(logger.info, self, 'Updating subreddits ...')
-
-                try:
-                    current_subreddits = self.__current_subreddits
-
-                except AttributeError:
-                    current_subreddits = set()
-
-                subs_from_db = self.subreddits.get_all_subreddits()
-                # verify that the set of subreddits actually changed
-                # (the database file could have been modified with nothing)
-                diff = subs_from_db.symmetric_difference(current_subreddits)
-
-                if bool(diff):
-                    new = subs_from_db - current_subreddits
-                    if new:
-                        logger.id(logger.info, self,
-                                'New subreddits: {color}',
-                                color=new,
-                        )
-                    removed = current_subreddits - subs_from_db
-                    if removed:
-                        logger.id(logger.info, self,
-                                'Removed subreddits: {color}',
-                                color=removed,
-                        )
-                    if new or removed:
-                        # if the set of subreddits does not receive many
-                        # comments, then the comment stream may contain
-                        # duplicates
-                        logger.id(logger.info, self,
-                                'Re-initializing comment stream (some comments'
-                                ' may have been processed before) ...',
-                        )
-
-                    subreddits_str = reddit.pack_subreddits(subs_from_db)
-                    logger.id(logger.debug, self,
-                            'subreddit string:\n\t{subreddits_str}',
-                            subreddits_str=subreddits_str,
-                    )
-                    if subreddits_str:
-                        comment_subreddits = self._reddit.subreddit(
-                                subreddits_str
-                        )
-                        comment_stream = comment_subreddits.stream.comments(
-                                pause_after=0
-                        )
-                        self.__cached_comment_stream = comment_stream
-                        self.__current_subreddits = subs_from_db
-
-                else:
-                    msg = ['No']
-                    if comment_stream is not None:
-                        msg.append('new')
-                    msg.append('subreddits!')
-
-                    logger.id(logger.info, self, ' '.join(msg))
-
-        return comment_stream
 
     def _run_forever(self):
         """
@@ -202,6 +123,7 @@ class IgHighlightsBot(RunForeverMixin, StreamMixin):
 
         self.ratelimit_handler.start()
         self.controversial.start()
+        self.submissions.start()
         self.messages.start()
         self.mentions.start()
         self.replier.start()
@@ -210,41 +132,23 @@ class IgHighlightsBot(RunForeverMixin, StreamMixin):
         signal.signal(signal.SIGINT, self.graceful_exit)
         signal.signal(signal.SIGTERM, self.graceful_exit)
 
-        try:
-            while not self._killed:
-                # TODO: can GETs cause praw to throw a ratelimit exception?
-                for comment in self.stream:
-                    if not comment or self._killed:
-                        break
+        while not self._killed:
+            # TODO: can GETs cause praw to throw a ratelimit exception?
+            for comment in self.stream:
+                if not comment or self._killed:
+                    break
 
-                    logger.id(logger.info, self,
-                            'Processing {color_comment}',
-                            color_comment=reddit.display_id(comment),
-                    )
-
-                    ig_usernames = self.filter.replyable_usernames(comment)
-                    if ig_usernames:
-                        self.filter.enqueue(comment, ig_usernames)
-
-                if not self._killed:
-                    time.sleep(1)
-
-        except Redirect as e:
-            if re.search(r'/subreddits/search', e.message):
-                try:
-                    subs = self.__current_subreddits
-                except AttributeError:
-                    # this shouldn't happen
-                    logger.id(logger.debug, self,
-                            'No current subreddits ...?',
-                    )
-                    subs = set()
-
-                logger.id(logger.exception, self,
-                        'One or more non-existent subreddits: {color}',
-                        color=subs,
+                logger.id(logger.info, self,
+                        'Processing {color_comment}',
+                        color_comment=reddit.display_id(comment),
                 )
-                raise
+
+                ig_usernames = self.filter.replyable_usernames(comment)
+                if ig_usernames:
+                    self.filter.enqueue(comment, ig_usernames)
+
+            if not self._killed:
+                time.sleep(1)
 
 
 __all__ = [

@@ -179,3 +179,90 @@ def on_insta_rant():
     """
     return _load_pickle('on_insta_rant')
 
+@pytest.fixture(scope='session')
+def post_based_dawg_ireddit():
+    """
+    praw.models.Submission linking to non-instagram content with the title
+    'Based dawg'
+    """
+    return _load_pickle('post_based_dawg_ireddit')
+
+@pytest.fixture(scope='session')
+def post_poor_hank_imgur():
+    """
+    praw.models.Submission linking to non-instagram content with the title
+    'poor hank'
+    """
+    return _load_pickle('post_poor_hank_imgur')
+
+@pytest.fixture(scope='session')
+def post_sju_gfycat():
+    """
+    praw.models.Submission linking to non-instagram content with the title
+    'Sara Jean Underwood'
+    """
+    return _load_pickle('post_sju_gfycat')
+
+@pytest.fixture(scope='session')
+def selfpost_warm_welcome():
+    """
+    praw.models.Submission self-post with the title 'warm welcome'
+    and the following text:
+
+    Some migrants have arrived.
+    Ushat stayed outside with a blue flashing "!".
+    "Death is all around us. The horror..."
+    "She is horrified after seeing the cyclops Rusna Powerlantern the Amber of Paint die."
+    horrified by a 20 year old skeleton next to my entrance. this is going to be fun
+
+    """
+    return _load_pickle('selfpost_warm_welcome')
+
+@pytest.fixture(scope='session')
+def post_pussy_slip_imgur():
+    """
+    praw.models.Submission linking to non-instagram content with the title
+    'Pussy slip' with comments containing instagram soft- and hard-links
+    """
+    return _load_pickle('post_pussy_slip_imgur')
+
+@pytest.fixture(scope='session')
+def post_jamie_ig_imgur():
+    """
+    praw.models.Submission linking to non-instagram content with the title
+    'Jamie (IG: @jamie_baristaxo) at Hillbilly Hotties Silver Lake in Everett, WA'
+    """
+    return _load_pickle('post_jamie_ig_imgur')
+
+@pytest.fixture(scope='session')
+def post_lenabarista_imgur():
+    """
+    praw.models.Submission linking to non-instagram content with the title
+    'Lena.barista'
+    """
+    return _load_pickle('post_lenabarista_imgur')
+
+@pytest.fixture(scope='session')
+def post_deliahatesyou_ig_imgur():
+    """
+    praw.models.Submission linking to non-instagram content with the title
+    'Deliahatesyou (IG)'
+    """
+    return _load_pickle('post_deliahatesyou_ig_imgur')
+
+@pytest.fixture(scope='session')
+def post_katiesintheclouds_ig_imgur():
+    """
+    praw.models.Submission linking to non-instagram content with the title
+    'Katiesintheclouds (IG)'
+    """
+    return _load_pickle('post_katiesintheclouds_ig_imgur')
+
+@pytest.fixture(scope='session')
+def post_coffeecutie_beachvibes_imgur():
+    """
+    praw.models.Submission linking to non-instagram content with the title
+    '@_coffeecutie #beachvibes [MIC]'
+    """
+    return _load_pickle('post_coffeecutie_beachvibes_imgur')
+

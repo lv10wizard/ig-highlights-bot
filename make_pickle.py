@@ -2,7 +2,7 @@
 Usage: <python2|python3> make_pickle.py COMMENT_ID PICKLE_NAME
     ** Run this in the project's root directory **
 
-Pickles the given comment and saves them to tests/fixtures/pickles
+Pickles the given comment/submission and saves them to tests/fixtures/pickles
 """
 
 import argparse
@@ -11,6 +11,7 @@ import pickle
 import sys
 
 from praw.exceptions import PRAWException
+from prawcore.exceptions import NotFound
 
 from src import reddit
 from src.config import Config
@@ -25,9 +26,10 @@ if __name__ == '__main__':
     logger.add_handler(handler)
 
     parser = argparse.ArgumentParser(
-            description='Pickles the comment to tests/fixtures/pickles'
+            description='Pickles the comment/submission to'
+            ' tests/fixtures/pickles'
     )
-    parser.add_argument('comment_id', help='The comment id to pickle')
+    parser.add_argument('thing_id', help='The thing id to pickle')
     parser.add_argument('pickle_name',
             help='The filename to save the pickle as',
     )
@@ -49,38 +51,51 @@ if __name__ == '__main__':
         logger.info('\'{path}\' exists. Exiting ...')
         sys.exit(0)
 
-    comment = reddit_obj = reddit_obj.comment(options['comment_id'])
+    # test if the id points to a comment
+    # TODO: can/will/do comment ids and submission ids clash?
+    thing = reddit_obj.comment(options['thing_id'])
+    text = None
+
     try:
         # XXX: call .body to fetch the comment's data and to verify that it is
         # an actual comment.
-        body = comment.body
+        text = thing.body
     except PRAWException:
-        logger.exception('Cannot pickle \'{color_cid}\'. Is it a comment?',
-                color_cid=options['comment_id'],
-        )
-        raise
+        # see if it's a submission
+        thing = reddit_obj.submission(options['thing_id'])
 
-    else:
-        logger.info('{color_comment} by {color_author}:\n{body}\n',
-                color_comment=reddit.display_id(comment),
-                color_author=reddit.author(comment),
-                body=body,
+        try:
+            text = thing.title
+
+        except (AttributeError, NotFound):
+            logger.exception(
+                    'Cannot pickle \'{color_id}\'.'
+                    ' Is it a comment/submission?',
+                    color_id=options['thing_id'],
+            )
+            raise
+
+    if thing and text:
+        logger.info('{color_thing} by {color_author}:\n{text}\n',
+                color_thing=reddit.display_id(thing),
+                color_author=reddit.author(thing),
+                text=text,
         )
         logger.info('Pickling to \'{path}\' ...',
                 path=path,
         )
         try:
             with open(path, 'wb') as fd:
-                pickle.dump(comment, fd)
+                pickle.dump(thing, fd)
 
         except (IOError, OSError):
-            logger.exception('Failed to pickle {color_comment}!',
-                    color_comment=reddit.display_id(comment),
+            logger.exception('Failed to pickle {color_thing}!',
+                    color_thing=reddit.display_id(thing),
             )
 
         else:
-            logger.info('Successfully pickled {color_comment} to \'{path}\'!',
-                    color_comment=reddit.display_id(comment),
+            logger.info('Successfully pickled {color_thing} to \'{path}\'!',
+                    color_thing=reddit.display_id(thing),
                     path=path,
             )
 

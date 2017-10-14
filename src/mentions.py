@@ -61,7 +61,7 @@ class Mentions(ProcessMixin, StreamMixin):
 
         # if not had_replyable_comment:
         #     # summoned to a thread where the bot attempted no replies
-        #     replied = self.reply_history.replied_comments_for_submission(
+        #     replied = self.reply_history.replied_things_for_submission(
         #             submission
         #     )
         #     if not replied:
