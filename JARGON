@@ -116,7 +116,7 @@ o+w+(?:i+e+)? # 'ow', 'oww', 'owww', etc
 p2p
 p+a+w*g+
 p+e+r+v+(?:e+r+t+)?
-(?:p+h+o+t+o+)?s+h+o+p+e+d+ # 'photoshopped', 'shopped', etc
+(?:p+h+o+t+o+)?s+h+o+p+(?:e+d+|t+)? # 'photoshopped', 'shopped', etc
 p+l+[sz]+
 pov
 ppl
