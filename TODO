@@ -359,6 +359,7 @@ O. parse submission titles for possible instagram user strings
     O. update readme
     O. update app description
 ? parse comments' submissions from comment stream if not parsed yet?
+? separate submissions/comments min length for potential username matches
 
 - test stale ig queue
 - test replies

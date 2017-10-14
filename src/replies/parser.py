@@ -385,7 +385,7 @@ class _ParserStrategy(object):
                 do_add = False
                 reason = '???'
                 # not too short
-                if len(name) <= 4:
+                if len(name) <= 5:
                     reason = 'too short ({0})'.format(len(name))
                 else:
                     # not some kind of internet jagon
