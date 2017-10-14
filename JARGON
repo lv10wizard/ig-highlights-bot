@@ -38,6 +38,7 @@ c+u+[sz]+
 d+a+f+u*(?:c*k*|q+) # 'dafuq', 'dafuuuuck', etc
 d+a+t+\w{3,} # 'datass', 'daaaateverything', etc
 d+[ao]+w*g+
+(?:d+a+|t+h+e+)?b+o+m+b*[sz]* # 'thebombbbb', 'bombbsssss'
 d+a+(?:y+[au]*h*)?m+n*
 di+nga+li+ng
 dmhs
@@ -160,7 +161,7 @@ w*h*y+ # 'whyyyy', 'wwwhhhyyyyy', 'yyyyyyy', etc
 w*o{2,}f+ # 'oof', 'woof', 'wwoooof', etc
 w+h*o+s+h+ # 'woosh', 'wooooosh', 'whoosh', etc
 w*o+p+s* # 'woops', 'wooooops', 'oooops', 'oop', etc
-w+o+w+(?:[sz]+[ae]+[hr]*)?[sz]? # 'wwwoooowww', 'wowserz', 'wowwza', etc
+w+o+w+(?:[sz]+(?:[ae]+[hry]*|i+e+))?[sz]? # 'woow', 'wowserz', 'wowza', 'wowzie'
 wtc # where to cop
 w+t+[fh]+(?:o+m+f*g+)? # 'wtf', 'wwwtf', wtttttf', 'wtfomfg', etc
 (?:x+o+)+x*
