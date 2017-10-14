@@ -25,6 +25,9 @@ class Formatter(object):
             # '&#32;[[Source]({source_url})]'
             '&#32;[[Block]({blacklist_url})]'
             '&#32;[[FAQ]({help_url})]'
+            # non-standard bot codeword to let other bots know that this comment
+            # was posted by a bot (see: https://www.reddit.com/2r4qt8)
+            '&#32;[](#bot)'
     )
     HIGHLIGHT_FMT = '[{i}]({link})'
     LINE_DELIM = '\n\n'
