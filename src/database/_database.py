@@ -264,7 +264,7 @@ class Database(object):
             )
         name = name_match.group(1)
 
-        columns = set()
+        columns = []
         col_start = tbl_defn.find('(')
         col_end = tbl_defn.rfind(')')
         # XXX: hack to prevent CHECK(...) and UNIQUE(...) from being included
@@ -287,12 +287,12 @@ class Database(object):
                         'Failed to determine column name from'
                         ' \'{0}\' ({1})'.format(col, col_defn)
                 )
-            columns.add(match.group(1))
+            columns.append(match.group(1))
 
         # get actual column names
         # https://stackoverflow.com/a/20643403
         info = db.execute('PRAGMA table_info(\'{0}\')'.format(name)).fetchall()
-        existing_columns = set(row['name'] for row in info)
+        existing_columns = [row['name'] for row in info]
 
         logger.id(logger.debug, self,
                 'Verifying integrity of table \'{tblname}\':'
@@ -303,8 +303,28 @@ class Database(object):
                 color_actual=existing_columns,
         )
 
-        extra_columns = existing_columns - columns
-        if extra_columns:
+        missing_columns = [
+                col for col in columns
+                if col not in existing_columns
+        ]
+        if missing_columns:
+            # the entire table should be dropped in this situation in case one
+            # or more new (missing) columns are integral to the database's
+            # behavior
+            logger.id(logger.info, self,
+                    'Table \'{tblname}\' is missing columns: {color}',
+                    tblname=name,
+                    color=missing_columns,
+            )
+
+        extra_columns = [
+                col for col in existing_columns
+                if col not in columns
+        ]
+        if extra_columns and not missing_columns:
+            # only drop extra columns if there are none missing
+            # (extra + missing probably means that one or more columns were
+            #  completely replaced)
             logger.id(logger.info, self,
                     'Table \'{tblname}\' has extra columns: {color}',
                     tblname=name,
@@ -317,21 +337,16 @@ class Database(object):
             db.execute('ALTER TABLE {0} RENAME TO {1}'.format(name, tmp_name))
             db.execute('CREATE TABLE {0}'.format(tbl_defn))
             # copy the data into the new table
-            db.execute('INSERT INTO {0}({2}) SELECT {2} FROM {1}'.format(
-                name, tmp_name, ', '.join(columns)
+            db.execute('INSERT INTO {0}({2}) SELECT {3} FROM {1}'.format(
+                name,
+                tmp_name,
+                ', '.join(columns),
+                ', '.join(
+                    col for col in existing_columns
+                    if col not in extra_columns
+                ),
             ))
             db.execute('DROP TABLE {0}'.format(tmp_name))
-
-        missing_columns = columns - existing_columns
-        if missing_columns:
-            # the entire table should be dropped in this situation in case one
-            # or more new (missing) columns are integral to the database's
-            # behavior
-            logger.id(logger.info, self,
-                    'Table \'{tblname}\' is missing columns: {color}',
-                    tblname=name,
-                    color=missing_columns,
-            )
 
         return not bool(missing_columns)
 
