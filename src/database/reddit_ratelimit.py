@@ -100,7 +100,7 @@ class RedditRateLimitQueueDatabase(Database):
     def ig_users_for(self, submission):
         """
         Returns the set of instagram users queued to be posted to thing
-                or an empty set if no
+                or an empty set if none are found
         """
         from src.replies import Formatter
 

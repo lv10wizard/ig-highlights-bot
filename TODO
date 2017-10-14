@@ -263,17 +263,17 @@ O. parse soft-linked users
             99% of submissions don't soft-link anyway
     O. disable 404 badactor flagging since the bot is now guessing at usernames
         .. basically badactor flagging is turned off completely after this
-- test Parser.ig_{links,usernames}
+O. test Parser.ig_{links,usernames}
     O. create script that takes comment_id & filename to create pickles
         O. c = Comment(comment_id)
         O. c.body
         O. with open('filename.py{ver}.pickle', 'wb') as fd:
             pickle.dump(c, fd)
-    - with usernames
-    - without usernames
-    - with links
-    - without links
-    - without either
+    O. with usernames
+    O. without usernames
+    O. with links
+    O. without links
+    O. without either
 O. add num_comments column to InstagramDatabase
     want a way to include #comments in sort but not all media has comments
 

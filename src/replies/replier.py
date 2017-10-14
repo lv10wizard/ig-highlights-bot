@@ -45,7 +45,7 @@ class Replier(ProcessMixin, RedditInstanceMixin):
                     the queue database or if the thing was deleted)
         """
         if not ig_usernames:
-            logger.id(logger.debug, self,
+            logger.id(logger.info, self,
                     'No reply-able instagram usernames found in'
                     ' {color_thing}!',
                     color_thing=reddit.display_id(thing),

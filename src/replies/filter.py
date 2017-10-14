@@ -157,6 +157,7 @@ class Filter(object):
         skip = list(already_posted | currently_queued)
         ig_usernames = [user for user in ig_usernames if user not in skip]
 
+        # XXX: reconstruct the pruned list so that the order is kept
         pruned = [user for user in orig_usernames if user not in ig_usernames]
         if pruned:
             msg = ['Pruned #{num_posted} usernames: {color_posted}']
