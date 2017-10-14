@@ -229,7 +229,6 @@ class Messages(ProcessMixin, StreamMixin):
                     )
                     self.blacklist.add(prefixed_name)
 
-            logger.id(logger.debug, self, 'Processing messages ...')
             for message in self.stream:
                 if message is None or self._killed.is_set():
                     break
@@ -250,6 +249,11 @@ class Messages(ProcessMixin, StreamMixin):
                         continue
                     else:
                         break
+
+                logger.id(logger.info, self,
+                        'Processing {color_message}',
+                        color_message=reddit.display_id(message),
+                )
 
                 # blindly mark messages as seen even if processing fails.
                 # this prevents random / spam messages from being processed
@@ -346,12 +350,6 @@ class Messages(ProcessMixin, StreamMixin):
 
             # flag that duplicate items should now break out of the stream
             first_run = False
-
-            if not self._killed.is_set():
-                logger.id(logger.debug, self,
-                        'Waiting {time} before checking messages again ...',
-                        time=delay,
-                )
             self._killed.wait(delay)
 
         if self._killed.is_set():

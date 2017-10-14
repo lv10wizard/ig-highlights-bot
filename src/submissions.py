@@ -27,6 +27,8 @@ class Submissions(ProcessMixin, SubredditsSubmissionsStreamMixin):
                 self.cfg, self._reddit.username_raw, self.blacklist
         )
 
+        delay = 60
+
         while not self._killed.is_set():
             for submission in self.stream:
                 if not submission or self._killed.is_set():
@@ -41,7 +43,7 @@ class Submissions(ProcessMixin, SubredditsSubmissionsStreamMixin):
                 if ig_usernames:
                     self.filter.enqueue(submission, ig_usernames)
 
-            self._killed.wait(1)
+            self._killed.wait(delay)
 
         if self._killed.is_set():
             logger.id(logger.debug, self, 'Killed!')

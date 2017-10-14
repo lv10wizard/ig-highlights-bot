@@ -84,7 +84,6 @@ class Mentions(ProcessMixin, StreamMixin):
         first_run = True
 
         while not self._killed.is_set():
-            logger.id(logger.debug, self, 'Processing mentions ...')
             for mention in self.stream:
                 if mention is None or self._killed.is_set():
                     break
@@ -121,12 +120,6 @@ class Mentions(ProcessMixin, StreamMixin):
                 self._process_mention(mention)
 
             first_run = False
-
-            if not self._killed.is_set():
-                logger.id(logger.debug, self,
-                        'Waiting {time} before checking mentions again ...',
-                        time=delay,
-                )
             self._killed.wait(delay)
 
         if self._killed.is_set():
