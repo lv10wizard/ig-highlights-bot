@@ -156,11 +156,14 @@ class InstagramDatabase(Database):
                 min=self._get_min('num_likes'),
                 max=self._get_max('num_likes'),
         )
+
+        avg_comments = self._get_avg('num_comments')
+        max_comments = self._get_max('num_comments')
         normalized_comments = normalized_fmt.format(
                 weight=1.0,
                 col='num_comments',
                 min=self._get_min('num_comments'),
-                max=self._get_max('num_comments'),
+                max=max_comments,
         )
 
         order = ('CASE'
@@ -174,7 +177,22 @@ class InstagramDatabase(Database):
                 ' AND {normalized_likes} < 0.25'
                 ' THEN 0'
 
-                ' ELSE {default_order} END DESC'.format(
+                # order by likes if the comments avg is too high relative to
+                # the max comment count. averages tend to skew low so if the
+                # avg is high then that probably indicates the user has low
+                # comment activity or that they don't have many posts.
+                ' ELSE CASE WHEN 1.0 * {avg_comments} / {max_comments} > 0.18'
+                '       THEN num_likes'
+                # scale the likes count [0.1, 1] based on how far/close the
+                # comments count is to its maximum value.
+                # ie, low comment count relative to max -> 0.1 * likes
+                #     high comment count                -> 1 * likes
+                # XXX: 0.1 is the capped scale lower bound to account for
+                # the minimum num_comments being 0
+                '       ELSE MAX(0.1, {default_weight}) * num_likes'
+                '       END'
+                ' END DESC'.format(
+
                     fence=outer_comments[1],
                     # somewhat arbitrary threshold to exclude outliers
                     # (this just ensures that it is indeed an outlier)
@@ -182,19 +200,12 @@ class InstagramDatabase(Database):
                     # somewhat arbitrary base amount from which to judge the
                     # comments-to-likes ratio. this value makes the comparison
                     # apply more specifically to the user.
-                    avg_comments=self._get_avg('num_comments'),
+                    avg_comments=avg_comments,
                     # normalize so that we can meaningfully compare the value
                     normalized_likes=normalized_likes,
 
-                    # scale the likes count [0.1, 1] based on how far/close the
-                    # comments count is to its maximum value.
-                    # ie, low comment count relative to max -> 0.1 * likes
-                    #     high comment count                -> 1 * likes
-                    # XXX: 0.1 is the capped scale lower bound to account for
-                    # the minimum num_comments being 0
-                    default_order=(
-                        'MAX(0.1, {0}) * num_likes'.format(normalized_comments)
-                    ),
+                    max_comments=max_comments,
+                    default_weight=normalized_comments,
                 )
         )
 
