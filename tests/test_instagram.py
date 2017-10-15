@@ -23,6 +23,89 @@ def test_instagram_username_matches(string):
 def test_instagram_username_does_not_match(string):
     assert not USERNAME_REGEX.search(string)
 
+@pytest.mark.parametrize('link,expected', [
+    ('https://www.instagram.com/k.01.bulgakova/', 'k.01.bulgakova'),
+    ('https://www.instagram.com/jadegrobler/', 'jadegrobler'),
+    ('https://instagr.am/morganlux', 'morganlux'),
+])
+def test_instagram_matches_ig_links_strings(link, expected):
+    match = Instagram.IG_LINK_REGEX.search(link)
+    assert match
+    assert match.group(2) == expected
+
+@pytest.mark.parametrize('link', [
+    'https://www.google.com/',
+    'www.example.com',
+    'http://localhost:8080',
+    'https://www.reddit.com/r/EarthPorn/comments/76f6zg/this_glacial_iceberg_in_greenland_was_awesome/',
+])
+def test_instagram_matches_does_not_overmatch_links_strings(link):
+    assert not Instagram.IG_LINK_REGEX.search(link)
+
+@pytest.mark.parametrize('link,expected', [
+    ('https://www.instagram.com/p/BaLqVhPhv-Z/?taken-by=jadegrobler',
+        'jadegrobler'),
+    ('https://www.instagram.com/p/BZ8BtkXALZA/?taken-by=jadegrobler',
+        'jadegrobler'),
+    ('https://www.instagram.com/p/BZO5gp4D5ah/?taken-by=k.01.bulgakova',
+        'k.01.bulgakova'),
+])
+def test_instagram_matches_ig_links_query_strings(link, expected):
+    match = Instagram.IG_LINK_QUERY_REGEX.search(link)
+    assert match
+    assert match.group(1) == 'https://www.instagram.com'
+    assert match.group(2) == expected
+
+@pytest.mark.parametrize('string,expected', [
+    ('@k.01.bulgakova', 'k.01.bulgakova'),
+    (' @k.01.bulgakova', 'k.01.bulgakova'),
+    (' @k.01.bulgakova ', 'k.01.bulgakova'),
+    ('@k.01.bulgakova ', 'k.01.bulgakova'),
+    ('(@k.01.bulgakova) ', 'k.01.bulgakova'),
+    (' [@k.01.bulgakova] ', 'k.01.bulgakova'),
+])
+def test_instagram_matches_ig_user_strings(string, expected):
+    match = Instagram.IG_USER_REGEX.search(string)
+    assert match
+    assert match.group(1) == expected
+
+@pytest.mark.parametrize('string', [
+    'This is her instagram: @foobar',
+    '(IG): blahface__',
+    'that\'s idont.care on insta',
+    'rockopera on IG.',
+])
+def test_instagram_matches_has_ig_keyword_strings(string):
+    assert Instagram.HAS_IG_KEYWORD_REGEX.search(string)
+
+@pytest.mark.parametrize('string', [
+    'IG: foobar maybe?',
+    'is this @_blah on insta?',
+])
+def test_instagram_does_not_overmatch_has_ig_keyword_strings(string):
+    assert not Instagram.HAS_IG_KEYWORD_REGEX.search(string)
+
+@pytest.mark.parametrize('string,expected', [
+    ('IG: foobar', 'foobar'),
+    ('foobar on insta', 'foobar'),
+    ('I\'m pretty sure this is foobar on insta', 'foobar'),
+])
+def test_instagram_matches_potential_ig_user_strings(string, expected):
+    match = Instagram.IG_USER_STRING_REGEX.search(string)
+    assert match
+    assert expected in match.groups()
+
+@pytest.mark.parametrize('string', [
+    'Yo that\'s not cool',
+    'Story of my life.',
+    'Sauce? sauce sauce',
+    'Name?',
+    'I\'m okay with this',
+    'maybe blah on instagram? actually on second thought nvm',
+])
+def test_instagram_does_not_overmatch_potential_ig_user_strings(string):
+    assert not Instagram.IG_USER_STRING_REGEX.search(string)
+
 def test_instagram_matches_links(haileypandolfi, viktoria_kay):
     assert Instagram.IG_LINK_REGEX.search(haileypandolfi.body)
     assert not Instagram.IG_LINK_QUERY_REGEX.search(haileypandolfi.body)
