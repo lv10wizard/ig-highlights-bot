@@ -254,7 +254,7 @@ class Replier(ProcessMixin, RedditInstanceMixin):
             if ig_list is None:
                 # thing was probably deleted.
                 logger.id(logger.debug, self,
-                        'No instagram users found in \'{color_thing}!'
+                        'No instagram users found in \'{color_thing}\'!'
                         ' Removing from reply-queue ...',
                         color_thing=reddit.display_id(thing),
                 )
