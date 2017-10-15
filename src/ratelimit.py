@@ -269,15 +269,18 @@ class RateLimitHandler(ProcessMixin, RedditInstanceMixin):
                     # only handle specific types of things
                     if isinstance(thing, RateLimitHandler.VALID_THINGS):
                         # Note: we may be rate-limited again
-                        if self._reddit.do_reply(
+                        success = self._reddit.do_reply(
                                 thing, body, self._killed,
-                        ):
+                        )
+
+                        if success or success is None:
+                            # reply either succeeded or a reply is not possible
+                            # (eg. 403 Forbidden)
                             # remove the element from the queue database
                             with self.rate_limit_queue:
-                                self.rate_limit_queue.delete(
-                                        thing, body
-                                )
+                                self.rate_limit_queue.delete(thing, body)
 
+                        if success:
                             # try to add the thing to the reply history
                             # (but only if we can find instagram users
                             #  in the body)

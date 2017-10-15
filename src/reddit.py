@@ -701,6 +701,11 @@ class Reddit(praw.Reddit):
         killed (multiprocessing.Event, optional) - process loop condition used
                 to gracefully exit from this method in case it gets stuck
                 attempting to queue the reply from a rogue ratelimit.
+
+        Returns True if a successful reply is made
+                or False if the reply could not be made right now and should be
+                    retried
+                or None if the reply is not possible
         """
         success = False
         # TODO: do all thing.reply methods require a non-empty body?
@@ -776,6 +781,7 @@ class Reddit(praw.Reddit):
                             color_thing=display_id(thing),
                             exc_info=True,
                     )
+                    success = None
 
                 except Forbidden as e:
                     # TODO? blacklist subreddit / user instead (base off thing
@@ -788,6 +794,7 @@ class Reddit(praw.Reddit):
                             color_thing=display_id(thing),
                             exc_info=True,
                     )
+                    success = None
 
                 except praw.exceptions.APIException as e:
                     self.__handle_api_exception(e)
