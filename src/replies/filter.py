@@ -200,13 +200,16 @@ class Filter(object):
 
         too_many_replies = False
         ancestor_tree = reddit.get_ancestor_tree(comment)
-        author_tree = [
-                c.author.name.lower()
-                # XXX: specifically insert None for comments
-                # missing authors (deleted/removed)
-                if bool(c.author) else None
-                for c in ancestor_tree
-        ]
+        if ancestor_tree:
+            author_tree = [
+                    c.author.name.lower()
+                    # XXX: specifically insert None for comments
+                    # missing authors (deleted/removed)
+                    if bool(c.author) else None
+                    for c in ancestor_tree
+            ]
+        else:
+            author_tree = []
 
         logger.id(logger.debug, self,
                 '{color_comment} author tree:'

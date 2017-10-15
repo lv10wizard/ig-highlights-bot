@@ -8,6 +8,7 @@ import praw
 from prawcore.exceptions import (
         Forbidden,
         OAuthException,
+        RequestException,
 )
 from six import (
         iteritems,
@@ -118,14 +119,58 @@ def unpack_subreddits(subreddits_str):
     """
     return set(subreddits_str.split('+'))
 
-def display_id(thing):
-    if hasattr(thing, 'permalink'):
+_NO_CALLBACK_RESULT = '!!!!!__CALLBACK__FAILED__!!!!!'
+def _network_wrapper(callback, thing, *args, **kwargs):
+    """
+    Wraps the callback in a try/except against network issues
+    """
+    result = _NO_CALLBACK_RESULT
+    delay = 1
+    while result == _NO_CALLBACK_RESULT:
         try:
-            return thing.permalink()
-        except TypeError:
-            # object is not callable: thing should be a submission
-            return thing.permalink
-    return thing
+            result = callback(thing, *args, **kwargs)
+
+        except RequestException:
+            logger.id(logger.warn, thing.__repr__(),
+                    'Failed to fetch {callback}; retrying in {time} ...',
+                    callback=callback.__name__,
+                    time=delay,
+                    exc_info=True,
+            )
+            try:
+                # try Event.wait so that we don't get stuck sleeping through
+                # shutdown
+                Reddit._killed.wait(delay)
+            except AttributeError:
+                time.sleep(delay)
+            finally:
+                try:
+                    # test _killed in case it is a bool and not an Event
+                    if isinstance(Reddit._killed, bool):
+                        killed = Reddit._killed
+                    else:
+                        killed = Reddit._killed.is_set()
+                except AttributeError:
+                    pass
+                else:
+                    if killed:
+                        break
+            delay *= 2
+
+    return result if result != _NO_CALLBACK_RESULT else None
+
+def display_id(thing):
+    def _display_id(thing):
+        if hasattr(thing, 'permalink'):
+            try:
+                return thing.permalink()
+            except TypeError:
+                # object is not callable: thing should be a submission
+                return thing.permalink
+
+        return thing
+
+    return _network_wrapper(_display_id, thing)
 
 def display_fullname(thing):
     if hasattr(thing, 'fullname'):
@@ -139,10 +184,13 @@ def display_fullname(thing):
     return thing
 
 def author(thing):
-    author = '[deleted/removed]'
-    if hasattr(thing, 'author') and thing.author:
-        author = thing.author.name
-    return author
+    def _author(thing):
+        author = '[deleted/removed]'
+        if hasattr(thing, 'author') and thing.author:
+            author = thing.author.name
+        return author
+
+    return _network_wrapper(_author, thing)
 
 def split_fullname(fullname):
     """
@@ -179,12 +227,15 @@ def get_submission_for(thing):
     Returns the praw.models.Submission for the give thing
             or None if the thing has no submission
     """
-    if isinstance(thing, praw.models.Comment):
-        return thing.submission
-    elif isinstance(thing, praw.models.Submission):
-        return thing
+    def _get_submission_for(thing):
+        if isinstance(thing, praw.models.Comment):
+            return thing.submission
+        elif isinstance(thing, praw.models.Submission):
+            return thing
 
-    return None
+        return None
+
+    return _network_wrapper(_get_submission_for, thing)
 
 def get_ancestor_tree(comment, to_lower=True):
     """
@@ -201,18 +252,21 @@ def get_ancestor_tree(comment, to_lower=True):
     # ancestors of a sibling this comment)
 
     # https://praw.readthedocs.io/en/latest/code_overview/models/comment.html#praw.models.Comment.parent
-    result = []
-    ancestor = comment
-    refresh_counter = 0
-    while not ancestor.is_root:
-        ancestor = ancestor.parent()
-        result.append(ancestor)
-        if refresh_counter % 9 == 0:
-            # TODO? catch praw.exceptions.ClientException:
-            # This comment does not appear to be in the comment tree
-            ancestor.refresh()
-        refresh_counter += 1
-    return result
+    def _get_ancestor_tree(comment, to_lower):
+        result = []
+        ancestor = comment
+        refresh_counter = 0
+        while not ancestor.is_root:
+            ancestor = ancestor.parent()
+            result.append(ancestor)
+            if refresh_counter % 9 == 0:
+                # TODO? catch praw.exceptions.ClientException:
+                # This comment does not appear to be in the comment tree
+                ancestor.refresh()
+            refresh_counter += 1
+        return result
+
+    return _network_wrapper(_get_ancestor_tree, comment, to_lower)
 
 # ######################################################################
 

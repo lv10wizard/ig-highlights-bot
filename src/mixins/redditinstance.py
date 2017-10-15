@@ -28,6 +28,12 @@ class RedditInstanceMixin(object):
         except AttributeError:
             from src import reddit
 
+            if hasattr(self, '_killed'):
+                reddit.Reddit._killed = self._killed
+            else:
+                logger.id(logger.debug, self,
+                        'Could not set Reddit._killed: no ._killed member!',
+                )
             instance = reddit.Reddit(self.cfg, self.__rate_limited)
             self.__reddit_instance = instance
 
