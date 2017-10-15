@@ -129,7 +129,10 @@ def test_parser_matches_user_linked_in_query(jessicabolusi_medialink):
     'jesuschirst', 'beeyotch', 'photoshop', 'shopt', 'shooopped', 'shoppedddd',
     'selfshot', 'Wowzie', 'wowzzeeyyyz', 'Bombsss', 'bommmbbb', 'biergarten',
     'oktoberfest', 'oooooctoberfeesssttt', 'dirndl', 'dirdnl', 'drindl',
-    'dridnl',
+    'dridnl', 'sideboob', 'rearpussy', 'asshooole', 'diiiick', 'PEEENIS',
+    'downblouse', 'boooobieesss', 'boooobs', 'boob', 'buuuttts', 'butts',
+    'buttockssss', 'frontbutt', 'frontasss', 'pussyyyy', 'upskirtttt',
+    'upshort', 'upshooooorts',
 ])
 def test_parser_detects_jargon(word):
     assert Parser.is_jargon(word)

@@ -10,6 +10,7 @@ afai(?:cr|cs|ct|k|r) # as far as i ...
 afk
 a[fs]af*p # 'afap', 'asap', 'asafp'
 a+h+
+a+s+(?:h+o+l+)?e*s*
 aslp?
 atm
 a+u+t+o+m+a+t+a+ # 'automata' (pychant doesn't consider this as english)
@@ -23,6 +24,7 @@ b+e+(?:a+u+|y+[ou]+)t+[aei]+f+u+l+ # 'beautifullll', 'beeeeyoouteeaafulllll'
 b+[ei]+a*y*[ao]+t*c+h+ # 'beeyyyooootch', etc
 b+i*e+r+g+a+r+[dt]+e+n+ # 'biergarten'
 bitcoin
+b+o+b+(?:i+e+)?s*
 br[bls]
 b+r+(?:[eau]+|e+w+|o{2,})h* # 'bruh', 'brooooo', 'breeeeehh', etc
 bs
@@ -30,6 +32,7 @@ bsdm
 bsod
 btw
 b+u+l+(?:s+h+e*i+e*t+)? # 'bull', 'buuuullshiiitt', etc
+b+u+t+(?:o+c*k+)?s*
 bu+t+e+r+f+a+c+e+
 cgi
 c+o{2,}l+ # 'cooooool', etc
@@ -41,9 +44,11 @@ d+a+t+\w{3,} # 'datass', 'daaaateverything', etc
 d+[ao]+w*g+
 (?:d+a+|t+h+e+)?b+o+m+b*[sz]* # 'thebombbbb', 'bombbsssss'
 d+a+(?:y+[au]*h*)?m+n*
+d+i+c+k+s*
 di+nga+li+ng
 d+[ir]+[dn]+l+ # 'dirndl' & misspellings
 dmhs
+d+o+w+n+(?:b+l+o+[uw]+s+e*|s+h+i+r+t+)s*
 d+u+d+e+
 d+u+h+
 eli5
@@ -52,9 +57,11 @@ e+n+h+a+n+c+e+
 (?:f+a+p+s*)+ # 'fap', 'fapfapfap', 'faaappp', etc
 f+a+k+e+
 f+a+m+
+fdau
 ffs
 f+m+l+
 f+r+i+e+n+d+z+o+n+e+d*
+f+r+o+n+t+(?:a+s+|b+u+t+)s*
 fubar
 f+u+(?:c+k+|h+)?
 fwiw
@@ -119,13 +126,16 @@ omw
 o+w+(?:i+e+)? # 'ow', 'oww', 'owww', etc
 p2p
 p+a+w*g+
+p+e+n+i+s+e*s*
 p+e+r+v+(?:e+r+t+)?
 (?:p+h+o+t+o+)?s+h+o+p+(?:e+d+|t+)? # 'photoshopped', 'shopped', etc
 p+l+[sz]+
 pov
 ppl
+p+u+s+(?:i+e+|y+)s*
 pwn(?:ed|t)?
 qft
+r+e+a+r+p+u+s+(?:i+e+|y+)s*
 rtf?m # read the fine manual
 rule\d+ # 'rule34', etc
 s+c*h+w+i+f+t+y+
@@ -133,6 +143,7 @@ s+c*h+l+u+r+p+
 s+e+l+f+(?:p+i+c+|s+h+o+t+)?
 s+h+e*i+e*t+ # 'shiieeeeet'
 (?:s+h+)?r+e+k+t+ # 'shrekt', 'rekt'
+s+i+d+e+b+o+b+s*
 smf?h
 snafu
 s+o+
@@ -153,6 +164,7 @@ tryna
 tty?[ls]
 ty(?:vm)?
 u+[hm]+(?:o+h+)? # 'uuuuuh', 'uuuuuhhhhh', 'uhoh', 'ummmm', etc
+u+p+s+(?:k+i+r+t+|h+o+r+t+)s*
 vip
 vlog
 wa*i+f+(?:e*y+|u+) # 'waifuuuu', 'wifey', etc
