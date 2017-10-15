@@ -31,6 +31,8 @@ from src.replies import Parser
     'pawg', 'yeezys', 'fuccboi', 'fukboi', 'fuckboy', 'fuqboeeeeyy', 'hoooot',
     'hawwwwt', 'hotttie', 'hottey', 'hottyyy', 'hotties', 'hawwwtieee',
     'booobage', 'oopsie', 'oooopsy', 'oopsey', 'oopsies', 'spammmmmm',
+    'suuuperrr!', 'superman', 'superb0i', 'superboy', 'superwoman',
+    'superwomen', 'supermen', 'suprrrrr', 'supergrrrrl', 'supergirl',
 ] + ['o'*(i+2) for i in range(15)])
 def test_parser_detects_jargon(word):
     assert Parser.is_jargon(word)

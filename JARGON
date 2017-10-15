@@ -150,6 +150,8 @@ s+o+
 s+p+a+m+(?:i+e+|e*y+)?s*
 spo+py # 'spoopy', 'spoooopy', etc
 s+t+f+u+
+# 'suuuper', 'superboy', 'superman', 'supergirl', 'superwoman'
+s+u+p+e*r+(?:b+[0o]+[iy]+|g+i*r+l+|(?:w+o+)?m+[aey]+n+)?
 tb[hf]
 tb
 th?(?:ankz|n?x) # 'tnx', 'tx', 'thankz', 'tankz', 'thnx', ...
