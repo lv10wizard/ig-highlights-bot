@@ -471,30 +471,28 @@ class Reddit(praw.Reddit):
         success = False
         delay = self.__rate_limited.remaining
         if delay > 0 or force:
-            submission = None
-            try:
-                submission = thing.submission
-            except AttributeError:
-                pass
+            submission = get_submission_for(thing)
+            logger.id(logger.info, self,
+                    'Rate-limited! Queueing {color_thing}'
+                    ' (expires @ {time} = {strftime}) ...',
+                    color_thing=display_id(thing),
+                    time=self.__rate_limited.remaining,
+                    strftime='%H:%M:%S',
+                    strf_time=self.__rate_limited.value,
+            )
 
             try:
-                logger.id(logger.info, self,
-                        'Rate-limited! Queueing {color_thing}'
-                        ' (expires @ {time} = {strftime}) ...',
-                        color_thing=display_id(thing),
-                        time=self.__rate_limited.remaining,
-                        strftime='%H:%M:%S',
-                        strf_time=self.__rate_limited.value,
-                )
                 with self.__rate_limit_queue:
                     self.__rate_limit_queue.insert(
                             thing, body, delay, submission,
                     )
+
             except database.UniqueConstraintFailed:
-                logger.id(logger.warn, self,
-                        'Attempted to enqueue duplicate {color_thing}',
+                # this may mean that the ratelimit handling is not timed
+                # correctly or simply that the bot was ratelimited again
+                logger.id(logger.debug, self,
+                        'Updating {color_thing} in ratelimit queue ...',
                         color_thing=display_id(thing),
-                        exc_info=True,
                 )
                 with self.__rate_limit_queue:
                     self.__rate_limit_queue.update(thing, body, delay)
