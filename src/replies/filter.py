@@ -153,7 +153,21 @@ class Filter(object):
         already_posted = self.reply_history.replied_ig_users_for_submission(
                 submission
         )
+        if already_posted:
+            logger.id(logger.debug, self,
+                    'Already posted in {color_submission}: {color_users}',
+                    color_submission=reddit.display_id(submission),
+                    color_users=already_posted,
+            )
+
         currently_queued = self.reddit_ratelimit_queue.ig_users_for(submission)
+        if currently_queued:
+            logger.id(logger.debug, self,
+                    'Currently queued for {color_submission}: {color_users}',
+                    color_submission=reddit.display_id(submission),
+                    color_users=currently_queued,
+            )
+
         skip = list(already_posted | currently_queued)
         ig_usernames = [user for user in ig_usernames if user not in skip]
 
