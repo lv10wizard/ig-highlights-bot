@@ -93,7 +93,7 @@ class Blacklist(object):
         success = False
         name_type = Blacklist.__get_blacklist_type(name, prefix)
         if not name_type:
-            logger.id(logger.debug, self,
+            logger.id(logger.warn, self,
                     'Could not add {color_name} to blacklist:'
                     ' failed to determine blacklist type'
                     ' (name=\'{name_arg}\', prefix=\'{prefix}\')',
@@ -104,6 +104,7 @@ class Blacklist(object):
 
         else:
             _, name_raw = reddit.split_prefixed_name(name)
+            prefixed_name = reddit.prefix(name_raw, name_type)
 
             with self.__lock:
                 is_blacklisted = self.__database.is_blacklisted(
@@ -118,7 +119,7 @@ class Blacklist(object):
                         logger.id(logger.info, self,
                                 'Could not temporarily add {color_name} to'
                                 ' blacklist: already temporarily blacklisted.',
-                                color_name=name_raw,
+                                color_name=prefixed_name,
                         )
 
                     else:
@@ -129,7 +130,7 @@ class Blacklist(object):
                         logger.id(logger.info, self,
                                 'Flagging {color_name}\'s ban to be made'
                                 ' permanent ({time} remaining)',
-                                color_name=name_raw,
+                                color_name=prefixed_name,
                                 time=time_left,
                         )
                         self.__database.set_make_permanent(name, name_type)
@@ -138,7 +139,7 @@ class Blacklist(object):
                 elif not is_blacklisted:
                     logger.id(logger.info, self,
                             'Adding {color_name} {tmp}to blacklist',
-                            color_name=name_raw,
+                            color_name=prefixed_name,
                             tmp=('temporarily ' if tmp else ''),
                     )
                     try:
@@ -146,7 +147,7 @@ class Blacklist(object):
                     except UniqueConstraintFailed:
                         logger.id(logger.warn, self,
                                 '{color_name} is already blacklisted!',
-                                color_name=name_raw,
+                                color_name=prefixed_name,
                                 exc_info=True,
                         )
                     else:
@@ -156,7 +157,7 @@ class Blacklist(object):
                     logger.id(logger.info, self,
                             'Could not add {color_name} to blacklist:'
                             ' already blacklisted.',
-                            color_name=name_raw,
+                            color_name=prefixed_name,
                     )
 
                 if success:
@@ -189,7 +190,7 @@ class Blacklist(object):
         success = False
         name_type = Blacklist.__get_blacklist_type(name, prefix)
         if not name_type:
-            logger.id(logger.debug, self,
+            logger.id(logger.warn, self,
                     'Could not remove {color_name} from blacklist:'
                     ' failed to determine blacklist type'
                     ' (name=\'{name_arg}\', prefix=\'{prefix}\')',
@@ -200,6 +201,7 @@ class Blacklist(object):
 
         else:
             _, name_raw = reddit.split_prefixed_name(name)
+            prefixed_name = reddit.prefix(name_raw, name_type)
 
             # I'm not 100% certain this requires locking.. maybe in extremely
             # rare situations.
@@ -212,10 +214,8 @@ class Blacklist(object):
                     if time_left <= 0:
                         # permanent ban (user or subreddit)
                         logger.id(logger.info, self,
-                                'Removing {color_name} ({color_nametype})'
-                                ' from blacklist',
-                                color_name=name_raw,
-                                color_nametype=name_type,
+                                'Removing {color_name} from blacklist',
+                                color_name=prefixed_name,
                         )
                         self.__database.delete(name_raw, name_type)
                         # XXX: assumes delete was successful
@@ -226,7 +226,7 @@ class Blacklist(object):
                         logger.id(logger.info, self,
                                 'Clearing flag to make {color_name}\'s ban'
                                 ' permanent ({time} remaining)',
-                                color_name=name_raw,
+                                color_name=prefixed_name,
                                 time=time_left,
                         )
                         self.__database.clear_make_permanent(
@@ -236,9 +236,8 @@ class Blacklist(object):
 
                 else:
                     logger.id(logger.info, self,
-                            '{color_name} ({name_type}) is not blacklisted!',
-                            color_name=name_raw,
-                            name_type=name_type,
+                            '{color_name} is not blacklisted!',
+                            color_name=prefixed_name,
                     )
 
                 if success:
@@ -279,7 +278,7 @@ class Blacklist(object):
         """
         name_type = Blacklist.__get_blacklist_type(name, prefix)
         if not name_type:
-            logger.id(logger.debug, self,
+            logger.id(logger.warn, self,
                     'Could not determine if {color_name} is blacklisted:'
                     ' failed to determine blacklist type'
                     ' (name=\'{name_arg}\', prefix=\'{prefix}\')',
@@ -324,7 +323,7 @@ class Blacklist(object):
         """
         name_type = Blacklist.__get_blacklist_type(name, prefix)
         if not name_type:
-            logger.id(logger.debug, self,
+            logger.id(logger.warn, self,
                     'Could not determine time remaining on {color_name}\'s'
                     ' blacklisted: failed to determine blacklist type'
                     ' (name=\'{name_arg}\', prefix=\'{prefix}\')',

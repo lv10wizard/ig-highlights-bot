@@ -59,7 +59,10 @@ def is_subreddit(name):
     return is_subreddit_prefix(prefix)
 
 def is_subreddit_prefix(prefix):
-    return prefix == PREFIX_SUBREDDIT
+    return (
+            prefix == PREFIX_SUBREDDIT
+            or prefix == database.BlacklistDatabase.TYPE_SUBREDDIT
+    )
 
 def is_user(name):
     """
@@ -69,7 +72,10 @@ def is_user(name):
     return is_user_prefix(prefix)
 
 def is_user_prefix(prefix):
-    return prefix == PREFIX_USER
+    return (
+            prefix == PREFIX_USER
+            or prefix == database.BlacklistDatabase.TYPE_USER
+    )
 
 def prefix_subreddit(name):
     """
@@ -84,6 +90,11 @@ def prefix_user(name):
     return prefix(name, PREFIX_USER)
 
 def prefix(name, prefix):
+    if prefix == database.BlacklistDatabase.TYPE_USER:
+        prefix = PREFIX_USER
+    elif prefix == database.BlacklistDatabase.TYPE_SUBREDDIT:
+        prefix = PREFIX_SUBREDDIT
+
     if re.search(r'^{0}'.format(prefix), name):
         return name
     return '{0}{1}'.format(prefix, name)
