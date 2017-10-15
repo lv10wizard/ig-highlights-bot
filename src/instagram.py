@@ -98,13 +98,17 @@ class Instagram(object):
     # XXX: periods cannot appear consecutively
     # eg. 'foo.b.a.r' is ok; 'foo..bar' is not
     # XXX: periods cannot appear as the first character nor the last character
-    USERNAME_PTN = r'\w(?!.*[.]{2,})[\w\.]{,29}(?<![.])'
-    #                  |\___________/\_________/\______/
-    #                  |      |           |         \
-    #                  |      |           |    don't match if ends with '.'
-    #                  |      |      match 0-29 letters, numbers, underscores
-    #                  |    do not match if there are any consecutive periods
+    _VALID_CHARS = '0-9A-Za-z_'
+    USERNAME_PTN = r'[{0}](?!.*[.]{{2,}})[{0}\.]{{,29}}(?<![.])'.format(
+    #                  |  \_____________/\____________/\______/
+    #                  |        |              |          /
+    #                  |        |              |    don't match if ends with '.'
+    #                  |        |      match 0-29 letters, numbers, underscores
+    #                  |     do not match if there are any consecutive periods
     #               first character must be a letter, number or underscore
+
+            _VALID_CHARS,
+    )
 
     _BASE_URL_PTN = r'https?://(?:www[.])?(?:{0})'.format('|'.join(_BASE_URLS))
     #                 \_______/\_________/\_____/

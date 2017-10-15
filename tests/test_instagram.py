@@ -1,7 +1,27 @@
+# -*- coding: UTF-8 -*-
+
+import re
+
 import pytest
 
 from src.instagram import Instagram
 
+
+USERNAME_REGEX = re.compile(
+        r'^{0}$'.format(Instagram.USERNAME_PTN), flags=re.IGNORECASE
+)
+
+@pytest.mark.parametrize('string', [
+    'foobar', '1foo', 'a', 'foo__', 'foo.bar.a_xx99_', '__blahhh',
+])
+def test_instagram_username_matches(string):
+    assert USERNAME_REGEX.search(string)
+
+@pytest.mark.parametrize('string', [
+    'Touché', '.foobar', 'foobar..', 'foo..bar', '^', '$', 'asdf!',
+])
+def test_instagram_username_does_not_match(string):
+    assert not USERNAME_REGEX.search(string)
 
 def test_instagram_matches_links(haileypandolfi, viktoria_kay):
     assert Instagram.IG_LINK_REGEX.search(haileypandolfi.body)
