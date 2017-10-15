@@ -24,7 +24,6 @@ b+e+(?:a+u+|y+[ou]+)t+[aei]+f+u+l+ # 'beautifullll', 'beeeeyoouteeaafulllll'
 b+[ei]+a*y*[ao]+t*c+h+ # 'beeyyyooootch', etc
 b+i*e+r+g+a+r+[dt]+e+n+ # 'biergarten'
 bitcoin
-b+o+b+(?:i+e+)?s*
 br[bls]
 b+r+(?:[eau]+|e+w+|o{2,})h* # 'bruh', 'brooooo', 'breeeeehh', etc
 bs
@@ -143,7 +142,7 @@ s+c*h+l+u+r+p+
 s+e+l+f+(?:p+i+c+|s+h+o+t+)?
 s+h+e*i+e*t+ # 'shiieeeeet'
 (?:s+h+)?r+e+k+t+ # 'shrekt', 'rekt'
-s+i+d+e+b+o+b+s*
+(?:s+i+d+e+|u+n+d+e+r+)?b+o+b+(?:i+e+)?s*
 smf?h
 snafu
 s+o+

@@ -132,7 +132,7 @@ def test_parser_matches_user_linked_in_query(jessicabolusi_medialink):
     'dridnl', 'sideboob', 'rearpussy', 'asshooole', 'diiiick', 'PEEENIS',
     'downblouse', 'boooobieesss', 'boooobs', 'boob', 'buuuttts', 'butts',
     'buttockssss', 'frontbutt', 'frontasss', 'pussyyyy', 'upskirtttt',
-    'upshort', 'upshooooorts',
+    'upshort', 'upshooooorts', 'underboobs', 'underbooobies', 'sidebooobies',
 ])
 def test_parser_detects_jargon(word):
     assert Parser.is_jargon(word)
