@@ -154,7 +154,7 @@ class Filter(object):
                 submission
         )
         if already_posted:
-            logger.id(logger.debug, self,
+            logger.id(logger.info, self,
                     'Already posted in {color_submission}: {color_users}',
                     color_submission=reddit.display_id(submission),
                     color_users=already_posted,
@@ -162,7 +162,7 @@ class Filter(object):
 
         currently_queued = self.reddit_ratelimit_queue.ig_users_for(submission)
         if currently_queued:
-            logger.id(logger.debug, self,
+            logger.id(logger.info, self,
                     'Currently queued for {color_submission}: {color_users}',
                     color_submission=reddit.display_id(submission),
                     color_users=currently_queued,
@@ -179,7 +179,7 @@ class Filter(object):
                 msg.append('#{num_users}: {color_users}')
             else:
                 msg.append('All users pruned!')
-            logger.id(logger.debug, self,
+            logger.id(logger.info, self,
                     '\n\t'.join(msg),
                     num_posted=len(pruned),
                     color_posted=pruned,
