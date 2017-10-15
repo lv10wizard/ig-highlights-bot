@@ -4,6 +4,45 @@ import pytest
 from src.replies import Parser
 
 
+@pytest.mark.parametrize('word', [
+    'ha', 'haha!', 'haahaha', 'bahaahaha', 'lol', 'LOL', 'lol!!', 'loooool',
+    'lololol', 'lloolollol', 'lmao', 'LMAO', 'lmfao', 'LMFAO', 'rofl', 'lulz',
+    'roflmao', 'rofllmao', 'wtfffff', 'omg', 'OMFGGG', 'woooops', 'WOoOOSH',
+    'FTFY', 'wowsers', 'WTF!?', 'dafuq', 'bruhhh', 'kek', 'yaaaassss', 'duuude',
+    'bae', '2spooky4me', '3spoopy5me', '8cute10me', 'me_irl', '2meirl', 'ick',
+    'niceeeeeeeeeeeeeeeeeeee', 'noice', 'gracias', 'o_O', 'O.o', 'Whelp',
+    'soooo..', 'Wowza!', 'butterface', 'hellooooooo', 'Mmmmm...', 'gotdayumn!',
+    'GODDAYUMMNNN', 'dayuuuuum', 'TIL', 'bae', 'awww', 'asl?', 'yw', 'shopped',
+    'Photoshopped', 'Enhaaaaance', 'zooooommm', 'ooookey', 'Ooof.', 'schwifty',
+    'lawwwwd', 'lawdyyy', 'goddamn', 'schlurp', 'gaaaggg', 'gaaaayyy',
+    'nnnaaaaammee', 'makelinesstraightagain', 'wut', 'wat', 'Hhnnnnng', 'fml',
+    'HnnNNNGGG', 'Whoosh', 'wHOooOoosh', 'Gatdaaaamn', 'Ooorah', 'Hoohrah',
+    'Woahhhohoho', 'Woahhahahah', 'huehuehue', 'hueheuehuhheuheu',
+    'Beeyooteafull', 'bEeeauutiiifuuul', 'xoxoxoox', 'homie...', 'automata',
+    'selfie', 'selfey', 'selfy', 'pelfie', 'jeeebus', 'JEEESUS!', 'jesuscrhist',
+    'jesuschirst', 'beeyotch', 'photoshop', 'shopt', 'shooopped', 'shoppedddd',
+    'selfshot', 'Wowzie', 'wowzzeeyyyz', 'Bombsss', 'bommmbbb', 'biergarten',
+    'oktoberfest', 'oooooctoberfeesssttt', 'dirndl', 'dirdnl', 'drindl',
+    'dridnl', 'sideboob', 'rearpussy', 'asshooole', 'diiiick', 'PEEENIS',
+    'downblouse', 'boooobieesss', 'boooobs', 'boob', 'buuuttts', 'butts',
+    'buttockssss', 'frontbutt', 'frontasss', 'pussyyyy', 'upskirtttt',
+    'upshort', 'upshooooorts', 'underboobs', 'underbooobies', 'sidebooobies',
+    'ahueheuheuhhehu', 'UHEUAHEUEHAHUEHAUEH', 'booooty', 'whooty', 'paag',
+    'pawg', 'yeezys', 'fuccboi', 'fukboi', 'fuckboy', 'fuqboeeeeyy', 'hoooot',
+    'hawwwwt', 'hotttie', 'hottey', 'hottyyy', 'hotties', 'hawwwtieee',
+    'booobage', 'oopsie', 'oooopsy', 'oopsey', 'oopsies',
+] + ['o'*(i+2) for i in range(15)])
+def test_parser_detects_jargon(word):
+    assert Parser.is_jargon(word)
+
+@pytest.mark.parametrize('word', [
+    'Daring', 'gorgeous', 'google', 'vyvan.le', 'Hanny_madani', 'kaja_sbn',
+    'haileypandolfi', 'viktoria_kay', 'linstahh', 'natalieannworth',
+    'tiffanie_marie', 'tiffanie.marie', 'jessicabolusi',
+])
+def test_parser_does_not_overmatch_jargon(word):
+    assert not Parser.is_jargon(word)
+
 def test_parser_init(
         linstahh, selfpost_warm_welcome, post_lenabarista_imgur,
         post_coffeecutie_beachvibes_imgur,
@@ -114,45 +153,6 @@ def test_parser_matches_user_linked_in_query(jessicabolusi_medialink):
     J = Parser(jessicabolusi_medialink)
     assert J.ig_links
     assert J.ig_usernames == ['jessicabolusi']
-
-@pytest.mark.parametrize('word', [
-    'ha', 'haha!', 'haahaha', 'bahaahaha', 'lol', 'LOL', 'lol!!', 'loooool',
-    'lololol', 'lloolollol', 'lmao', 'LMAO', 'lmfao', 'LMFAO', 'rofl', 'lulz',
-    'roflmao', 'rofllmao', 'wtfffff', 'omg', 'OMFGGG', 'woooops', 'WOoOOSH',
-    'FTFY', 'wowsers', 'WTF!?', 'dafuq', 'bruhhh', 'kek', 'yaaaassss', 'duuude',
-    'bae', '2spooky4me', '3spoopy5me', '8cute10me', 'me_irl', '2meirl', 'ick',
-    'niceeeeeeeeeeeeeeeeeeee', 'noice', 'gracias', 'o_O', 'O.o', 'Whelp',
-    'soooo..', 'Wowza!', 'butterface', 'hellooooooo', 'Mmmmm...', 'gotdayumn!',
-    'GODDAYUMMNNN', 'dayuuuuum', 'TIL', 'bae', 'awww', 'asl?', 'yw', 'shopped',
-    'Photoshopped', 'Enhaaaaance', 'zooooommm', 'ooookey', 'Ooof.', 'schwifty',
-    'lawwwwd', 'lawdyyy', 'goddamn', 'schlurp', 'gaaaggg', 'gaaaayyy',
-    'nnnaaaaammee', 'makelinesstraightagain', 'wut', 'wat', 'Hhnnnnng', 'fml',
-    'HnnNNNGGG', 'Whoosh', 'wHOooOoosh', 'Gatdaaaamn', 'Ooorah', 'Hoohrah',
-    'Woahhhohoho', 'Woahhahahah', 'huehuehue', 'hueheuehuhheuheu',
-    'Beeyooteafull', 'bEeeauutiiifuuul', 'xoxoxoox', 'homie...', 'automata',
-    'selfie', 'selfey', 'selfy', 'pelfie', 'jeeebus', 'JEEESUS!', 'jesuscrhist',
-    'jesuschirst', 'beeyotch', 'photoshop', 'shopt', 'shooopped', 'shoppedddd',
-    'selfshot', 'Wowzie', 'wowzzeeyyyz', 'Bombsss', 'bommmbbb', 'biergarten',
-    'oktoberfest', 'oooooctoberfeesssttt', 'dirndl', 'dirdnl', 'drindl',
-    'dridnl', 'sideboob', 'rearpussy', 'asshooole', 'diiiick', 'PEEENIS',
-    'downblouse', 'boooobieesss', 'boooobs', 'boob', 'buuuttts', 'butts',
-    'buttockssss', 'frontbutt', 'frontasss', 'pussyyyy', 'upskirtttt',
-    'upshort', 'upshooooorts', 'underboobs', 'underbooobies', 'sidebooobies',
-    'ahueheuheuhhehu', 'UHEUAHEUEHAHUEHAUEH', 'booooty', 'whooty', 'paag',
-    'pawg', 'yeezys', 'fuccboi', 'fukboi', 'fuckboy', 'fuqboeeeeyy', 'hoooot',
-    'hawwwwt', 'hotttie', 'hottey', 'hottyyy', 'hotties', 'hawwwtieee',
-    'booobage',
-] + ['o'*(i+2) for i in range(15)])
-def test_parser_detects_jargon(word):
-    assert Parser.is_jargon(word)
-
-@pytest.mark.parametrize('word', [
-    'Daring', 'gorgeous', 'google', 'vyvan.le', 'Hanny_madani', 'kaja_sbn',
-    'haileypandolfi', 'viktoria_kay', 'linstahh', 'natalieannworth',
-    'tiffanie_marie', 'tiffanie.marie', 'jessicabolusi',
-])
-def test_parser_does_not_overmatch_jargon(word):
-    assert not Parser.is_jargon(word)
 
 def test_parser_does_not_match_thanks(thanks_):
     # 'Thanks'
