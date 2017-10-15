@@ -470,7 +470,7 @@ class Reddit(praw.Reddit):
                 logger.id(logger.info, self,
                         'Rate-limited! Queueing {color_thing}'
                         ' (expires @ {time} = {strftime}) ...',
-                        color_thing=display_fullname(thing),
+                        color_thing=display_id(thing),
                         time=self.__rate_limited.remaining,
                         strftime='%H:%M:%S',
                         strf_time=self.__rate_limited.value,
@@ -482,7 +482,7 @@ class Reddit(praw.Reddit):
             except database.UniqueConstraintFailed:
                 logger.id(logger.warn, self,
                         'Attempted to enqueue duplicate {color_thing}',
-                        color_thing=display_fullname(thing),
+                        color_thing=display_id(thing),
                         exc_info=True,
                 )
                 with self.__rate_limit_queue:
@@ -645,7 +645,7 @@ class Reddit(praw.Reddit):
             logger.id(logger.debug, self,
                     'Cannot reply to {color_thing} with \'{body}\''
                     ' ({body_type}). Needs non-empty string!',
-                    color_thing=display_fullname(thing),
+                    color_thing=display_id(thing),
                     body=body,
                     body_type=type(body),
             )
@@ -674,7 +674,7 @@ class Reddit(praw.Reddit):
                             ' (rate-limited? {yesno_ratelimit};'
                             ' time left: {time} = {strftime})',
                             num=num_attempts,
-                            color_thing=display_fullname(thing),
+                            color_thing=display_id(thing),
                             yesno_ratelimit=self.is_rate_limited,
                             time=self.__rate_limited.remaining,
                             strftime='%H:%M:%S',
@@ -691,7 +691,7 @@ class Reddit(praw.Reddit):
                         '\n{sep}'
                         '\n{body}'
                         '\n{sep}',
-                        color_thing=display_fullname(thing),
+                        color_thing=display_id(thing),
                         sep=Reddit.LINE_SEP,
                         body=body,
                 )
@@ -710,7 +710,7 @@ class Reddit(praw.Reddit):
                     logger.id(logger.warn, self,
                             'Could not reply to {color_thing}:'
                             ' no \'reply\' method!',
-                            color_thing=display_fullname(thing),
+                            color_thing=display_id(thing),
                             exc_info=True,
                     )
 
@@ -722,7 +722,7 @@ class Reddit(praw.Reddit):
                     # (could also mean auth failed, maybe something else?)
                     logger.id(logger.warn, self,
                             'Failed to reply to {color_thing}!',
-                            color_thing=display_fullname(thing),
+                            color_thing=display_id(thing),
                             exc_info=True,
                     )
 

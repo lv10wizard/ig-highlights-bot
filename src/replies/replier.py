@@ -189,7 +189,7 @@ class Replier(ProcessMixin, RedditInstanceMixin):
                     logger.id(logger.warn, self,
                             'Duplicate instagram user posted in'
                             ' {color_submission}! (users={color_users})',
-                            color_submission=reddit.display_fullname(
+                            color_submission=reddit.display_id(
                                 reddit.get_submission_for(thing),
                             ),
                             color_user=ig_usernames,

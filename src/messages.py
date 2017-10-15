@@ -239,7 +239,7 @@ class Messages(ProcessMixin, StreamMixin):
                     logger.id(logger.debug, self,
                             'I\'ve already read {color_message}!'
                             ' (\'{subject}\' from {color_from})',
-                            color_message=reddit.display_fullname(message),
+                            color_message=reddit.display_id(message),
                             subject=message.subject,
                             color_from=reddit.author(message),
                     )
@@ -267,7 +267,7 @@ class Messages(ProcessMixin, StreamMixin):
                     logger.id(logger.warn, self,
                             'Attempted to process duplicate message:'
                             ' {color_message} from {color_from}!',
-                            color_message=reddit.display_fullname(message),
+                            color_message=reddit.display_id(message),
                             color_from=reddit.author(message),
                             exc_info=True,
                     )

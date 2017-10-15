@@ -37,7 +37,7 @@ class Mentions(ProcessMixin, StreamMixin):
             # this shouldn't happen
             logger.id(logger.debug, self,
                     '{color_mention} has no submission ?!',
-                    color_mention=reddit.display_fullname(mention),
+                    color_mention=reddit.display_id(mention),
             )
             return
 
@@ -91,7 +91,7 @@ class Mentions(ProcessMixin, StreamMixin):
                     logger.id(logger.debug, self,
                             'I\'ve already processed {color_mention} from'
                             ' {color_from}!',
-                            color_mention=reddit.display_fullname(mention),
+                            color_mention=reddit.display_id(mention),
                             color_from=reddit.author(mention),
                     )
                     if first_run:
@@ -107,7 +107,7 @@ class Mentions(ProcessMixin, StreamMixin):
                     logger.id(logger.warn, self,
                             'Attempted to process duplicate submission:'
                             ' {color_mention} from {color_from}!',
-                            color_mention=reddit.display_fullname(mention),
+                            color_mention=reddit.display_id(mention),
                             color_from=reddit.author(mention),
                             exc_info=True,
                     )

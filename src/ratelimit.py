@@ -263,7 +263,7 @@ class RateLimitHandler(ProcessMixin, RedditInstanceMixin):
                 if thing:
                     logger.id(logger.info, self,
                             'Processing {color_thing} ...',
-                            color_thing=reddit.display_fullname(thing),
+                            color_thing=reddit.display_id(thing),
                     )
                     # only handle specific types of things
                     if isinstance(thing, RateLimitHandler.VALID_THINGS):
@@ -291,7 +291,7 @@ class RateLimitHandler(ProcessMixin, RedditInstanceMixin):
                                         )
 
                                 except database.UniqueConstraintFailed:
-                                    display = reddit.display_fullname(
+                                    display = reddit.display_id(
                                             thing
                                     )
                                     logger.id(logger.warn, self,
@@ -314,7 +314,7 @@ class RateLimitHandler(ProcessMixin, RedditInstanceMixin):
                     # remove the element so that it isn't immediately retried
                     logger.id(logger.warn, self,
                             'Removing {color_thing} from queue database ...',
-                            color_thing=reddit.display_fullname(thing),
+                            color_thing=reddit.display_id(thing),
                     )
                     with self.rate_limit_queue:
                         self.rate_limit_queue.delete(thing, body)

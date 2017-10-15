@@ -347,7 +347,7 @@ class Blacklist(object):
                         '{color_author} already flagged as a bad actor for'
                         ' {color_thing}',
                         color_author=thing.author.name,
-                        color_thing=reddit.display_fullname(thing),
+                        color_thing=reddit.display_id(thing),
                 )
                 return
 
@@ -368,7 +368,7 @@ class Blacklist(object):
                 logger.id(logger.debug, self,
                         '{color_thing} has no valid permalink!'
                         ' (permalink={permalink})',
-                        color_thing=reddit.display_fullname(thing),
+                        color_thing=reddit.display_id(thing),
                         permalink=permalink,
                 )
                 permalink = None
@@ -382,7 +382,7 @@ class Blacklist(object):
                         '{color_author} already flagged as a bad actor for'
                         ' {color_thing}!',
                         color_author=thing.author.name,
-                        color_thing=reddit.display_fullname(thing),
+                        color_thing=reddit.display_id(thing),
                         exc_info=True,
                 )
 
