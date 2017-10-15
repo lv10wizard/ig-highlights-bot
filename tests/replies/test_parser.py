@@ -127,7 +127,9 @@ def test_parser_matches_user_linked_in_query(jessicabolusi_medialink):
     'Beeyooteafull', 'bEeeauutiiifuuul', 'xoxoxoox', 'homie...', 'automata',
     'selfie', 'selfey', 'selfy', 'pelfie', 'jeeebus', 'JEEESUS!', 'jesuscrhist',
     'jesuschirst', 'beeyotch', 'photoshop', 'shopt', 'shooopped', 'shoppedddd',
-    'selfshot', 'Wowzie', 'wowzzeeyyyz', 'Bombsss', 'bommmbbb',
+    'selfshot', 'Wowzie', 'wowzzeeyyyz', 'Bombsss', 'bommmbbb', 'biergarten',
+    'oktoberfest', 'oooooctoberfeesssttt', 'dirndl', 'dirdnl', 'drindl',
+    'dridnl',
 ])
 def test_parser_detects_jargon(word):
     assert Parser.is_jargon(word)

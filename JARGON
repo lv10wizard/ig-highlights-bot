@@ -21,6 +21,7 @@ badass
 b+e+c+a+u+s+e+
 b+e+(?:a+u+|y+[ou]+)t+[aei]+f+u+l+ # 'beautifullll', 'beeeeyoouteeaafulllll'
 b+[ei]+a*y*[ao]+t*c+h+ # 'beeyyyooootch', etc
+b+i*e+r+g+a+r+[dt]+e+n+ # 'biergarten'
 bitcoin
 br[bls]
 b+r+(?:[eau]+|e+w+|o{2,})h* # 'bruh', 'brooooo', 'breeeeehh', etc
@@ -41,6 +42,7 @@ d+[ao]+w*g+
 (?:d+a+|t+h+e+)?b+o+m+b*[sz]* # 'thebombbbb', 'bombbsssss'
 d+a+(?:y+[au]*h*)?m+n*
 di+nga+li+ng
+d+[ir]+[dn]+l+ # 'dirndl' & misspellings
 dmhs
 d+u+d+e+
 d+u+h+
@@ -109,6 +111,7 @@ n+o+
 n?sf[lw]
 n+v+m+
 o[_\.\-]o # faces eg. 'o_O', 'o.o'
+o+[ck]+t+o+b+e+r+(?:f+e+s+t+)?
 o+h+
 o*k+(?:[ae]+y+)? # 'ok', 'ooooook', 'okey', etc
 otoh
