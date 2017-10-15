@@ -756,6 +756,7 @@ class Instagram(object):
                         except ValueError as e:
                             # bad json ...?
                             # try again, it may be a temporary error
+                            # TODO: figure out why this happens
                             try:
                                 num_tries = self.__bad_json_tries
                             except AttributeError:
@@ -764,7 +765,7 @@ class Instagram(object):
 
                             if num_tries < 10:
                                 delay = 5
-                                logger.id(logger.warn, self,
+                                logger.id(logger.debug, self,
                                         'Bad json! Retrying in {time}'
                                         ' (#{num}) ...',
                                         time=delay,
