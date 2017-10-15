@@ -79,7 +79,7 @@ g+o+t+c+h+[au]+(?:f+a+m+)? # 'gotchufam', etc
 gracias
 grat[sz]+
 (?:he)?ded # 'heded', 'ded'
-h+(?:a+w+|o+)t+ # 'hooott', 'hawwwt', etc
+h+(?:a+w+|o+)t+(?:i+e+|e*y+)?s* # 'hooott', 'hawwwt', etc
 h+e+l+o+ # 'hellloooooooo', etc
 h*m+ # 'hmm', 'mmmm', etc
 hm\w # hold my ...
