@@ -209,7 +209,12 @@ class Instagram(object):
     )
 
     HAS_IG_KEYWORD_REGEX = re.compile(
-            '(?!.*[?])(?:^{0})|(?:{1}$)'.format(
+            '(?!.*[?])(?:^{0}|\s*{1}(?:\s+|$))'.format(
+            #\_______/   \__/ \_____________/
+            #    |         \        \
+            #    |         /    match instagram keyword suffix
+            #    |      match instagram keyword prefix
+            # do not match if a '?' appears anywhere in the string
                 _IG_KEYWORD_PREFIX,
                 _IG_KEYWORD_SUFFIX,
             ),

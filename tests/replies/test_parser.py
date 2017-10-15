@@ -72,8 +72,9 @@ def test_parser_matches_instagram_prefix(
     assert not C.ig_links
     assert C.ig_usernames == ['_coffeequeennn']
 
-def test_parser_matches_on_instagram_suffix(
+def test_parser_matches_instagram_suffix(
         hanny_madani, kaja_sbn, eva_lo_dimelo, chaileeson, deliahatesyou,
+        diablo_sam,
 ):
     H = Parser(hanny_madani)
     assert not H.ig_links
@@ -94,6 +95,10 @@ def test_parser_matches_on_instagram_suffix(
     D = Parser(deliahatesyou)
     assert not D.ig_links
     assert D.ig_usernames == ['Deliahatesyou']
+
+    DS = Parser(diablo_sam)
+    assert not DS.ig_links
+    assert DS.ig_usernames == ['Diablo_sam']
 
 def test_parser_matches_multiline_user_string(capbarista_multiline_prefix):
     C = Parser(capbarista_multiline_prefix)
