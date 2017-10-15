@@ -38,6 +38,7 @@ def test_instagram_matches_ig_links_strings(link, expected):
     'www.example.com',
     'http://localhost:8080',
     'https://www.reddit.com/r/EarthPorn/comments/76f6zg/this_glacial_iceberg_in_greenland_was_awesome/',
+    'https://www.instagram.com/p/BaCrBOqn-8R/?hl=en',
 ])
 def test_instagram_matches_does_not_overmatch_links_strings(link):
     assert not Instagram.IG_LINK_REGEX.search(link)
@@ -49,6 +50,10 @@ def test_instagram_matches_does_not_overmatch_links_strings(link):
         'jadegrobler'),
     ('https://www.instagram.com/p/BZO5gp4D5ah/?taken-by=k.01.bulgakova',
         'k.01.bulgakova'),
+    ('https://www.instagram.com/p/BaCrBOqn-8R/?hl=en&taken-by=saracalixtocr',
+        'saracalixtocr'),
+    ('https://www.instagram.com/p/BaCrBOqn-8R/?taken-by=saracalixtocr&hl=en',
+        'saracalixtocr'),
 ])
 def test_instagram_matches_ig_links_query_strings(link, expected):
     match = Instagram.IG_LINK_QUERY_REGEX.search(link)
