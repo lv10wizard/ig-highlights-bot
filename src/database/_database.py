@@ -193,7 +193,7 @@ class Database(object):
         if exc_type is None and exc_value is None and traceback is None:
             self._db.commit()
         else:
-            logger.id(logger.warn, self,
+            logger.id(logger.debug, self,
                     'An error occurred! Rolling back changes ...',
                     exc_info=True,
             )
