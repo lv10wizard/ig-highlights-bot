@@ -220,6 +220,7 @@ class RateLimitHandler(ProcessMixin, RedditInstanceMixin):
 
     VALID_THINGS = (
             praw.models.Comment,
+            praw.models.Submission,
             praw.models.Message,
     )
 
