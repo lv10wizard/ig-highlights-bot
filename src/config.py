@@ -285,7 +285,7 @@ class Config(object):
 
         return success
 
-    def __get_fallback(self, section, key, err=None):
+    def __get_fallback(self, section, key, err=None, get_func='get'):
         try:
             value = self.__parser.get(section, key)
         except NoSectionError:
@@ -294,7 +294,12 @@ class Config(object):
             value = '<No Option [{0}]>'.format(key)
         except:
             value = '<???>'
-        default = self.__fallback.get(section, key)
+
+        try:
+            getter = getattr(self.__fallback, get_func)
+        except AttributeError:
+            getter = getattr(self.__fallback, 'get')
+        default = getter(section, key)
 
         logger.id(logger.warn, self,
                 'Invalid value for \'{key}\': {value}.'
@@ -313,7 +318,7 @@ class Config(object):
         try:
             result = getter(section, key)
         except (NoOptionError, NoSectionError, ValueError) as e:
-            result = self.__get_fallback(section, key, e)
+            result = self.__get_fallback(section, key, e, get_func)
         return result
 
     def __get_time(self, section, key):
