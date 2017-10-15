@@ -134,7 +134,7 @@ def test_parser_matches_user_linked_in_query(jessicabolusi_medialink):
     'buttockssss', 'frontbutt', 'frontasss', 'pussyyyy', 'upskirtttt',
     'upshort', 'upshooooorts', 'underboobs', 'underbooobies', 'sidebooobies',
     'ahueheuheuhhehu', 'UHEUAHEUEHAHUEHAUEH', 'booooty', 'whooty', 'paag',
-    'pawg',
+    'pawg', 'yeezys', 'fuccboi', 'fukboi', 'fuckboy', 'fuqboeeeeyy',
 ] + ['o'*(i+2) for i in range(15)])
 def test_parser_detects_jargon(word):
     assert Parser.is_jargon(word)

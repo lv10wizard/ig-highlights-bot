@@ -63,7 +63,7 @@ f+m+l+
 f+r+i+e+n+d+z+o+n+e+d*
 f+r+o+n+t+(?:a+s+|b+u+t+)s*
 fubar
-f+u+(?:c+k+|h+)?
+f+u+h*[ckq]*h*(?:b+[0o]+[iey]+)? # 'fuuuck', 'fuuuuuh', 'fuccb0i', 'fuqboeyy'
 fwiw
 g+a+g+
 g+a+y+
@@ -182,6 +182,7 @@ w+t+[fh]+(?:o+m+f*g+)? # 'wtf', 'wwwtf', wtttttf', 'wtfomfg', etc
 (?:x+o+)+x*
 y+[ae]+e*[hsy]+ # 'yaaaas', 'yeeeeesssss', 'yeahhhh', etc
 y+[aeu]+[hp]+ # 'yuuuhh', 'yeeeppp', yaaaahhh', etc
+y+e+[sz]+(?:i+e+|e*y+)?[sz]*
 y*[iu]+c+k+(?:i+e+|y+)? # 'ick', 'yucky', etc
 y+i+p+(?:i+e+|y+) # 'yippieeee', etc
 ymmv
