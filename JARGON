@@ -10,6 +10,8 @@ afai(?:cr|cs|ct|k|r) # as far as i ...
 afk
 a[fs]af*p # 'afap', 'asap', 'asafp'
 a+h+
+(?:a+p+l+e*|b+u+b+l+e*)?[bw]+h*o+t+(?:i+e+|[ae]*y+)s* # 'applebooty', ...
+(?:a+p+l+e*|b+u+b+l+e*)?b+u+t+(?:o+c*k+)?s* # 'bubblebutt', ...
 a+s+(?:h+o+l+)?e*s*
 aslp?
 atm
@@ -25,15 +27,14 @@ b+e+(?:a+u+|y+[ou]+)t+[aei]+f+u+l+ # 'beautifullll', 'beeeeyoouteeaafulllll'
 b+[ei]+a*y*[ao]+t*c+h+ # 'beeyyyooootch', etc
 b+i*e+r+g+a+r+[dt]+e+n+ # 'biergarten'
 bitcoin
-[bw]+h*o+t+(?:i+e+|y+)s*
 br[bls]
 b+r+(?:[eau]+|e+w+|o{2,})h* # 'bruh', 'brooooo', 'breeeeehh', etc
 bs
 bsdm
 bsod
 btw
+b+u+b+l+e* # 'bubbleeee', etc
 b+u+l+(?:s+h+e*i+e*t+)? # 'bull', 'buuuullshiiitt', etc
-b+u+t+(?:o+c*k+)?s*
 bu+t+e+r+f+a+c+e+
 cgi
 c+o{2,}l+ # 'cooooool', etc
