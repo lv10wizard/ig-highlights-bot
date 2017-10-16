@@ -3,7 +3,9 @@ from constants import (
         CONTACT_URL,
         HELP_URL,
         REPO_URL,
+        THING_ID_PLACEHOLDER,
 )
+from src import reddit
 from src.instagram import Instagram
 from src.util import (
         get_padding,
@@ -64,20 +66,12 @@ class Formatter(object):
         return user_re.findall(body)
 
     def __init__(self, username):
-        # wrap the string in a list so it is easier to work with
-        self.FOOTER = [Formatter.FOOTER_FMT.format(
-                contact_url=CONTACT_URL,
-                source_url=REPO_URL,
-                blacklist_url=BLACKLIST_URL_FMT.format(
-                    to=username,
-                ),
-                help_url=HELP_URL,
-        )]
+        self.username = username
 
     def __str__(self):
         return self.__class__.__name__
 
-    def format(self, ig_list):
+    def format(self, ig_list, thing):
         """
         Formats the data into one or more reddit comment reply strings
 
@@ -89,6 +83,17 @@ class Formatter(object):
         replies = []
         current_reply = []
         ig_users = []
+        # wrap the string in a list so it is easier to work with
+        FOOTER = [Formatter.FOOTER_FMT.format(
+                contact_url=CONTACT_URL.replace(
+                    THING_ID_PLACEHOLDER, reddit.display_id(thing)
+                ),
+                source_url=REPO_URL,
+                blacklist_url=BLACKLIST_URL_FMT.format(
+                    to=self.username,
+                ),
+                help_url=HELP_URL,
+        )]
 
         for ig in ig_list:
             header = Formatter.HEADER_FMT.format(user=ig.user, link=ig.url)
@@ -118,6 +123,7 @@ class Formatter(object):
                     replies,
                     current_reply,
                     ig_users,
+                    FOOTER,
             )
 
         # add the final reply to the replies list
@@ -125,6 +131,7 @@ class Formatter(object):
                 replies,
                 current_reply,
                 ig_users,
+                FOOTER,
                 force=bool(current_reply and ig_users),
         )
         if current_reply or ig_users:
@@ -138,7 +145,9 @@ class Formatter(object):
 
         return replies
 
-    def __try_add_reply(self, replies, current_reply, ig_users, force=False):
+    def __try_add_reply(
+            self, replies, current_reply, ig_users, footer, force=False
+    ):
         """
         "Commits" the constructed reply text if the current_reply exceeds the
         COMMENT_CHARACTER_LIMIT.
@@ -153,7 +162,7 @@ class Formatter(object):
         idx = 0
         # XXX: assumes each whole reply constitutes two elements
         step = 2
-        full_reply = Formatter.LINE_DELIM.join(current_reply + self.FOOTER)
+        full_reply = Formatter.LINE_DELIM.join(current_reply + footer)
         while len(full_reply) >= Formatter.COMMENT_CHARACTER_LIMIT:
             # the total size of the current reply exceeds the maximum allowed
             # comment character length
@@ -162,7 +171,7 @@ class Formatter(object):
             # until the reply is under the character limit
             idx -= step
             full_reply = Formatter.LINE_DELIM.join(
-                    current_reply[:idx] + self.FOOTER
+                    current_reply[:idx] + footer
             )
 
         # don't de-sync the reply & ig_users list in case an overflow happens

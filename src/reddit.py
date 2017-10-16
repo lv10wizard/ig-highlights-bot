@@ -764,6 +764,13 @@ class Reddit(praw.Reddit):
                         body=body,
                 )
 
+                if constants.THING_ID_PLACEHOLDER in body:
+                    logger.id(logger.warn, self,
+                            'thing.id placeholder (\'{placeholder}\') still'
+                            ' in body!',
+                            placeholder=constants.THING_ID_PLACEHOLDER,
+                    )
+
                 try:
                     if not constants.dry_run:
                         thing.reply(body)

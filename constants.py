@@ -68,7 +68,10 @@ JARGON_DEFAULTS_PATH = os.path.join(ROOT_DIR, 'JARGON')
 
 AUTHOR = 'lv10wizard'
 COMPOSE_MESSAGE_BASE_URL = 'https://www.reddit.com/message/compose/'
-CONTACT_SUBJECT_SKELETON = 'Instagram highlights bot'
+THING_ID_PLACEHOLDER = '____THING_ID_PLACEHOLDER____'
+CONTACT_SUBJECT_SKELETON = 'Instagram highlights bot ({0})'.format(
+        THING_ID_PLACEHOLDER
+)
 CONTACT_URL_FMT = (
         COMPOSE_MESSAGE_BASE_URL
         + '?to='

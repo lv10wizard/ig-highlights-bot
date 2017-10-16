@@ -148,7 +148,7 @@ class Replier(ProcessMixin, RedditInstanceMixin):
                 color_list=ig_list_usernames,
         )
 
-        reply_list = self.formatter.format(ig_list)
+        reply_list = self.formatter.format(ig_list, thing)
         if len(reply_list) > self.cfg.max_replies_per_comment:
             # too many replies formed
             logger.id(logger.info, self,
