@@ -42,7 +42,8 @@ from src.replies import Parser
     'shhhhhhhit', 'shit', 'shiet', 'sheeeit', 'boooooo', 'bbbooooo',
     'motherfuuuuuhhhh', 'motherfuqqqqq', 'muthafuqqqqahhhh', 'motherfuckerrrr',
     'mothaaaafuckaaaa', 'mothrrrfuhhhckrrrrr', 'shaddup', 'shaattttup',
-    'shutup', 'shuuuuutaahhhhhp',
+    'shutup', 'shuuuuutaahhhhhp', 'suckaaaaahhh', 'suckaaa', 'mothaasuckaaaa',
+    'suqqqqquuuuhhhh', 'suckerrrr',
 ] + ['o'*(i+2) for i in range(15)])
 def test_parser_detects_jargon(word):
     assert Parser.is_jargon(word)

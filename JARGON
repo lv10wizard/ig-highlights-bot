@@ -113,7 +113,7 @@ m[fr]w
 mma
 m+o+a*r+e* # 'moaaaarrr', 'morrreeee', etc
 # 'fuuuck', 'fuuuuuh', 'fuccb0i', 'fuqboeyy', 'motherfuuuuu', 'muthafuckaaaa',
-(?:m+[ou]+h*t+h+(?:a+h*|e*r+))?f+u+h*[ckq]*(?:e*r+|a+h*)?(?:b+[0o]+[iey]+)?
+(?:m+[ou]+h*t+h+(?:a+h*|e*r+))?[fs]+u+h*[ckq]*(?:e*r+|a+h*)?(?:b+[0o]+[iey]+)?
 mvp
 n+a+h+
 n+a+m+e+
@@ -158,6 +158,7 @@ s+o+
 s+p+a+m+(?:i+e+|e*y+)?s*
 spo+py # 'spoopy', 'spoooopy', etc
 s+t+f+u+
+s+u+(?:c+k+|q+)[aou]+h*
 # 'suuuper', 'superboy', 'superman', 'supergirl', 'superwoman'
 s+u+p+e*r+(?:b+[0o]+[iy]+|g+i*r+l+|(?:w+o+)?m+[aey]+n+)?
 tb[hf]
