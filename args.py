@@ -43,12 +43,15 @@ except ValueError:
 igdb_path = database.Database.format_path(database.InstagramDatabase.PATH)
 resolved_igdb_path = config.resolve_path(igdb_path)
 try:
-    IG_DB_CHOICES = sorted([
+    IG_DB_CHOICES = [
             name for name in os.listdir(resolved_igdb_path)
             if name.endswith('.db')
-    ])
+    ]
 except OSError:
     IG_DB_CHOICES = []
+    IG_DB_DISPLAY_CHOICES = []
+else:
+    IG_DB_DISPLAY_CHOICES = sorted([name[:-3] for name in IG_DB_CHOICES])
 
 def to_opt_str(arg_str):
     return arg_str.replace('-', '_')
@@ -318,6 +321,9 @@ def print_instagram_database(cfg, order, *user_databases):
         user_databases = IG_DB_CHOICES
 
     for user_db in user_databases:
+        if not user_db.endswith('.db'):
+            user_db = '{0}.db'.format(user_db)
+
         path = os.path.join(resolved_igdb_path, user_db)
         if os.path.exists(path):
             if not order:
@@ -480,9 +486,10 @@ def parse():
             ),
     )
 
-    ig_choices = IG_DB_CHOICES + ['*']
+    ig_choices = IG_DB_DISPLAY_CHOICES + ['*']
     parser.add_argument('--{0}'.format(IG_DB),
-            metavar='NAME', nargs='+', choices=ig_choices,
+            metavar='NAME', nargs='+',
+            choices=IG_DB_CHOICES + IG_DB_DISPLAY_CHOICES,
             help='Dump the specified instagram user databases to stdout.'
             ' Choices: {0}'.format(ig_choices),
     )
