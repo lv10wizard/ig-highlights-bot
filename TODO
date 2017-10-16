@@ -362,6 +362,14 @@ O. parse submission titles for possible instagram user strings
 ? parse comments' submissions from comment stream if not parsed yet?
 ? separate submissions/comments min length for potential username matches
 - dynamically update logging level/color (maybe path?) when config is reloaded
+- add most liked, most commented links to reply header
+    > how to handle duplicates?
+        1. most liked == most commented
+            - fetch most liked from db
+            - fetch most commented with exclusions from db
+                (exclude=most_liked_code)
+        2. either/both already in highlights set
+            - fetch top_media exclude=(most_liked, most_commented)
 
 - test stale ig queue
 - test replies
