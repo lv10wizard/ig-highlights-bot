@@ -193,6 +193,7 @@ y+i+p+(?:i+e+|y+) # 'yippieeee', etc
 ymmv
 y+o+l+o+
 y+tho
+y+u+m+(?:i+e*|e*y+)?s*(?:n+e+s+)?
 yw
 z*o+m+f*g+(?:w+t+f+)? # 'omg', 'ooomg', 'omfffg', 'omgwtf', etc
 z+o+m+ # 'zooooom', etc
