@@ -134,8 +134,8 @@ O. split config into sections
         options (and create a default config if it doesn't exist)
 O. remove (all?) database paths from config
     why even allow the user to change these?
-- dynamically update config settings
-    - config.reload (check mtime vs cached mtime)
+O. dynamically update config settings
+    O. config.reload (check mtime vs cached mtime)
 O. write pids to RUNTIME_ROOT_DIR
     O. os.makedirs(RUNTIME_ROOT_DIR)
     O. check if pid file(s?) exist before starting processes
@@ -361,6 +361,7 @@ O. parse submission titles for possible instagram user strings
 - parse submission from mentions
 ? parse comments' submissions from comment stream if not parsed yet?
 ? separate submissions/comments min length for potential username matches
+- dynamically update logging level/color (maybe path?) when config is reloaded
 
 - test stale ig queue
 - test replies

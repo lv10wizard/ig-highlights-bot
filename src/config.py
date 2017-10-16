@@ -187,6 +187,7 @@ class Config(object):
                     ' bad/missing options may terminate the program.',
             )
 
+        self.__mtime = self.__get_mtime(True)
         self.__parser = configparser.SafeConfigParser(Config.DEFAULTS)
         loaded = self.__parser.read(self._resolved_path)
         if self._resolved_path not in loaded:
@@ -266,6 +267,26 @@ class Config(object):
     def __str__(self):
         return os.path.basename(self.path)
 
+    def __get_mtime(self, missing_ok=False):
+        """
+        Returns the mtime of the config file
+                or -1 if the file could not be stat'd
+        """
+        try:
+            return os.path.getmtime(self._resolved_path)
+
+        except OSError as e:
+            if missing_ok and e.errno == errno.ENOENT:
+                pass
+            else:
+                logger.id(logger.warn, self,
+                        'Could not get mtime of \'{path}\'',
+                        path=self.path,
+                        exc_info=True,
+                )
+
+        return -1
+
     def __do_write(self):
         logger.id(logger.info, self,
                 'Writing config to \'{path}\' ...',
@@ -281,6 +302,7 @@ class Config(object):
                     path=self.path,
             )
         else:
+            self.__mtime = self.__get_mtime()
             success = True
 
         return success
@@ -313,6 +335,21 @@ class Config(object):
         return default
 
     def __get(self, section, key, get_func='get'):
+        mtime = self.__get_mtime()
+        if mtime > 0 and mtime != self.__mtime:
+            # reload the config: the config's mtime changed
+            logger.id(logger.debug, self,
+                    'Reloading \'{path}\' ...',
+                    path=self.path,
+            )
+            loaded = self.__parser.read(self._resolved_path)
+            self.__mtime = mtime
+            if self._resolved_path not in loaded:
+                logger.id(logger.warn, self,
+                        'Failed to reload \'{path}\'!',
+                        path=self.path,
+                )
+
         # possible AttributeError if get_func has a typo
         getter = getattr(self.__parser, get_func)
         try:
