@@ -38,6 +38,7 @@ from src.replies import Parser
     'yummies', 'hawwwtdayummm', 'hotdamn!', 'hawtdaaayuuumnnnn', 'holymoly',
     'hooolyyyyy', 'Bubblebut', 'bubbleeeee', 'bubbbbble', 'bubblebutttttt',
     'aappleboooty', 'applewhooties', 'bubblebooty', 'bhoottay', 'whoottayyy',
+    'Heyoooo', 'ayyyyyooooo', 'heeeyyyyyy', 'waaaaaait', 'Heyo!',
 ] + ['o'*(i+2) for i in range(15)])
 def test_parser_detects_jargon(word):
     assert Parser.is_jargon(word)

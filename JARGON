@@ -18,7 +18,6 @@ atm
 a+u+t+o+m+a+t+a+ # 'automata' (pychant doesn't consider this as english)
 a+w+
 awol
-a+y+
 b+a+e+
 badass
 (?:b+a+)?z+i+n+g+a*
@@ -83,6 +82,7 @@ grat[sz]+
 (?:he)?ded # 'heded', 'ded'
 # 'hooott', 'hawwwt', 'hoooootdaaaaaaamn', etc
 h+(?:a+w+|o+)t+(?:(?:i+e+|e*y+)?s*|d+a+(?:y+[au]*h*)?m+n*)
+h*[ae]+y+o*
 h+e+l+o+ # 'hellloooooooo', etc
 h*m+ # 'hmm', 'mmmm', etc
 hm\w # hold my ...
@@ -176,6 +176,7 @@ u+p+s+(?:k+i+r+t+|h+o+r+t+)s*
 vip
 vlog
 wa*i+f+(?:e*y+|u+) # 'waifuuuu', 'wifey', etc
+w+a+i+t+
 w+e+l+ # 'welllll', etc
 w+h*[au]+t+ # 'whaaaat', 'waaaaat', 'wuuuuuuuutttt', etc
 w+h*e+l+p+
