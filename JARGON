@@ -26,6 +26,7 @@ b+e+(?:a+u+|y+[ou]+)t+[aei]+f+u+l+ # 'beautifullll', 'beeeeyoouteeaafulllll'
 b+[ei]+a*y*[ao]+t*c+h+ # 'beeyyyooootch', etc
 b+i*e+r+g+a+r+[dt]+e+n+ # 'biergarten'
 bitcoin
+b+o+ # 'boooooo', ...
 br[bls]
 b+r+(?:[eau]+|e+w+|o{2,})h* # 'bruh', 'brooooo', 'breeeeehh', etc
 bs
@@ -64,7 +65,6 @@ f+m+l+
 f+r+i+e+n+d+z+o+n+e+d*
 f+r+o+n+t+(?:a+s+|b+u+t+)s*
 fubar
-f+u+h*[ckq]*h*(?:b+[0o]+[iey]+)? # 'fuuuck', 'fuuuuuh', 'fuccb0i', 'fuqboeyy'
 fwiw
 g+a+g+
 g+a+y+
@@ -112,6 +112,8 @@ m*e+h+
 m[fr]w
 mma
 m+o+a*r+e* # 'moaaaarrr', 'morrreeee', etc
+# 'fuuuck', 'fuuuuuh', 'fuccb0i', 'fuqboeyy', 'motherfuuuuu', 'muthafuckaaaa',
+(?:m+[ou]+h*t+h+(?:a+h*|e*r+))?f+u+h*[ckq]*(?:e*r+|a+h*)?(?:b+[0o]+[iey]+)?
 mvp
 n+a+h+
 n+a+m+e+
@@ -146,7 +148,7 @@ rule\d+ # 'rule34', etc
 s+c*h+w+i+f+t+y+
 s+c*h+l+u+r+p+
 s+e+l+f+(?:p+i+c+|s+h+o+t+)?
-s+h+e*i+e*t+ # 'shiieeeeet'
+s+h+[ei]+t+ # 'shiieeeeet'
 (?:s+h+)?r+e+k+t+ # 'shrekt', 'rekt'
 (?:s+i+d+e+|u+n+d+e+r+)?b+o+b+(?:a+g+e+|i+e+)?s*
 smf?h
