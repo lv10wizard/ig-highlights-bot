@@ -129,12 +129,23 @@ def test_instagram_matches_links(haileypandolfi, viktoria_kay):
     assert not Instagram.IG_USER_STRING_REGEX.search(viktoria_kay.body.strip())
     assert not Instagram.HAS_IG_KEYWORD_REGEX.search(viktoria_kay.body.strip())
 
-def test_instagram_ignores_automod(parenthesis_user):
+# XXX: this test doesn't really make sense
+def test_instagram_ignores_automod(parenthesis_user, automoderator_user_link):
     assert not Instagram.IG_LINK_REGEX.search(parenthesis_user.body)
     assert not Instagram.IG_LINK_QUERY_REGEX.search(parenthesis_user.body)
     assert Instagram.IG_USER_REGEX.search(parenthesis_user.body)
     assert not Instagram.IG_USER_STRING_REGEX.search(parenthesis_user.body.strip())
     assert not Instagram.HAS_IG_KEYWORD_REGEX.search(parenthesis_user.body.strip())
+
+    assert Instagram.IG_LINK_REGEX.search(automoderator_user_link.body)
+    assert not Instagram.IG_LINK_QUERY_REGEX.search(automoderator_user_link.body)
+    assert not Instagram.IG_USER_REGEX.search(automoderator_user_link.body)
+    assert not Instagram.IG_USER_STRING_REGEX.search(
+            automoderator_user_link.body.strip()
+    )
+    assert Instagram.HAS_IG_KEYWORD_REGEX.search(
+            automoderator_user_link.body.strip()
+    )
 
 def test_instagram_matches_non_english_word(vyvan_le):
     assert not Instagram.IG_LINK_REGEX.search(vyvan_le.body)

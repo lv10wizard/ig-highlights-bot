@@ -300,10 +300,7 @@ class _ParserStrategy(object):
                     if match:
                         usernames.append(match.group(2))
 
-            author = self.thing.author
-            author = author and author.name.lower()
-
-            if not usernames and author not in Parser.IGNORE:
+            if not usernames:
                 # try looking username-like strings in the thing in
                 # case the user soft-linked one or more usernames
                 # eg. '@angiegoesboom'
@@ -457,12 +454,6 @@ class Parser(object):
     """
     Parses reddit things for instagram user links
     """
-
-    # list of authors whose things should not be parsed for soft-links
-    # XXX: these should be in lower-case
-    IGNORE = [
-            'automoderator',
-    ]
 
     # XXX: I think creating these here is ok so long as this module is loaded
     # by the main process so that child processes inherit them. otherwise child

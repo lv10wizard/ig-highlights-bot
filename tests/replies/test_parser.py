@@ -95,10 +95,15 @@ def test_parser_ig_media_link(ig_media_link):
     assert not p.ig_links
     assert not p.ig_usernames
 
-def test_parser_ignores_automod(parenthesis_user):
-    p = Parser(parenthesis_user)
+@pytest.mark.xfail # handled at the Filter level
+def test_parser_ignores_automod(parenthesis_user, automoderator_user_link):
+    P = Parser(parenthesis_user)
     assert not p.ig_links
     assert not p.ig_usernames
+
+    A = Parser(automoderator_user_link)
+    assert not A.ig_links
+    assert not A.ig_usernames
 
 def test_parser_matches_non_english_word(vyvan_le):
     p = Parser(vyvan_le)

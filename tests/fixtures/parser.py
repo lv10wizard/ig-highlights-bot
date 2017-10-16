@@ -22,6 +22,14 @@ def _load_pickle(*prefix, suffix='pickle'):
         return pickle.load(fd)
 
 @pytest.fixture(scope='session')
+def automoderator_user_link():
+    """
+    praw.models.Comment posted by AutoModerator containing an instagram
+    user link
+    """
+    return _load_pickle('automoderator')
+
+@pytest.fixture(scope='session')
 def linstahh():
     """ praw.models.Comment containing a soft-linked instagram user """
     return _load_pickle('linstahh')

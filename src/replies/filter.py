@@ -13,6 +13,11 @@ class Filter(object):
     Filters things that the bot should make replies to
     """
 
+    # authors that should not be replied to
+    IGNORED = list(map(lambda author: author.lower(), [
+        'automoderator',
+    ]))
+
     def __init__(self, cfg, username, blacklist):
         self.cfg = cfg
         self.blacklist = blacklist
@@ -28,17 +33,6 @@ class Filter(object):
             result.append(self.username)
         return ':'.join(result)
 
-    def _by_me(self, comment):
-        """
-        Returns True if the comment was posted by the bot
-        """
-        result = False
-        # author may be None if deleted/removed
-        if bool(comment.author):
-            author = comment.author.name.lower()
-            result = author == self.username.lower()
-        return result
-
     def _can_reply(self, thing):
         """
         Checks if the bot is able to make a reply to the thing.
@@ -46,6 +40,7 @@ class Filter(object):
         will want to reply to.
 
         Returns True if
+            - thing's author not in hard-coded IGNORED list
             - thing not already replied to by the bot
             - thing already queued for a reply
             - thing is not in the rate-limit queue
@@ -60,9 +55,17 @@ class Filter(object):
         # (eg. return not (a or b or c)) so that appropriate logging calls can
         # be made
 
+        author = reddit.author(thing)
+        if author.lower() in Filter.IGNORED:
+            logger.id(logger.debug, self,
+                    '{color_author} ({color_thing}) is ignored: skipping.',
+                    color_author=reddit.prefix_user(author),
+                    color_thing=reddit.display_id(thing),
+            )
+            return False
+
         # check the database first (guaranteed to incur no network request)
-        already_replied = self.reply_history.has_replied(thing)
-        if already_replied:
+        if self.reply_history.has_replied(thing):
             logger.id(logger.debug, self,
                     'I already replied to {color_thing}: skipping.',
                     color_thing=reddit.display_id(thing),
@@ -103,7 +106,7 @@ class Filter(object):
                     color_thing=reddit.display_id(thing),
             )
 
-        if self._by_me(thing):
+        if author.lower() == self.username.lower():
             logger.id(logger.debug, self,
                     'I posted {color_thing}: skipping.',
                     color_thing=reddit.display_id(thing),
@@ -200,14 +203,9 @@ class Filter(object):
 
         too_many_replies = False
         ancestor_tree = reddit.get_ancestor_tree(comment)
+        # XXX: ancestor_tree may be None
         if ancestor_tree:
-            author_tree = [
-                    c.author.name.lower()
-                    # XXX: specifically insert None for comments
-                    # missing authors (deleted/removed)
-                    if bool(c.author) else None
-                    for c in ancestor_tree
-            ]
+            author_tree = [reddit.author(c).lower() for c in ancestor_tree]
         else:
             author_tree = []
 
