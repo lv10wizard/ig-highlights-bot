@@ -57,7 +57,7 @@ class Controversial(ProcessMixin, StreamMixin):
                 # comments then
                 #   1. the bot is probably unwanted in general and
                 #   2. it will delete more the next pass
-                time_filter='year', limit=100,
+                time_filter='all', limit=100,
         )
 
     def _run_forever(self):
