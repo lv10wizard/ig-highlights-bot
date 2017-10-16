@@ -187,13 +187,14 @@ class Instagram(object):
 
             # match eg. 'I think this is their instagram ...'
             #       or  'Her instagram name: ...'
-            r'(?:\w+\s+)*{0}(?:\s+\w+)*?:?\s+'.format(
-            # \_________/\_/\__________/ \  \
-            #      |      |      |       / match trailing spaces
-            #      |      |      |   optionally match ':'
-            #      |      |   match any extra words
-            #      |    match instagram keywords
-            #   match any leading words
+            r'(?:[\w:]+\s+)*{0}(?:\s+\w+)*?:?\s+'.format(
+            # \____________/\_/\__________/ \  \
+            #       |        |      |       / match trailing spaces
+            #       |        |      |   optionally match ':'
+            #       |        |   match any extra words
+            #       |      match instagram keywords
+            #    match any leading words; include ':' in case of something like
+            #       'Here: ...'
                 _INSTAGRAM_KEYWORD,
             ),
     ]

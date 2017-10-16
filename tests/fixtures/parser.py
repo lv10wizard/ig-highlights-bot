@@ -80,6 +80,14 @@ def coffeequeennn():
     return _load_pickle('coffeequeennn')
 
 @pytest.fixture(scope='session')
+def triippyunicorn():
+    """
+    praw.models.Comment containing a soft-linked user
+    (Source: ig ...)
+    """
+    return _load_pickle('triippyunicorn')
+
+@pytest.fixture(scope='session')
 def vyvan_le():
     """
     praw.models.Comment containing a soft-linked user without '@'
