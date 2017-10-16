@@ -109,7 +109,7 @@ class Formatter(object):
                         link=media_link,
                 )
                 highlights.append(Formatter.HIGHLIGHT_FMT.format(
-                    i=i, # could do i+1 to start at 1 but whatever
+                    i=i+1,
                     link=media_link,
                 ))
 
