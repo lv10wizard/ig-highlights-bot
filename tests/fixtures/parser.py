@@ -95,16 +95,26 @@ def vyvan_le():
     return _load_pickle('vyvan.le')
 
 @pytest.fixture(scope='session')
+def stephxohaven():
+    """
+    praw.models.Comment containing a soft-linked user without '@'
+    (... on instagram and snap)
+    """
+    return _load_pickle('stephxohaven')
+
+@pytest.fixture(scope='session')
 def hanny_madani():
     """
-    praw.models.Comment containing a soft-linked user without '@' (... on instagram)
+    praw.models.Comment containing a soft-linked user without '@'
+    (... on instagram)
     """
     return _load_pickle('hanny_madani')
 
 @pytest.fixture(scope='session')
 def kaja_sbn():
     """
-    praw.models.Comment containing a soft-linked user without '@' (... on instagram)
+    praw.models.Comment containing a soft-linked user without '@'
+    (... on instagram)
     """
     return _load_pickle('kaja_sbn')
 

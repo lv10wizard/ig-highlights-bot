@@ -98,6 +98,7 @@ def test_instagram_does_not_overmatch_has_ig_keyword_strings(string):
     ('I\'m pretty sure this is foobar on insta', 'foobar'),
     ('Diablo_sam on IG. She\'s awesome. ', 'Diablo_sam'),
     ('Source: ig triippyunicorn', 'triippyunicorn'),
+    ('stephxohaven on insta and snap', 'stephxohaven'),
 ])
 def test_instagram_matches_potential_ig_user_strings(string, expected):
     match = Instagram.IG_USER_STRING_REGEX.search(string)
@@ -220,6 +221,7 @@ def test_isntagram_does_not_over_match_instagram_prefix(
 
 def test_instagram_matches_on_instagram_suffix(
         hanny_madani, kaja_sbn, eva_lo_dimelo, chaileeson, deliahatesyou,
+        stephxohaven,
 ):
     assert not Instagram.IG_LINK_REGEX.search(hanny_madani.body)
     assert not Instagram.IG_LINK_QUERY_REGEX.search(hanny_madani.body)
@@ -255,6 +257,13 @@ def test_instagram_matches_on_instagram_suffix(
     user_str_match = Instagram.IG_USER_STRING_REGEX.search(deliahatesyou.body.strip())
     assert user_str_match
     assert user_str_match.group('suffix') == 'Deliahatesyou'
+
+    assert not Instagram.IG_LINK_REGEX.search(stephxohaven.body)
+    assert not Instagram.IG_LINK_QUERY_REGEX.search(stephxohaven.body)
+    assert not Instagram.IG_USER_REGEX.search(stephxohaven.body)
+    user_str_match = Instagram.IG_USER_STRING_REGEX.search(stephxohaven.body.strip())
+    assert user_str_match
+    assert user_str_match.group('suffix') == 'stephxohaven'
 
 def test_instagram_matches_user_linked_in_query(jessicabolusi_medialink):
     assert not Instagram.IG_LINK_REGEX.search(jessicabolusi_medialink.body)
