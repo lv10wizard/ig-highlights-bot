@@ -268,6 +268,11 @@ class RateLimitHandler(ProcessMixin, RedditInstanceMixin):
                     )
                     # only handle specific types of things
                     if isinstance(thing, RateLimitHandler.VALID_THINGS):
+                        logger.id(logger.info, self,
+                                'Replying to {color_thing} ...',
+                                color_thing=reddit.display_id(thing),
+                        )
+
                         # Note: we may be rate-limited again
                         success = self._reddit.do_reply(
                                 thing, body, self._killed,
