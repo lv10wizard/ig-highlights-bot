@@ -86,6 +86,7 @@ h+e+l+o+ # 'hellloooooooo', etc
 h*m+ # 'hmm', 'mmmm', etc
 hm\w # hold my ...
 h*o+h*r+a+h* # 'Oorah', 'OOohrah', 'Hoorah', etc
+h+o+l+e*y+(?:m+o+l+(?:i+e+|e*y+))? # 'holymoly', etc
 h+o+m+(?:i+e+|y+) # 'homieeee', 'homeeeeyy', etc
 h+o+w+
 h*u*n+g*f*h* # 'hnnngg', 'unghhh', 'nnggghh', 'unnggfffhh', etc

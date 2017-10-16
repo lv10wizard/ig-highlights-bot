@@ -35,7 +35,8 @@ from src.replies import Parser
     'superwomen', 'supermen', 'suprrrrr', 'supergrrrrl', 'supergirl',
     'ayyyyy', 'ayyyyylmaorofl', 'lmaoayyyyy', 'REEEEEEEE', 'RRRREEEEEEEEEEE',
     'yummmm', 'yummyyyy', 'yumminesss', 'yummyness', 'yummmyyyynesssss',
-    'yummies', 'hawwwtdayummm', 'hotdamn!', 'hawtdaaayuuumnnnn',
+    'yummies', 'hawwwtdayummm', 'hotdamn!', 'hawtdaaayuuumnnnn', 'holymoly',
+    'hooolyyyyy',
 ] + ['o'*(i+2) for i in range(15)])
 def test_parser_detects_jargon(word):
     assert Parser.is_jargon(word)
