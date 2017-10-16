@@ -148,6 +148,7 @@ rule\d+ # 'rule34', etc
 s+c*h+w+i+f+t+y+
 s+c*h+l+u+r+p+
 s+e+l+f+(?:p+i+c+|s+h+o+t+)?
+s+h+[auo]+[dt]+[aou]+h*p+h* # 'shaddap', 'shuttttupp',
 s+h+[ei]+t+ # 'shiieeeeet'
 (?:s+h+)?r+e+k+t+ # 'shrekt', 'rekt'
 (?:s+i+d+e+|u+n+d+e+r+)?b+o+b+(?:a+g+e+|i+e+)?s*
