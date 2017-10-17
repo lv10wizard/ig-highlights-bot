@@ -209,6 +209,15 @@ def author(thing):
 
     return _network_wrapper(_author, thing)
 
+def score(thing):
+    def _score(thing):
+        score = None
+        if hasattr(thing, 'score'):
+            score = thing.score
+        return score
+
+    return _network_wrapper(_score, thing)
+
 def split_fullname(fullname):
     """
     Returns [type_str, id] from a {fullname} (eg. 't3_6zztml')
@@ -912,6 +921,7 @@ __all__ = [
         'display_fullname',
         'subreddit_display_name',
         'author',
+        'score',
         'split_fullname',
         'get_type_from_fullname',
         'get_submission_for',

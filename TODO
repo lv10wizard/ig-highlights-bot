@@ -370,7 +370,19 @@ O. parse submission titles for possible instagram user strings
                 (exclude=most_liked_code)
         2. either/both already in highlights set
             - fetch top_media exclude=(most_liked, most_commented)
-
+O. learn "bad" words so that they are not tried again
+    O. prevent previously deleted comment users from being matched as
+        potential usernames in the future (links still ok)
+        > what about '@'s?
+            1. non-instagram user soft-link
+            2. are there other cases?
+            >> previous bad usernames will prune any non-link username
+        O. ''.join(map(lambda x: x+'+', bad_username))
+            eg. 'foobar' -> 'f+o+o+b+a+r+'
+            >> may as well match against these
+X. --dry-run Controversial
+    X. don't delete thing
+    >> the bot should probably delete regardless of mode
 - test stale ig queue
 - test replies
     - test comments are stored properly

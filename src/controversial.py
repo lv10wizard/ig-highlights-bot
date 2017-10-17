@@ -1,7 +1,14 @@
 from praw.models import Comment
 
-from src import reddit
+from src import (
+        reddit,
+        replies,
+)
 from src.config import parse_time
+from src.database import (
+        BadUsernamesDatabase,
+        UniqueConstraintFailed,
+)
 from src.mixins import (
         ProcessMixin,
         StreamMixin,
@@ -47,6 +54,8 @@ class Controversial(ProcessMixin, StreamMixin):
         ProcessMixin.__init__(self)
         StreamMixin.__init__(self, cfg, rate_limited)
 
+        self.bad_usernames = BadUsernamesDatabase()
+
     @property
     def _stream(self):
         # don't cache the controversial list generator since we want to check
@@ -84,7 +93,40 @@ class Controversial(ProcessMixin, StreamMixin):
 
                 seen.add(comment)
                 if comment.score <= threshold:
-                    # score too low: delete the comment
+                    # score too low
+
+                    # flag the username(s) so that they aren't matched as
+                    # potential usernames in the future
+                    ig_usernames = replies.Formatter.ig_users_in(thing.body)
+                    if not ig_usernames:
+                        # either reply format changed or this thing is somehow
+                        # not a bot reply
+                        logger.id(logger.debug, self,
+                                'No instagram usernames found in'
+                                '{color_thing}!',
+                                color_thing=reddit.display_id(thing),
+                        )
+
+                    for username in ig_usernames:
+                        if username not in self.bad_usernames:
+                            logger.id(logger.debug, self,
+                                    'Adding \'{color_username}\' as a bad'
+                                    ' username ...',
+                                    color_username=username,
+                            )
+
+                            try:
+                                self.bad_usernames.insert(username, thing)
+
+                            except UniqueConstraintFailed:
+                                # this shouldn't happen
+                                logger.id(logger.warn, self,
+                                        '\'{color_username}\' already in'
+                                        ' bad_usernames database!',
+                                        exc_info=True,
+                                )
+
+                    # delete the comment
                     logger.id(logger.info, self,
                             'Deleting {color_comment}: score too low'
                             ' ({score} <= {threshold})',

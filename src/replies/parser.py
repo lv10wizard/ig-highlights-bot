@@ -23,7 +23,10 @@ from six.moves.urllib.parse import urlparse
 
 from src import reddit
 from src.config import parse_time
-from src.database import SubredditsDatabase
+from src.database import (
+        BadUsernamesDatabase,
+        SubredditsDatabase,
+)
 from src.instagram import Instagram
 from src.util import (
         logger,
@@ -160,6 +163,9 @@ class _ParserStrategy(object):
     Parsing strategy abstract class
     """
 
+    _subreddits = SubredditsDatabase(do_seed=False)
+    _bad_usernames = BadUsernamesDatabase()
+
     @staticmethod
     def sanitize_link(link):
         """
@@ -287,6 +293,7 @@ class _ParserStrategy(object):
         """
         usernames = Parser._username_cache[self.thing.fullname]
         if usernames is None:
+            from_link = True
             usernames = []
             # look for usernames from links first since they are all but
             # guaranteed to be accurate
@@ -301,6 +308,7 @@ class _ParserStrategy(object):
                         usernames.append(match.group(2))
 
             if not usernames:
+                from_link = False
                 # try looking username-like strings in the thing in
                 # case the user soft-linked one or more usernames
                 # eg. '@angiegoesboom'
@@ -326,14 +334,12 @@ class _ParserStrategy(object):
                 if (
                         not usernames
                         and Parser._JARGON_FROM_FILE
-                        and 'all' not in Parser._subreddits
+                        and 'all' not in _ParserStrategy._subreddits
                 ):
                     # try looking for possible username strings
                     usernames = self._get_potential_user_strings()
 
             usernames = remove_duplicates(usernames)
-            Parser._username_cache[self.thing.fullname] = usernames
-
             if usernames:
                 logger.id(logger.info, self,
                         'Found #{num} username{plural}: {color}',
@@ -341,6 +347,35 @@ class _ParserStrategy(object):
                         plural=('' if len(usernames) == 1 else 's'),
                         color=usernames,
                 )
+
+                if not from_link:
+                    # prune previous bad matches (eg. usernames that were
+                    # deleted due to downvotes)
+                    usernames_db = _ParserStrategy._bad_usernames
+                    patterns = usernames_db.get_bad_username_patterns()
+                    bad_username_regex = re.compile(
+                            '^(?:{0})$'.format('|'.join(patterns)),
+                            flags=re.IGNORECASE,
+                    )
+
+                    pruned = []
+                    for name in usernames:
+                        if bad_username_regex.search(name):
+                            usernames.remove(name)
+                            pruned.append(name)
+
+                    if pruned:
+                        logger.id(logger.info, self,
+                                'Pruned #{num} previous bad match{plural}:'
+                                ' {color_pruned}',
+                                num=len(pruned),
+                                plural=('' if len(pruned) == 1 else 'es'),
+                                color_pruned=pruned,
+                        )
+                    if not usernames:
+                        logger.id(logger.info, self, 'All usernames pruned!')
+
+            Parser._username_cache[self.thing.fullname] = usernames
 
         return usernames.copy()
 
@@ -460,8 +495,6 @@ class Parser(object):
     # processes may create another version .. I think.
     _link_cache = _Cache('links')
     _username_cache = _Cache('usernames')
-
-    _subreddits = SubredditsDatabase(do_seed=False)
 
     _en_US = None # 'murican
     _en_GB = None # british
