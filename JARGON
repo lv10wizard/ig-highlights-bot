@@ -143,6 +143,7 @@ pwn(?:ed|t)?
 qft
 r+e+
 r+e+a+r+p+u+s+(?:i+e+|y+)s*
+r+i+p+
 rtf?m # read the fine manual
 rule\d+ # 'rule34', etc
 s+c*h+w+i+f+t+y+
