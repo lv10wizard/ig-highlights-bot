@@ -87,7 +87,7 @@ class Controversial(ProcessMixin, StreamMixin):
                     # score too low: delete the comment
                     logger.id(logger.info, self,
                             'Deleting {color_comment}: score too low'
-                            ' ({score} < {threshold})',
+                            ' ({score} <= {threshold})',
                             color_comment=reddit.display_id(comment),
                             score=comment.score,
                             threshold=threshold,
