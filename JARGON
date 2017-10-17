@@ -9,14 +9,14 @@
 afai(?:cr|cs|ct|k|r) # as far as i ...
 afk
 a[fs]af*p # 'afap', 'asap', 'asafp'
-a+h+
+a+h+w*
 (?:a+p+l+e*|b+u+b+l+e*)?[bw]+h*o+t+(?:i+e+|[ae]*y+)s* # 'applebooty', ...
 (?:a+p+l+e*|b+u+b+l+e*)?b+u+t+(?:o+c*k+)?s* # 'bubblebutt', ...
 a+s+(?:h+o+l+)?e*s*
 aslp?
 atm
 a+u+t+o+m+a+t+a+ # 'automata' (pychant doesn't consider this as english)
-a+w+
+a+w+h*
 awol
 b+a+e+
 badass
