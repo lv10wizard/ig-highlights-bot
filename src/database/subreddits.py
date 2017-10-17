@@ -9,6 +9,7 @@ from ._database import (
         UniqueConstraintFailed,
 )
 from constants import SUBREDDITS_DEFAULTS_PATH
+from src import reddit
 from src.util import logger
 
 
@@ -18,18 +19,6 @@ class SubredditsDatabase(Database):
     """
 
     PATH = 'subreddits.db'
-
-    @staticmethod
-    def get_subreddit_name(thing):
-        if hasattr(thing, 'subreddit'):
-            name = thing.subreddit.display_name
-        elif hasattr(thing, 'display_name'):
-            name = thing.display_name
-        elif isinstance(thing, string_types):
-            name = thing
-        else:
-            name = None
-        return name
 
     def __init__(self, do_seed=None, *args, **kwargs):
         Database.__init__(self, *args, **kwargs)
@@ -61,7 +50,7 @@ class SubredditsDatabase(Database):
         return db
 
     def __contains__(self, thing):
-        name = SubredditsDatabase.get_subreddit_name(thing)
+        name = reddit.subreddit_display_name(thing)
         if not name:
             logger.id(logger.debug, self,
                     'Unhandled __contains__ type for \'{thing}\' ({type})',
@@ -175,7 +164,7 @@ class SubredditsDatabase(Database):
                             )
 
     def _insert(self, thing):
-        name = SubredditsDatabase.get_subreddit_name(thing)
+        name = reddit.subreddit_display_name(thing)
         if not name:
             logger.id(logger.debug, self,
                     'Cannot add \'{thing}\' to subreddits database:'
@@ -192,7 +181,7 @@ class SubredditsDatabase(Database):
         )
 
     def _delete(self, thing):
-        name = SubredditsDatabase.get_subreddit_name(thing)
+        name = reddit.subreddit_display_name(thing)
         if not name:
             logger.id(logger.debug, self,
                     'Cannot remove \'{thing}\' from subreddits database:'

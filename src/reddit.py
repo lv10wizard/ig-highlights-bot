@@ -183,6 +183,23 @@ def display_fullname(thing):
         return '{0} ({1})'.format(thing.fullname, thing_type)
     return thing
 
+def subreddit_display_name(thing):
+    """
+    Returns the thing's subreddit's display_name
+    """
+    def _display_name(thing):
+        if hasattr(thing, 'subreddit'):
+            name = thing.subreddit.display_name
+        elif hasattr(thing, 'display_name'):
+            name = thing.display_name
+        elif isinstance(thing, string_types):
+            name = thing
+        else:
+            name = None
+        return name
+
+    return _network_wrapper(_display_name, thing)
+
 def author(thing):
     def _author(thing):
         author = '[deleted/removed]'
@@ -893,6 +910,7 @@ __all__ = [
         'unpack_subreddits',
         'display_id',
         'display_fullname',
+        'subreddit_display_name',
         'author',
         'split_fullname',
         'get_type_from_fullname',
