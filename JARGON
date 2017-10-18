@@ -187,7 +187,7 @@ w+h*[au]+t+ # 'whaaaat', 'waaaaat', 'wuuuuuuuutttt', etc
 w+h*e+l+p+
 w+h*o+a+(?:h+[aeou]+)?h* # 'woahhhh', 'whoahohhoho', etc
 w*h*y+ # 'whyyyy', 'wwwhhhyyyyy', 'yyyyyyy', etc
-w*o{2,}f* # 'oof', 'woof', 'wwoooof', etc
+w*o{2,}m*(?:f+|p+h+)? # 'oof', 'woof', 'wwoooof', 'oomph', etc
 w+h*o+s+h+ # 'woosh', 'wooooosh', 'whoosh', etc
 w*o+p+s*(?:i+e+|e*y+)?s* # 'woops', 'wooooops', 'oooops', 'oop', etc
 w+o+w+(?:[sz]+(?:[ae]+[hry]*|i+e+))?[sz]? # 'woow', 'wowserz', 'wowza', 'wowzie'
