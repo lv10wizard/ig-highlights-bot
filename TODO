@@ -384,6 +384,8 @@ X. --dry-run Controversial
     X. don't delete thing
     >> the bot should probably delete regardless of mode
 - fix test_parser creating actual databases
+- blacklist subredits the bot has been banned from
+    - read SubredditMessages saying "banned from /r/..."
 - test stale ig queue
 - test replies
     - test comments are stored properly
