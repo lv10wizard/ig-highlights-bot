@@ -1,3 +1,5 @@
+import re
+
 import pytest
 
 from src.replies import Formatter
@@ -7,9 +9,12 @@ from src.replies import Formatter
 def formatter_reply():
     """ Returns a mocked formatter reply """
     # TODO? actually call .format instead?
+    username = '_foobar_'
     reply = [
             Formatter.HEADER_FMT.format(
-                user='foobar', link='https://www.instagram.com/foobar',
+                user_raw=username,
+                user=re.sub(r'(_)', r'\\\1', username),
+                link='https://www.instagram.com/foobar',
             ),
             ' '.join(
                 Formatter.HIGHLIGHT_FMT.format(

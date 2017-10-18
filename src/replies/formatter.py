@@ -1,3 +1,5 @@
+import re
+
 from constants import (
         BLACKLIST_URL_FMT,
         CONTACT_URL,
@@ -20,7 +22,7 @@ class Formatter(object):
 
     COMMENT_CHARACTER_LIMIT = 1e4
     # tag usernames in the bot's replies so we can parse them back out easily
-    USER_TAG = '[](#ig@{user})'
+    USER_TAG = '[](#ig@{user_raw})'
     HEADER_FMT = '{0}[@{{user}}]({{link}}) highlights:'.format(USER_TAG)
     FOOTER_FMT = (
             '---\n^I&#32;am&#32;a&#32;bot.'
@@ -58,7 +60,7 @@ class Formatter(object):
                     Formatter.USER_TAG
             )
             pattern = escaped_user_tag.format(
-                    user='({0})'.format(Instagram.USERNAME_PTN)
+                    user_raw='({0})'.format(Instagram.USERNAME_PTN)
             )
             user_re = re.compile(pattern)
             Formatter.USER_TAG_REGEX = user_re
@@ -96,7 +98,13 @@ class Formatter(object):
         )]
 
         for ig in ig_list:
-            header = Formatter.HEADER_FMT.format(user=ig.user, link=ig.url)
+            header = Formatter.HEADER_FMT.format(
+                    user_raw=ig.user,
+                    # escape markdown characters
+                    # (eg. '_foo_' => italicized 'foo')
+                    user=re.sub(r'(_)', r'\\\1', ig.user),
+                    link=ig.url,
+            )
             highlights = []
             media = ig.top_media
             for i, media_link in enumerate(media):
