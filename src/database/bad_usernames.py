@@ -38,14 +38,16 @@ class BadUsernamesDatabase(Database):
                 ')'
         )
 
-    def _insert(self, text, thing):
+    def _insert(self, text, thing, score=None):
         self._db.execute(
                 'INSERT INTO bad_usernames(string, thing_fullname, score)'
                 ' VALUES(?, ?, ?)',
                 (
                     text,
                     BadUsernamesDatabase.get_fullname(thing),
-                    reddit.score(thing),
+                    # try the thing first; fallback to the provided value in
+                    # case thing is a string
+                    reddit.score(thing) or score,
                 ),
         )
 

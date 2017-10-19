@@ -25,6 +25,8 @@ ADD_SUBREDDIT   = 'add-subreddit'
 RM_SUBREDDIT    = 'rm-subreddit'
 ADD_BLACKLIST   = 'add-blacklist'
 RM_BLACKLIST    = 'rm-blacklist'
+ADD_BAD_USERNAME = 'add-bad-username'
+RM_BAD_USERNAME = 'rm-bad-username'
 DELETE_DATA     = 'delete-data'
 DUMP            = 'dump'
 IG_DB           = 'ig-db'
@@ -162,6 +164,44 @@ def rm_blacklist(cfg, *names):
     blacklist = Blacklist(cfg)
     for name in names:
         blacklist.remove(name)
+
+def add_bad_username(cfg, text, fullname, score):
+    bad_usernames = database.BadUsernamesDatabase()
+    logger.info('Adding \'{color_text}\' ({fullname}, {score}) as a'
+            ' bad-username ...',
+            color_text=text,
+            fullname=fullname,
+            score=score,
+    )
+
+    try:
+        with bad_usernames:
+            bad_usernames.insert(text, fullname, score)
+
+    except database.UniqueConstraintFailed:
+        logger.info('\'{color_text}\' already considered a bad-username',
+                color_text=text,
+        )
+
+    else:
+        logger.info('Successfully added \'{color_text}\' as a bad-username!',
+                color_text=text,
+        )
+
+def rm_bad_username(cfg, *text):
+    bad_usernames = database.BadUsernamesDatabase()
+    for t in text:
+        if t in bad_usernames:
+            logger.info('Removing bad-username: \'{color_text}\' ...',
+                    color_text=t,
+            )
+            with bad_usernames:
+                bad_usernames.delete(t)
+
+        else:
+            logger.info('\'{color_text}\' was not considered a bad-username!',
+                    color_text=t,
+            )
 
 def delete_data(cfg, do_delete=True):
     import shutil
@@ -360,6 +400,8 @@ def handle(cfg, args):
             RM_SUBREDDIT: rm_subreddit,
             ADD_BLACKLIST: add_blacklist,
             RM_BLACKLIST: rm_blacklist,
+            ADD_BAD_USERNAME: add_bad_username,
+            RM_BAD_USERNAME: rm_bad_username,
             DELETE_DATA: delete_data,
             DUMP: print_database,
             IG_DB: print_instagram_database,
@@ -472,6 +514,21 @@ def parse():
                 sub=sub_example,
                 note=note,
             )
+    )
+
+    parser.add_argument('--{0}'.format(ADD_BAD_USERNAME),
+            metavar='STRING', nargs=3,
+            help='Adds a string to the bad-usernames database so that it will'
+            ' not be matched in the future as a potential username. The second'
+            ' argument should be the fullname of the deleted bot comment'
+            ' containing the username. The third should be the score of the'
+            ' deleted bot comment.'
+    )
+    parser.add_argument('--{0}'.format(RM_BAD_USERNAME),
+            metavar='STRING', nargs='+',
+            help='Removes the string(s) from the bad-usernames database so that'
+            ' they can be matched in the future as potential instagram'
+            ' usernames again.'
     )
 
     parser.add_argument('--{0}'.format(DELETE_DATA), action='store_true',
