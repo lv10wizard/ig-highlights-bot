@@ -32,6 +32,7 @@ DUMP            = 'dump'
 IG_DB           = 'ig-db'
 IG_DB_LIKES     = 'ig-db-likes'
 IG_DB_COMMENTS  = 'ig-db-comments'
+IG_DB_LINKS_RAW = 'ig-db-links-raw'
 
 DUMP_CHOICES = sorted(list(database.SUBCLASSES.keys()))
 try:
@@ -355,7 +356,7 @@ def print_database(cfg, *databases):
             else:
                 logger.info('No database file: \'{path}\'', path=path)
 
-def print_instagram_database(cfg, order, *user_databases):
+def print_instagram_database_wrapper(callback, order, *user_databases):
     if '*' in user_databases:
         # dump all instagram databases
         user_databases = IG_DB_CHOICES
@@ -385,13 +386,28 @@ def print_instagram_database(cfg, order, *user_databases):
                 order = 'ORDER BY {0}'.format(igdb.order_string)
 
             logger.debug(order)
-            do_print_database(path, order)
+            callback(path, order)
 
         else:
             path_raw = os.path.join(database.InstagramDatabase.PATH, user_db)
             logger.info('No instagram data for user: \'{user}\'',
                     user=re.sub(r'[.]db$', '', user_db),
             )
+
+def print_instagram_database(cfg, order, *user_databases):
+    print_instagram_database_wrapper(do_print_database, order, *user_databases)
+
+def print_instagram_database_links(cfg, order, *user_databases):
+    def do_print_links(path, order):
+        import sqlite3
+
+        if os.path.exists(path):
+            db = sqlite3.connect(path)
+            cursor = db.execute('SELECT link FROM cache {0}'.format(order))
+            for row in cursor:
+                print(row['link'])
+
+    print_instagram_database_wrapper(do_print_links, order, *user_databases)
 
 def handle(cfg, args):
     handlers = {
@@ -407,11 +423,13 @@ def handle(cfg, args):
             IG_DB: print_instagram_database,
             IG_DB_LIKES: print_instagram_database,
             IG_DB_COMMENTS: print_instagram_database,
+            IG_DB_LINKS_RAW: print_instagram_database_links,
     }
     order = {
             IG_DB: None,
             IG_DB_LIKES: 'ORDER BY num_likes DESC',
             IG_DB_COMMENTS: 'ORDER BY num_comments DESC',
+            IG_DB_LINKS_RAW: None,
     }
 
     had_handleable_opt = False
@@ -559,6 +577,12 @@ def parse():
     parser.add_argument('--{0}'.format(IG_DB_COMMENTS), metavar='NAME',
             nargs='+', choices=ig_choices,
             help='Dump the specified instagram user databases to stdout'
+            ' sorted by most comments -> least comments.'
+            ' See --{0} for choices'.format(IG_DB),
+    )
+    parser.add_argument('--{0}'.format(IG_DB_LINKS_RAW), metavar='NAME',
+            nargs='+', choices=ig_choices,
+            help='Dump the specified instagram user databases\' links to stdout'
             ' sorted by most comments -> least comments.'
             ' See --{0} for choices'.format(IG_DB),
     )
