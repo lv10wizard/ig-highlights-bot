@@ -52,7 +52,7 @@ def test_parser_detects_jargon(word):
 @pytest.mark.parametrize('word', [
     'Daring', 'gorgeous', 'google', 'vyvan.le', 'hanny_madani', 'kaja_sbn',
     'haileypandolfi', 'viktoria_kay', 'linstahh', 'natalieannworth',
-    'tiffanie_marie', 'tiffanie.marie', 'jessicabolusi',
+    'tiffanie_marie', 'tiffanie.marie', 'jessicabolusi', 'girl.6ix',
 ])
 def test_parser_does_not_overmatch_jargon(word):
     assert not Parser.is_jargon(word)

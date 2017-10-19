@@ -534,10 +534,10 @@ class Parser(object):
     ] + _JARGON_FROM_FILE
 
     for i, regex in enumerate(_JARGON_VARIATIONS_WHOLE):
-        _JARGON_VARIATIONS.append(r'\b{0}\b'.format(regex))
+        _JARGON_VARIATIONS.append(r'^{0}\b'.format(regex))
 
     _JARGON_REGEX = re.compile(
-            '^{0}$'.format('|'.join(_JARGON_VARIATIONS)), flags=re.IGNORECASE
+            '{0}'.format('|'.join(_JARGON_VARIATIONS)), flags=re.IGNORECASE
     )
 
     @staticmethod
