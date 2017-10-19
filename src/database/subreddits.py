@@ -9,7 +9,6 @@ from ._database import (
         UniqueConstraintFailed,
 )
 from constants import SUBREDDITS_DEFAULTS_PATH
-from src import reddit
 from src.util import logger
 
 
@@ -50,6 +49,8 @@ class SubredditsDatabase(Database):
         return db
 
     def __contains__(self, thing):
+        from src import reddit
+
         name = reddit.subreddit_display_name(thing)
         if not name:
             logger.id(logger.debug, self,
@@ -164,6 +165,8 @@ class SubredditsDatabase(Database):
                             )
 
     def _insert(self, thing):
+        from src import reddit
+
         name = reddit.subreddit_display_name(thing)
         if not name:
             logger.id(logger.debug, self,
@@ -181,6 +184,8 @@ class SubredditsDatabase(Database):
         )
 
     def _delete(self, thing):
+        from src import reddit
+
         name = reddit.subreddit_display_name(thing)
         if not name:
             logger.id(logger.debug, self,

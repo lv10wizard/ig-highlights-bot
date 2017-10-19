@@ -1,5 +1,4 @@
 from ._database import Database
-from src import reddit
 
 
 class BadUsernamesDatabase(Database):
@@ -39,6 +38,8 @@ class BadUsernamesDatabase(Database):
         )
 
     def _insert(self, text, thing, score=None):
+        from src import reddit
+
         self._db.execute(
                 'INSERT INTO bad_usernames(string, thing_fullname, score)'
                 ' VALUES(?, ?, ?)',
