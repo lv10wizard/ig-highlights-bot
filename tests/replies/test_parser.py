@@ -134,6 +134,11 @@ def test_parser_matches_instagram_prefix(
     assert not T.ig_links
     assert T.ig_usernames == ['triippyunicorn']
 
+def test_parser_does_not_over_match_prefix(nachosarah):
+    N = Parser(nachosarah)
+    assert not N.ig_links
+    assert not N.ig_usernames
+
 def test_parser_matches_instagram_suffix(
         hanny_madani, kaja_sbn, eva_lo_dimelo, chaileeson, deliahatesyou,
         diablo_sam, stephxohaven,

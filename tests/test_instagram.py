@@ -192,8 +192,9 @@ def test_instagram_matches_instagram_prefix(
     assert user_str_match
     assert user_str_match.group('prefix') == '_coffeequeennn'
 
-def test_isntagram_does_not_over_match_instagram_prefix(
+def test_instagram_does_not_over_match_instagram_prefix(
         hanny_madani, kaja_sbn, eva_lo_dimelo, chaileeson, deliahatesyou,
+        nachosarah,
 ):
     assert not Instagram.IG_LINK_REGEX.search(hanny_madani.body)
     assert not Instagram.IG_LINK_QUERY_REGEX.search(hanny_madani.body)
@@ -229,6 +230,11 @@ def test_isntagram_does_not_over_match_instagram_prefix(
     user_str_match = Instagram.IG_USER_STRING_REGEX.search(deliahatesyou.body.strip())
     assert user_str_match
     assert not user_str_match.group('prefix')
+
+    assert not Instagram.IG_LINK_REGEX.search(nachosarah.body)
+    assert not Instagram.IG_LINK_QUERY_REGEX.search(nachosarah.body)
+    assert not Instagram.IG_USER_REGEX.search(nachosarah.body)
+    assert not Instagram.IG_USER_STRING_REGEX.search(nachosarah.body.strip())
 
 def test_instagram_matches_on_instagram_suffix(
         hanny_madani, kaja_sbn, eva_lo_dimelo, chaileeson, deliahatesyou,

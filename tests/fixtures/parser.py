@@ -80,6 +80,17 @@ def triippyunicorn():
     return load_pickle('triippyunicorn')
 
 @pytest.fixture(scope='session')
+def nachosarah():
+    """
+    praw.models.Comment containing a soft-linked user
+
+    Instagram name: nachosarah... not yo Sarah.
+    I wish she WAS my Sarah.
+
+    """
+    return load_pickle('nachosarah')
+
+@pytest.fixture(scope='session')
 def vyvan_le():
     """
     praw.models.Comment containing a soft-linked user without '@'
