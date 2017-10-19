@@ -95,7 +95,7 @@ if __name__ == '__main__':
     options = args.parse()
     # turn off logging if we're just dumping links
     init_logger(off=options['ig_db_links_raw'])
-    logger.debug('args:\n{pprint}', pprint=args)
+    logger.debug('args:\n{pprint}', pprint=options)
 
     # assign the dry_run arg as a "global" of sorts so that it doesn't have to
     # be passed to everything
