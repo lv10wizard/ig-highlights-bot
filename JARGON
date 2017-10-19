@@ -190,7 +190,8 @@ w*h*y+ # 'whyyyy', 'wwwhhhyyyyy', 'yyyyyyy', etc
 w*o{2,}m*(?:f+|p+h+)? # 'oof', 'woof', 'wwoooof', 'oomph', etc
 w+h*o+s+h+ # 'woosh', 'wooooosh', 'whoosh', etc
 w*o+p+s*(?:i+e+|e*y+)?s* # 'woops', 'wooooops', 'oooops', 'oop', etc
-w+o+w+(?:[sz]+(?:[ae]+[hry]*|i+e+))?[sz]? # 'woow', 'wowserz', 'wowza', 'wowzie'
+# 'woow', 'wowserz', 'wowza', 'wowzie', 'yowzers'
+[wy]+o+w+(?:[sz]+(?:[ae]+[hry]*|i+e+))?[sz]?
 wtc # where to cop
 w+t+[fh]+(?:o+m+f*g+)? # 'wtf', 'wwwtf', wtttttf', 'wtfomfg', etc
 (?:x+o+)+x*
