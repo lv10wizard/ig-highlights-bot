@@ -50,7 +50,7 @@ def test_parser_detects_jargon(word):
     assert Parser.is_jargon(word)
 
 @pytest.mark.parametrize('word', [
-    'Daring', 'gorgeous', 'google', 'vyvan.le', 'Hanny_madani', 'kaja_sbn',
+    'Daring', 'gorgeous', 'google', 'vyvan.le', 'hanny_madani', 'kaja_sbn',
     'haileypandolfi', 'viktoria_kay', 'linstahh', 'natalieannworth',
     'tiffanie_marie', 'tiffanie.marie', 'jessicabolusi',
 ])
@@ -140,7 +140,7 @@ def test_parser_matches_instagram_suffix(
 ):
     H = Parser(hanny_madani)
     assert not H.ig_links
-    assert H.ig_usernames == ['Hanny_madani']
+    assert H.ig_usernames == ['hanny_madani']
 
     K = Parser(kaja_sbn)
     assert not K.ig_links
@@ -156,11 +156,11 @@ def test_parser_matches_instagram_suffix(
 
     D = Parser(deliahatesyou)
     assert not D.ig_links
-    assert D.ig_usernames == ['Deliahatesyou']
+    assert D.ig_usernames == ['deliahatesyou']
 
     DS = Parser(diablo_sam)
     assert not DS.ig_links
-    assert DS.ig_usernames == ['Diablo_sam']
+    assert DS.ig_usernames == ['diablo_sam']
 
     S = Parser(stephxohaven)
     assert not S.ig_links
@@ -251,19 +251,19 @@ def test_parser_does_match_post_lenabarista(post_lenabarista_imgur):
     # 'Lena.barista'
     p = Parser(post_lenabarista_imgur)
     assert not p.ig_links
-    assert p.ig_usernames == ['Lena.barista']
+    assert p.ig_usernames == ['lena.barista']
 
 def test_parser_does_match_post_deliahatesyou_ig(post_deliahatesyou_ig_imgur):
     # 'Deliahatesyou (IG)'
     p = Parser(post_deliahatesyou_ig_imgur)
     assert not p.ig_links
-    assert p.ig_usernames == ['Deliahatesyou']
+    assert p.ig_usernames == ['deliahatesyou']
 
 def test_parser_does_match_post_katiesintheclouds_ig(post_katiesintheclouds_ig_imgur):
     # 'Katiesintheclouds (IG)'
     p = Parser(post_katiesintheclouds_ig_imgur)
     assert not p.ig_links
-    assert p.ig_usernames == ['Katiesintheclouds']
+    assert p.ig_usernames == ['katiesintheclouds']
 
 def test_parser_does_match_post_coffeecutie_beachvibes(post_coffeecutie_beachvibes_imgur):
     # '@_coffeecutie #beachvibes [MIC]'

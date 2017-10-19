@@ -375,6 +375,9 @@ class _ParserStrategy(object):
                     if not usernames:
                         logger.id(logger.info, self, 'All usernames pruned!')
 
+            # force all usernames to lowercase since instagram does not
+            # differentiate between cap/low-case
+            usernames = [name.lower() for name in usernames]
             Parser._username_cache[self.thing.fullname] = usernames
 
         return usernames.copy()
