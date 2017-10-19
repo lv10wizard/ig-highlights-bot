@@ -560,26 +560,27 @@ def parse():
     )
 
     ig_choices = IG_DB_DISPLAY_CHOICES + ['*']
+    ig_actual_choices = IG_DB_CHOICES + ig_choices
     parser.add_argument('--{0}'.format(IG_DB),
             metavar='NAME', nargs='+',
-            choices=IG_DB_CHOICES + IG_DB_DISPLAY_CHOICES,
+            choices=ig_actual_choices,
             help='Dump the specified instagram user databases to stdout.'
             ' Choices: {0}'.format(ig_choices),
     )
     parser.add_argument('--{0}'.format(IG_DB_LIKES), metavar='NAME',
-            nargs='+', choices=ig_choices,
+            nargs='+', choices=ig_actual_choices,
             help='Dump the specified instagram user databases to stdout'
             ' sorted by most likes -> least likes.'
             ' See --{0} for choices'.format(IG_DB),
     )
     parser.add_argument('--{0}'.format(IG_DB_COMMENTS), metavar='NAME',
-            nargs='+', choices=ig_choices,
+            nargs='+', choices=ig_actual_choices,
             help='Dump the specified instagram user databases to stdout'
             ' sorted by most comments -> least comments.'
             ' See --{0} for choices'.format(IG_DB),
     )
     parser.add_argument('--{0}'.format(IG_DB_LINKS_RAW), metavar='NAME',
-            nargs='+', choices=ig_choices,
+            nargs='+', choices=ig_actual_choices,
             help='Dump the specified instagram user databases\' links to stdout'
             ' sorted by most comments -> least comments.'
             ' See --{0} for choices'.format(IG_DB),
