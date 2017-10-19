@@ -119,7 +119,10 @@ class Controversial(ProcessMixin, StreamMixin):
                                 self.bad_usernames.insert(username, thing)
 
                             except UniqueConstraintFailed:
-                                # this shouldn't happen
+                                # this should mean that the bot made multiple
+                                # bad replies with the same username to
+                                # different posts before it was added as a bad
+                                # username
                                 logger.id(logger.warn, self,
                                         '\'{color_username}\' already in'
                                         ' bad_usernames database!',
