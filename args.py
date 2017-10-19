@@ -400,6 +400,7 @@ def print_instagram_database(cfg, order, *user_databases):
 def print_instagram_database_links(cfg, order, *user_databases):
     def do_print_links(path, order):
         import sqlite3
+        sqlite3.row_factory = sqlite3.Row
 
         if os.path.exists(path):
             db = sqlite3.connect(path)
