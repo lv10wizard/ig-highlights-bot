@@ -105,6 +105,7 @@ class Filter(object):
                     '{color_thing} is too old: skipping.',
                     color_thing=reddit.display_id(thing),
             )
+            return False
 
         if author.lower() == self.username.lower():
             logger.id(logger.debug, self,
