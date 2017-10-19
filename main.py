@@ -14,7 +14,7 @@ from src import config
 from src.util import logger
 
 
-def init_logger(cfg=None, options=None):
+def init_logger(cfg=None, options=None, off=False):
     """
     Initializes logging with the specified options
     """
@@ -88,11 +88,14 @@ def init_logger(cfg=None, options=None):
                 logger.Formatter(fmt=logger.Formatter.FORMAT_NO_DATE)
         )
         logger.clear_handlers()
-        logger.add_handler(handler)
+        if not off:
+            logger.add_handler(handler)
 
 if __name__ == '__main__':
-    init_logger()
     options = args.parse()
+    # turn off logging if we're just dumping links
+    init_logger(off=options['ig_db_links_raw'])
+    logger.debug('args:\n{pprint}', pprint=args)
 
     # assign the dry_run arg as a "global" of sorts so that it doesn't have to
     # be passed to everything

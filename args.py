@@ -6,10 +6,7 @@ import re
 from six import iteritems
 from six.moves import input
 
-from constants import (
-        __DEBUG__,
-        AUTHOR,
-)
+from constants import AUTHOR
 from src import (
         config,
         database,
@@ -588,10 +585,7 @@ def parse():
             ' See --{0} for choices'.format(IG_DB),
     )
 
-    args = vars(parser.parse_args())
-    if __DEBUG__:
-        logger.debug('args:\n{pprint}', pprint=args)
-    return args
+    return vars(parser.parse_args())
 
 
 __all__ = [
