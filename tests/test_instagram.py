@@ -129,6 +129,20 @@ def test_instagram_matches_links(haileypandolfi, viktoria_kay):
     assert not Instagram.IG_USER_STRING_REGEX.search(viktoria_kay.body.strip())
     assert not Instagram.HAS_IG_KEYWORD_REGEX.search(viktoria_kay.body.strip())
 
+def test_instagram_matches_multiple_ats(post_multi_ats):
+    assert not Instagram.IG_LINK_REGEX.search(post_multi_ats.title)
+    assert not Instagram.IG_LINK_QUERY_REGEX.search(post_multi_ats.title)
+    users = Instagram.IG_USER_REGEX.findall(post_multi_ats.title)
+    assert len(users) == 4
+    assert 'cheyannalavonzubas' in users
+    assert 'inthismomentofficial' in users
+    assert 'omandm' in users
+    assert 'avatarmetal' in users
+    assert not Instagram.IG_USER_STRING_REGEX.search(
+            post_multi_ats.title.strip()
+    )
+    assert not Instagram.HAS_IG_KEYWORD_REGEX.search(post_multi_ats.title)
+
 # XXX: this test doesn't really make sense
 def test_instagram_ignores_automod(parenthesis_user, automoderator_user_link):
     assert not Instagram.IG_LINK_REGEX.search(parenthesis_user.body)

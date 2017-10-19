@@ -89,6 +89,15 @@ def test_parser_ig_users_only(linstahh, natalieannworth, tiffanie_marie):
     assert N.ig_usernames == ['natalieannworth']
     assert T.ig_usernames == ['tiffanie.marie']
 
+def test_parser_matches_multiple_ats(post_multi_ats):
+    M = Parser(post_multi_ats)
+    assert not M.ig_links
+    assert len(M.ig_usernames) == 4
+    assert 'cheyannalavonzubas' in M.ig_usernames
+    assert 'inthismomentofficial' in M.ig_usernames
+    assert 'omandm' in M.ig_usernames
+    assert 'avatarmetal' in M.ig_usernames
+
 def test_parser_ig_links(haileypandolfi, viktoria_kay):
     H = Parser(haileypandolfi)
     V = Parser(viktoria_kay)

@@ -1,3 +1,4 @@
+# -*- coding: UTF-8 -*-
 import pickle
 import os
 import pytest
@@ -294,4 +295,13 @@ def post_coffeecutie_beachvibes_imgur():
     '@_coffeecutie #beachvibes [MIC]'
     """
     return load_pickle('post_coffeecutie_beachvibes_imgur')
+
+@pytest.fixture(scope='session')
+def post_multi_ats():
+    """
+    praw.models.Submission linking to non-instagram content with the title
+    '@cheyannalavonzubas Last night’s attire for @inthismomentofficial @omandm
+    and @avatarmetal 🤘🏻'
+    """
+    return load_pickle('post_multi_ats')
 
