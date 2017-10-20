@@ -97,14 +97,14 @@ class Controversial(ProcessMixin, StreamMixin):
 
                     # flag the username(s) so that they aren't matched as
                     # potential usernames in the future
-                    ig_usernames = replies.Formatter.ig_users_in(thing.body)
+                    ig_usernames = replies.Formatter.ig_users_in(comment.body)
                     if not ig_usernames:
                         # either reply format changed or this thing is somehow
                         # not a bot reply
                         logger.id(logger.debug, self,
                                 'No instagram usernames found in'
                                 '{color_thing}!',
-                                color_thing=reddit.display_id(thing),
+                                color_thing=reddit.display_id(comment),
                         )
 
                     for username in ig_usernames:
@@ -116,7 +116,7 @@ class Controversial(ProcessMixin, StreamMixin):
                             )
 
                             try:
-                                self.bad_usernames.insert(username, thing)
+                                self.bad_usernames.insert(username, comment)
 
                             except UniqueConstraintFailed:
                                 # this should mean that the bot made multiple
