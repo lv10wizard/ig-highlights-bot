@@ -15,6 +15,8 @@ user's most popular media.
 
 - pyenchant
 
+- inflect
+
 *For testing*:
 
 - mock (for python2)
@@ -23,13 +25,13 @@ user's most popular media.
 
 python 2.7:
 
-- `pip install -U praw requests bs4 six pyenchant`
+- `pip install -U praw requests bs4 six pyenchant inflect`
 
 - for testing: `pip install -U mock pytest`
 
 python 3.5+:
 
-- `pip install -U praw requests bs4 six pyenchant`
+- `pip install -U praw requests bs4 six pyenchant inflect`
 
 - for testing: `pip install -U pytest`
 

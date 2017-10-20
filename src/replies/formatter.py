@@ -1,5 +1,7 @@
 import re
 
+import inflect
+
 from constants import (
         BLACKLIST_URL_FMT,
         CONTACT_URL,
@@ -39,6 +41,8 @@ class Formatter(object):
     HIGHLIGHT_FMT = '[{i}]({link})'
     LINE_DELIM = '\n\n'
 
+    _inflect = None
+
     @staticmethod
     def ig_users_in(body):
         """
@@ -69,6 +73,9 @@ class Formatter(object):
 
     def __init__(self, username):
         self.username = username
+
+        if not Formatter._inflect:
+            Formatter._inflect = inflect.engine()
 
     def __str__(self):
         return self.__class__.__name__
@@ -117,12 +124,12 @@ class Formatter(object):
                         link=media_link,
                 )
                 highlights.append(Formatter.HIGHLIGHT_FMT.format(
-                    i=i+1,
+                    i=Formatter._inflect.number_to_words(i+1),
                     link=media_link,
                 ))
 
             current_reply.append(header)
-            current_reply.append(' '.join(highlights))
+            current_reply.append(' - '.join(highlights))
             ig_users.append(ig)
 
             # try to add the current reply if its character length exceeds
