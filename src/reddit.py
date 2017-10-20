@@ -694,7 +694,9 @@ class Reddit(praw.Reddit):
             )
 
             try:
-                maintainer.message(subject, body)
+                def _message(maintainer, subject, body):
+                    return maintainer.message(subject, body)
+                _network_wrapper(_message, maintainer, subject, body)
 
             except Forbidden as e:
                 # failed to log in? bot account suspended?
