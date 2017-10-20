@@ -116,7 +116,8 @@ class Controversial(ProcessMixin, StreamMixin):
                             )
 
                             try:
-                                self.bad_usernames.insert(username, comment)
+                                with self.bad_usernames:
+                                    self.bad_usernames.insert(username, comment)
 
                             except UniqueConstraintFailed:
                                 # this should mean that the bot made multiple
