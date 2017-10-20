@@ -132,7 +132,7 @@ def _network_wrapper(callback, thing, *args, **kwargs):
 
         except RequestException:
             logger.id(logger.warn, thing.__repr__(),
-                    'Failed to fetch {callback}; retrying in {time} ...',
+                    '{callback} failed! retrying in {time} ...',
                     callback=callback.__name__,
                     time=delay,
                     exc_info=True,
@@ -799,7 +799,16 @@ class Reddit(praw.Reddit):
 
                 try:
                     if not constants.dry_run:
-                        thing.reply(body)
+                        def _reply(thing, body):
+                            return thing.reply(body)
+                        reply = _network_wrapper(_reply, thing, body)
+                        if hasattr(reply, 'id'):
+                            logger.id(logger.info, self,
+                                    'Successfully replied to {color_thing}'
+                                    ' ({color_reply_id})',
+                                    color_thing=display_id(thing),
+                                    color_reply_id=reply.id,
+                            )
                     else:
                         if not self.__dry_run_test():
                             logger.id(logger.info, self,
