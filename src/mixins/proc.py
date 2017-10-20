@@ -118,7 +118,10 @@ class RunForeverMixin(object):
             self._run_forever()
 
         except:
-            logger.id(logger.exception, self, 'An uncaught exception occured!')
+            logger.id(logger.critical, self,
+                    'An uncaught exception occured!',
+                    exc_info=True,
+            )
             raise
 
         finally:
