@@ -153,7 +153,7 @@ class Instagram(object):
             ),
     )
 
-    IG_USER_REGEX = re.compile(
+    IG_AT_USER_REGEX = re.compile(
             r'(?:^|\s*|[(\[])@({0})(?:[)\]]|\s*|$)'.format(
             # \_____________/|\___/\_____________/
             #       |        |  |        \

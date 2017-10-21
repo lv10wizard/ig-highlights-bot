@@ -324,7 +324,7 @@ class _ParserStrategy(object):
                 )
 
                 # try '@username'
-                usernames = Instagram.IG_USER_REGEX.findall(self._thing_text)
+                usernames = Instagram.IG_AT_USER_REGEX.findall(self._thing_text)
                 # TODO: this should not be turned on if the bot is
                 # crawling any popular subreddit -- but how to determine
                 # if a subreddit is popular?
