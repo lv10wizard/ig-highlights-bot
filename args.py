@@ -164,6 +164,20 @@ def rm_blacklist(cfg, *names):
         blacklist.remove(name)
 
 def add_bad_username(cfg, text, fullname, score):
+    # TODO? look up submission thing prefix dynamically
+    submission_prefix = 't3_'
+    if not fullname.startswith(submission_prefix):
+        logger.info('Usage: --{add_bad_username_opt} TEXT FULLNAME SCORE',
+                add_bad_username_opt=ADD_BAD_USERNAME,
+        )
+        logger.info('FULLNAME must be a submission fullname (starting with'
+                ' {prefix}, not {fullname}): not adding \'{text}\'',
+                prefix=submission_prefix,
+                fullname=fullname,
+                text=text,
+        )
+        return
+
     bad_usernames = database.BadUsernamesDatabase()
     logger.info('Adding \'{color_text}\' ({fullname}, {score}) as a'
             ' bad-username ...',

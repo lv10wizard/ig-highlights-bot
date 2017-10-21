@@ -11,10 +11,15 @@ class BadUsernamesDatabase(Database):
     @staticmethod
     def get_fullname(thing):
         try:
-            return thing.fullname
+            submission = thing.submission
+        except AttributeError:
+            submission = thing
+
+        try:
+            return submission.fullname
         except AttributeError:
             # in case 'thing' is a string
-            return thing
+            return submission
 
     def __init__(self, dry_run=False, *args, **kwargs):
         # don't save a distinct database for dry-runs
