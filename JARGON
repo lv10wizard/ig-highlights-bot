@@ -143,6 +143,7 @@ pwn(?:ed|t)?
 qft
 r+e+
 r+e+a+r+p+u+s+(?:i+e+|y+)s*
+r+i+g+h+t+
 r+i+p+
 rtf?m # read the fine manual
 rule\d+ # 'rule34', etc
@@ -192,6 +193,7 @@ w+h*o+s+h+ # 'woosh', 'wooooosh', 'whoosh', etc
 w*o+p+s*(?:i+e+|e*y+)?s* # 'woops', 'wooooops', 'oooops', 'oop', etc
 # 'woow', 'wowserz', 'wowza', 'wowzie', 'yowzers'
 [wy]+o+w+(?:[sz]+(?:[ae]+[hry]*|i+e+))?[sz]?
+w+r+o+n+g+
 wtc # where to cop
 w+t+[fh]+(?:o+m+f*g+)? # 'wtf', 'wwwtf', wtttttf', 'wtfomfg', etc
 (?:x+o+)+x*
