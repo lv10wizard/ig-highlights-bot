@@ -152,6 +152,14 @@ def diablo_sam():
     return load_pickle('Diablo_sam')
 
 @pytest.fixture(scope='session')
+def alica_davis():
+    """
+    praw.models.Comment containing a soft-linked user without '@'
+    (@... on IG ...)
+    """
+    return load_pickle('alica.davis')
+
+@pytest.fixture(scope='session')
 def capbarista_multiline_prefix():
     """
     praw.models.Comment containing a soft-linked user without '@'

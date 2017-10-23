@@ -154,7 +154,7 @@ class Instagram(object):
     )
 
     IG_AT_USER_REGEX = re.compile(
-            r'(?:^|\s*|[(\[])@({0})(?:[)\]]|\s*|$)'.format(
+            r'(?:^|\s*|[(\[])@({0})(?:[)\]]|\s+|$)'.format(
             # \_____________/|\___/\_____________/
             #       |        |  |        \
             #       |        |  |    match whitespace or end of string

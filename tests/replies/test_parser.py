@@ -182,6 +182,11 @@ def test_parser_matches_instagram_suffix(
     assert not S.ig_links
     assert S.ig_usernames == ['stephxohaven']
 
+def test_parser_does_not_match_invalid_username(alica_davis):
+    A = Parser(alica_davis)
+    assert not A.ig_links
+    assert not A.ig_usernames
+
 def test_parser_matches_multiline_user_string(capbarista_multiline_prefix):
     C = Parser(capbarista_multiline_prefix)
     assert not C.ig_links

@@ -75,6 +75,13 @@ def test_instagram_matches_ig_user_strings(string, expected):
     assert match.group(1) == expected
 
 @pytest.mark.parametrize('string', [
+   '@Alíca.dávis on Instagram, minus the accents',
+   '@Alíca.dávis',
+])
+def test_instagram_does_not_overmatch_ig_user_strings(string):
+    assert not Instagram.IG_AT_USER_REGEX.search(string)
+
+@pytest.mark.parametrize('string', [
     'This is her instagram: @foobar',
     '(IG): blahface__',
     'that\'s idont.care on insta',
