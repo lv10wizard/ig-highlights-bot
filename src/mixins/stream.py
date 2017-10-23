@@ -61,14 +61,21 @@ class StreamMixin(RedditInstanceMixin):
         return 0
 
     def __sleep(self, delay):
-        logger.id(logger.info, self,
-                'Waiting {time} ...',
-                time=delay,
-        )
-        try:
-            self._killed.wait(delay)
-        except AttributeError:
-            time.sleep(delay)
+        if self.__is_alive:
+            logger.id(logger.info, self,
+                    'Waiting {time} ...',
+                    time=delay,
+            )
+            try:
+                self._killed.wait(delay)
+            except AttributeError:
+                time.sleep(delay)
+
+        else:
+            logger.id(logger.debug, self,
+                    'Skipping sleep ({time}): killed!',
+                    time=delay,
+            )
 
     @property
     def __delay(self):
