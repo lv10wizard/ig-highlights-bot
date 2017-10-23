@@ -39,7 +39,7 @@ class Filter(object):
         This does not mean that the thing contains any content that the bot
         will want to reply to.
 
-        Returns True if
+        Returns True if the following are all True
             - thing's author not in hard-coded IGNORED list
             - thing not already replied to by the bot
             - thing already queued for a reply
@@ -48,10 +48,11 @@ class Filter(object):
               defined in config)
             - thing not archived (too old)
             - thing not itself posted by the bot
+            - the bot is not banned from thing's subreddit
             - thing not in a blacklisted subreddit or posted by a blacklisted
               user
         """
-        # XXX: the code is fully written out instead of being a simple boolean
+        # XXX: the code is fully written out instead of being a "simple" boolean
         # (eg. return not (a or b or c)) so that appropriate logging calls can
         # be made
 
@@ -112,6 +113,14 @@ class Filter(object):
                     'I posted {color_thing}: skipping.',
                     color_thing=reddit.display_id(thing),
             )
+            return False
+
+        if hasattr(thing, 'subreddit') and thing.subreddit.user_is_banned:
+            logger.id(logger.debug, self,
+                    'I am banned from {color_subreddit}: skipping.',
+                    color_subreddit=reddit.prefix_subreddit(
+                        thing.subreddit.display_name
+                    ),
             return False
 
         # XXX: there is the possibility that the blacklist check fails just as
