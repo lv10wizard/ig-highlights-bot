@@ -121,6 +121,7 @@ class Filter(object):
                     color_subreddit=reddit.prefix_subreddit(
                         thing.subreddit.display_name
                     ),
+            )
             return False
 
         # XXX: there is the possibility that the blacklist check fails just as
