@@ -304,6 +304,7 @@ class Reddit(praw.Reddit):
     NOTSET_TYPE = praw.config._NotSet
     NOUSER_ERR = ('NO_USER', 'USER_DOESNT_EXIST')
     RATELIMIT_ERR = ('RATELIMIT',)
+    DELETED_ERR = ('DELETED_COMMENT',)
 
     LINE_SEP = '=' * 72
 
@@ -843,9 +844,17 @@ class Reddit(praw.Reddit):
                 except praw.exceptions.APIException as e:
                     self.__handle_api_exception(e)
 
-                    if e.error_type.upper() in Reddit.RATELIMIT_ERR:
+                    err_type = e.error_type.upper()
+                    if err_type in Reddit.RATELIMIT_ERR:
                         # force in case the rate-limit flag is unset somehow
                         self.__queue_reply(thing, body, force=True)
+
+                    elif err_type in Reddit.DELETED_ERR:
+                        logger.id(logger.info, self,
+                                'Failed to reply to {color_thing}: deleted!',
+                                color_thing=display_id(thing),
+                        )
+                        success = None
 
                 else:
                     success = True
