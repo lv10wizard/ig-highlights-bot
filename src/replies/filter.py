@@ -58,7 +58,7 @@ class Filter(object):
 
         author = reddit.author(thing)
         if author.lower() in Filter.IGNORED:
-            logger.id(logger.debug, self,
+            logger.id(logger.info, self,
                     '{color_author} ({color_thing}) is ignored: skipping.',
                     color_author=reddit.prefix_user(author),
                     color_thing=reddit.display_id(thing),
@@ -67,7 +67,7 @@ class Filter(object):
 
         # check the database first (guaranteed to incur no network request)
         if self.reply_history.has_replied(thing):
-            logger.id(logger.debug, self,
+            logger.id(logger.info, self,
                     'I already replied to {color_thing}: skipping.',
                     color_thing=reddit.display_id(thing),
             )
@@ -75,7 +75,7 @@ class Filter(object):
 
         if thing in self.reply_queue:
             # already queued for a reply; not sure how this would happen
-            logger.id(logger.debug, self,
+            logger.id(logger.info, self,
                     '{color_thing} is already queued for a reply: skipping.',
                     color_thing=reddit.display_id(thing),
             )
@@ -83,7 +83,7 @@ class Filter(object):
 
         if thing in self.reddit_ratelimit_queue:
             # will be handled by the RateLimitHandler
-            logger.id(logger.debug, self,
+            logger.id(logger.info, self,
                     '{color_thing} is rate-limit queued: skipping.',
                     color_thing=reddit.display_id(thing),
             )
@@ -92,7 +92,7 @@ class Filter(object):
         submission = reddit.get_submission_for(thing)
         replied = self.reply_history.replied_things_for_submission(submission)
         if len(replied) > self.cfg.max_replies_per_post:
-            logger.id(logger.debug, self,
+            logger.id(logger.info, self,
                     'I\'ve made too many replies (#{num}) to {color_post}:'
                     ' skipping.',
                     num=self.cfg.max_replies_per_post,
@@ -102,21 +102,21 @@ class Filter(object):
 
         # potentially spammy
         if hasattr(thing, 'archived') and thing.archived:
-            logger.id(logger.debug, self,
+            logger.id(logger.info, self,
                     '{color_thing} is too old: skipping.',
                     color_thing=reddit.display_id(thing),
             )
             return False
 
         if author.lower() == self.username.lower():
-            logger.id(logger.debug, self,
+            logger.id(logger.info, self,
                     'I posted {color_thing}: skipping.',
                     color_thing=reddit.display_id(thing),
             )
             return False
 
         if hasattr(thing, 'subreddit') and thing.subreddit.user_is_banned:
-            logger.id(logger.debug, self,
+            logger.id(logger.info, self,
                     'I am banned from {color_subreddit}: skipping.',
                     color_subreddit=reddit.prefix_subreddit(
                         thing.subreddit.display_name
@@ -144,7 +144,7 @@ class Filter(object):
 
             # potentially spammy (for subreddits)
             # TODO? don't log if is_subreddit
-            logger.id(logger.debug, self,
+            logger.id(logger.info, self,
                     ' '.join(msg),
                     color_name=prefixed_name,
                     time=time_left,
