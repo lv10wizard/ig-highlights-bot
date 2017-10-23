@@ -516,7 +516,7 @@ class Parser(object):
             #  match any number of leading 'l's
 
             'r+o+t*f+l+', # 'rofl', 'rotfl', 'rooofl', etc
-            '(?:a+y+)?l+m+f*a+o+', # 'lmao', 'lmfao', 'lmaooooo', etc
+            '(?:a+y+)?l+m+f*a+o+h*', # 'lmao', 'lmfao', 'lmaooooo', etc
     ]
     _JARGON_FROM_FILE = load_jargon()
     _JARGON_VARIATIONS_WHOLE = [
