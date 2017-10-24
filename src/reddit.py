@@ -200,7 +200,24 @@ def subreddit_display_name(thing):
 
     return _network_wrapper(_display_name, thing)
 
+def is_banned_from(thing):
+    """
+    Returns True if the user is banned from thing's subreddit
+            or False if not banned
+            or None if thing has no subreddit
+    """
+    def _is_banned(thing):
+        banned = None
+        if hasattr(thing, 'subreddit'):
+            banned = thing.subreddit.user_is_banned
+        return banned
+
+    return _network_wrapper(_is_banned, thing)
+
 def author(thing):
+    """
+    Returns the thing's author name if it exists; "[deleted/removed]" otherwise
+    """
     def _author(thing):
         author = '[deleted/removed]'
         if hasattr(thing, 'author') and thing.author:

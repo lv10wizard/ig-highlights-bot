@@ -115,7 +115,7 @@ class Filter(object):
             )
             return False
 
-        if hasattr(thing, 'subreddit') and thing.subreddit.user_is_banned:
+        if reddit.is_banned_from(thing):
             logger.id(logger.info, self,
                     'I am banned from {color_subreddit}: skipping.',
                     color_subreddit=reddit.prefix_subreddit(
