@@ -177,7 +177,8 @@ tmi
 tryna
 tty?[ls]
 ty(?:vm)?
-u+[hm]+(?:o+h+)? # 'uuuuuh', 'uuuuuhhhhh', 'uhoh', 'ummmm', etc
+# 'uuuuuh', 'uuuuuhhhhh', 'uhoh', 'ummmm', 'ughhh', etc
+u+[ghm]+(?:|o+h+)?
 u+p+s+(?:k+i+r+t+|h+o+r+t+)s*
 vip
 vlog
