@@ -20,7 +20,7 @@ def test_bad_users_insert(bad_users_db, _cassiebrown_bot_reply):
     with _seed(bad_users_db, _cassiebrown_bot_reply):
         row = bad_users_db._db.execute('SELECT * FROM bad_usernames').fetchone()
         assert row['string'] == '_cassiebrown_'
-        assert row['thing_fullname'] == _cassiebrown_bot_reply.fullname
+        assert row['thing_fullname'] == _cassiebrown_bot_reply.submission.fullname
         assert row['score'] == _cassiebrown_bot_reply.score
 
 def test_bad_users_contains(bad_users_db, _cassiebrown_bot_reply):
