@@ -79,21 +79,9 @@ class BadUsernamesDatabase(Database):
             >>> bad_username_regex = re.compile('|'.join(patterns))
             >>> bad_username_regex.search(text)
         """
-        def format_pattern(text):
-            # remove repeating characters
-            cleaned_text = []
-            seen = ''
-            for c in text:
-                c = c.lower()
-                if c != seen.lower():
-                    cleaned_text.append(c)
-                    seen = c
-            cleaned_text = ''.join(cleaned_text)
-
-            return ''.join( map(lambda c: '{0}+'.format(c), cleaned_text) )
-
+        from src.util import format_repeat_each_character_pattern
         bad_usernames = self.get_bad_username_strings_raw()
-        return set(map(format_pattern, bad_usernames))
+        return set(map(format_repeat_each_character_pattern, bad_usernames))
 
 
 __all__ = [

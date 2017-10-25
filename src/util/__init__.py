@@ -2,7 +2,27 @@ from errno import EEXIST
 import os
 
 
+def format_repeat_each_character_pattern(text):
+    """
+    Returns a regex pattern matching the given text and any variation of it that
+            repeats any character. eg. 'blah' -> 'b+l+a+h+' => matches 'blaaaah'
+    """
+    # remove repeating characters
+    cleaned_text = []
+    seen = ''
+    for c in text:
+        c = c.lower()
+        if c != seen.lower():
+            cleaned_text.append(c)
+            seen = c
+    cleaned_text = ''.join(cleaned_text)
+
+    return ''.join( map(lambda c: '{0}+'.format(c), cleaned_text) )
+
 def get_padding(num):
+    """
+    Returns padding string length for the given number
+    """
     padding = 0
     while num > 0:
         padding += 1

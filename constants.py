@@ -65,6 +65,7 @@ CONFIG_DEFAULTS_PATH = os.path.join(ROOT_DIR, 'bot.cfg')
 BLACKLIST_DEFAULTS_PATH = os.path.join(ROOT_DIR, 'BLACKLIST')
 SUBREDDITS_DEFAULTS_PATH = os.path.join(ROOT_DIR, 'SUBREDDITS')
 JARGON_DEFAULTS_PATH = os.path.join(ROOT_DIR, 'JARGON')
+POKEMON_DEFAULTS_PATH = os.path.join(ROOT_DIR, 'POKEMON')
 
 AUTHOR = 'lv10wizard'
 COMPOSE_MESSAGE_BASE_URL = 'https://www.reddit.com/message/compose/'

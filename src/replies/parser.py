@@ -37,7 +37,11 @@ from src.util import (
 def load_jargon():
     import os
 
-    from constants import JARGON_DEFAULTS_PATH
+    from constants import (
+            JARGON_DEFAULTS_PATH,
+            POKEMON_DEFAULTS_PATH,
+    )
+    from src.util import format_repeat_each_character_pattern
 
     jargon = []
     logger.id(logger.debug, __name__,
@@ -79,6 +83,25 @@ def load_jargon():
         logger.id(logger.exception, __name__,
                 'Failed to load jargon file: \'{path}\'!',
                 path=JARGON_DEFAULTS_PATH,
+        )
+
+    logger.id(logger.debug, __name__,
+            'Loading pokemon from \'{path}\' ...',
+            path=POKEMON_DEFAULTS_PATH,
+    )
+    try:
+        with open(POKEMON_DEFAULTS_PATH, 'r') as fd:
+            for i, line in enumerate(fd):
+                pokemon = map(
+                        format_repeat_each_character_pattern,
+                        line.strip().lower()
+                )
+                jargon.append(''.join(pokemon))
+
+    except (IOError, OSError):
+        logger.id(logger.exception, __name__,
+                'Failed to load pokemon file: \'{path}\'!',
+                path=POKEMON_DEFAULTS_PATH,
         )
 
     return jargon
