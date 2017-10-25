@@ -5,7 +5,7 @@ user's most popular media.
 
 #### Dependencies
 
-- praw >= 5.1 (>= 4.0 may work; untested)
+- praw >= 5.2
 
 - requests
 

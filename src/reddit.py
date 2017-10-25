@@ -161,12 +161,16 @@ def _network_wrapper(callback, thing, *args, **kwargs):
 
 def display_id(thing):
     def _display_id(thing):
-        if hasattr(thing, 'permalink'):
+        try:
+            # comment
+            return thing.permalink_url
+        except AttributeError:
+            # 'Submission' object has no attribute
+            # submission
             try:
-                return thing.permalink()
-            except TypeError:
-                # object is not callable: thing should be a submission
                 return thing.permalink
+            except AttributeError:
+                pass # message or other thing
 
         return thing
 

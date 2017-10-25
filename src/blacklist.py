@@ -355,14 +355,7 @@ class Blacklist(object):
                     color_author=thing.author.name,
             )
 
-            try:
-                # comment
-                permalink = thing.permalink()
-            except TypeError:
-                # 'type' object is not callable
-                # submission
-                permalink = thing.permalink
-
+            permalink = reddit.display_id(thing)
             if not isinstance(permalink, string_types):
                 logger.id(logger.debug, self,
                         '{color_thing} has no valid permalink!'
