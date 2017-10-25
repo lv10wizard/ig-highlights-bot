@@ -196,11 +196,14 @@ class InstagramDatabase(Database):
                 ' AND {normalized_likes} < 0.75'
                 ' THEN 0'
 
+                ' ELSE CASE'
                 # order by likes if the comments avg is too high relative to
                 # the max comment count. averages tend to skew low so if the
                 # avg is high then that probably indicates the user has low
                 # comment activity or that they don't have many posts.
-                ' ELSE CASE WHEN 1.0 * {avg_comments} / {max_comments} > 0.18'
+                ' WHEN 1.0 * {avg_comments} / {max_comments} > 0.18'
+                # or if the user's comment activity is too low
+                ' OR {avg_comments} <= 10'
                 '       THEN num_likes'
                 # scale the likes count [0.1, 1] based on how far/close the
                 # comments count is to its maximum value.
