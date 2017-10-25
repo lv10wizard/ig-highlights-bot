@@ -119,6 +119,18 @@ class InstagramDatabase(Database):
         )
         return cursor.fetchone()[0]
 
+    def _get_q2(self, col):
+        """
+        Returns the 50th percentile (2nd quartile) of the given column
+        """
+        # https://stackoverflow.com/a/15766121
+        cursor = self._db.execute(
+                'SELECT AVG({0}) FROM (SELECT {0} FROM cache ORDER BY {0}'
+                ' LIMIT 2 - (SELECT count(*) FROM cache) % 2'
+                ' OFFSET (SELECT count(*)/2 - 1 FROM cache))'.format(col)
+        )
+        return cursor.fetchone()[0]
+
     def _get_q3(self, col):
         """
         Returns the 75th percentile (3rd quartile) of the given column
@@ -181,7 +193,7 @@ class InstagramDatabase(Database):
                 ' OR 1.0 * (num_comments - {avg_comments}) / num_likes >= 0.08)'
                 # but only if the like-count isn't very high; highly liked posts
                 # are usually prototypical of the user's overall media.
-                ' AND {normalized_likes} < 0.25'
+                ' AND {normalized_likes} < 0.75'
                 ' THEN 0'
 
                 # order by likes if the comments avg is too high relative to
