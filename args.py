@@ -372,13 +372,14 @@ def print_instagram_database_wrapper(callback, order, *user_databases):
         # dump all instagram databases
         user_databases = IG_DB_CHOICES
 
+    orig_order = order
     for user_db in user_databases:
         if not user_db.endswith('.db'):
             user_db = '{0}.db'.format(user_db)
 
         path = os.path.join(resolved_igdb_path, user_db)
         if os.path.exists(path):
-            if not order:
+            if not orig_order:
                 # use the default order if none was specified
                 igdb = database.InstagramDatabase(path)
                 if igdb.size() == 0:
