@@ -46,11 +46,16 @@ class Mentions(ProcessMixin, StreamMixin):
                 color_submission=reddit.display_id(submission),
         )
 
-        had_replyable_comment = False
+        replyable_thing = False
+        ig_usernames = self.filter.replyable_usernames(submission)
+        if ig_usernames:
+            replyable_thing = True
+            self.filter.enqueue(submission, ig_usernames, mention)
+
         for comment in submission.comments.list():
             ig_usernames = self.filter.replyable_usernames(comment)
             if ig_usernames:
-                had_replyable_comment = True
+                replyable_thing = True
                 self.filter.enqueue(comment, ig_usernames, mention)
 
         # XXX: flagging bad actors from failed mentions temporarily(?) turned
@@ -58,7 +63,7 @@ class Mentions(ProcessMixin, StreamMixin):
         # trolling through mentions will be that big of an issue since there
         # really is no visible effect for the offending user.
 
-        # if not had_replyable_comment:
+        # if not replyable_thing:
         #     # summoned to a thread where the bot attempted no replies
         #     replied = self.reply_history.replied_things_for_submission(
         #             submission
