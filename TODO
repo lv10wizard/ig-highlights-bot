@@ -220,16 +220,18 @@ O. persistent reddit ratelimit time
 O. gracefully exit instagram fetch
     O. pass _killed flag to Instagram class? __init__?
     O. in fetch, if _killed.is_set() => set do_enqueue
-- figure out why messages stream sleeps upon fetching items
+O? figure out why messages stream sleeps upon fetching items
     is it only if #items < 100?
+    >> pretty sure this is praw ratelimit sleeping
 O. reclassify some debug logging -> info (info is far too quiet)
-- add the bot-posted comment id to the [Contact] msg subject skeleton
-    - get comment from thing.reply()
-    - change CONTACT_SUBJECT_SKELETON to include a comment id placeholder
+X. add the bot-posted comment id to the [Contact] msg subject skeleton
+    X. get comment from thing.reply()
+    O. change CONTACT_SUBJECT_SKELETON to include a comment id placeholder
         (ie, '{0}')
-    - comment.edit( ... )
+    X. comment.edit( ... )
         probably: comment.edit( comment.body.format(comment.id) )
     * what if ratelimited on .edit ?
+    >> formatting in parent permalink so no need to .edit
 O. quiet spammy logging
     X. reddit-queue.db
         X. SELECT * FROM queue ORDER BY ratelimit_reset ASC
@@ -293,10 +295,11 @@ O. ignore AutoModerator '@username' soft-links
         or better: ignore if .name.lower() in IGNORE_LIST
     O. test: parenthesis_username.pickle
 
-- determine why there is a 3 ~ 5s delay between the Replier removing the comment
+O? determine why there is a 3 ~ 5s delay between the Replier removing the comment
     from the repy-queue and calling ._reply() when instagram data is fetched
     (just looking up from database does not incur this delay)
     > is this delay system dependant?
+    >> pretty sure this is related to praw sleeping
 X. reply-queue per-comment logging
     > how to prevent spam the log though?
     >> handled in 821f2ea (kind of)
@@ -310,7 +313,6 @@ X. reply-queue per-comment logging
         - check word[0] == upper => 's'
         - check word[-2] != vowel => 'ies'
     (in case a database is changed significantly)
-- fix instagram 500-level codes spamming log
 - turn off Parser._get_potential_user_strings() if bot is scraping a popular
   subreddit
     - how to classify a subreddit as popular?
@@ -359,7 +361,7 @@ O. parse submission titles for possible instagram user strings
     O. update readme
     O. update app description
 O. parse submission from mentions
-? parse comments' submissions from comment stream if not parsed yet?
+O. parse comments' submissions from comment stream if not parsed yet?
 ? separate submissions/comments min length for potential username matches
 - dynamically update logging level/color (maybe path?) when config is reloaded
 - add most liked, most commented links to reply header
@@ -399,6 +401,7 @@ X. --dry-run Controversial
     - if no: remove [Source](...) from FOOTER
            ? remove link from FAQ
 ? fetch instagram data in a separate process
+    would allow quicker replies of cached users
     - poll? callback? in replier to see if data is ready
 O. remove try/catch in mentions/messages _run_forever
 ? target only python3

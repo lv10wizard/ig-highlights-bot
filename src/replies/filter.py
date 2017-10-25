@@ -100,7 +100,6 @@ class Filter(object):
             )
             return False
 
-        # potentially spammy
         if hasattr(thing, 'archived') and thing.archived:
             logger.id(logger.info, self,
                     '{color_thing} is too old: skipping.',
@@ -112,15 +111,6 @@ class Filter(object):
             logger.id(logger.info, self,
                     'I posted {color_thing}: skipping.',
                     color_thing=reddit.display_id(thing),
-            )
-            return False
-
-        if reddit.is_banned_from(thing):
-            logger.id(logger.info, self,
-                    'I am banned from {color_subreddit}: skipping.',
-                    color_subreddit=reddit.prefix_subreddit(
-                        thing.subreddit.display_name
-                    ),
             )
             return False
 
@@ -150,6 +140,17 @@ class Filter(object):
                     color_name=prefixed_name,
                     time=time_left,
                     color_thing=reddit.display_id(thing),
+            )
+            return False
+
+        # this will most likely incur an extra network hit
+        if reddit.is_banned_from(thing):
+            # TODO: add to blacklist
+            logger.id(logger.info, self,
+                    'I am banned from {color_subreddit}: skipping.',
+                    color_subreddit=reddit.prefix_subreddit(
+                        thing.subreddit.display_name
+                    ),
             )
             return False
         return True
