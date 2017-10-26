@@ -300,3 +300,9 @@ def test_parser_does_match_post_coffeecutie_beachvibes(post_coffeecutie_beachvib
     assert not p.ig_links
     assert p.ig_usernames == ['_coffeecutie']
 
+def test_parser_does_match_post_ig_url_in_title(post_ig_url_in_title):
+    # '... (nikumikyo, insta: https://www.instagram.com/nikumikyo/)'
+    p = Parser(post_ig_url_in_title)
+    assert len(p.ig_links) == 1
+    assert p.ig_usernames == ['nikumikyo']
+

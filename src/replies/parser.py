@@ -214,9 +214,9 @@ class _ParserStrategy(object):
             reddit.display_id(self.thing)
         ])
 
-    @abc.abstractmethod
     def _parse_links(self):
         """ Strategy-specific link parsing """
+        return self._parse_links_from_html() + self._parse_links_from_text()
 
     @abc.abstractproperty
     def _thing_text(self):
@@ -285,6 +285,43 @@ class _ParserStrategy(object):
 
         return links
 
+    def _parse_links_from_text(self):
+        """
+        Parses links from the thing's text
+
+        Returns a list of parsed urls
+        """
+        logger.id(logger.debug, self,
+                'Testing for links in text: \'{color_text}\'',
+                color_text=self._thing_text,
+        )
+
+        links = [
+                match[0] for match in
+                Instagram.IG_LINK_REGEX.findall(self._thing_text)
+        ]
+        if links:
+            logger.id(logger.debug, self,
+                    'Matched user profile link{plural}: {color_links}',
+                    plural=('' if len(links) == 1 else 's'),
+                    color_links=links,
+            )
+
+        else:
+            links = [
+                    match[0] for match in
+                    Instagram.IG_LINK_QUERY_REGEX.findall(self._thing_text)
+            ]
+            if links:
+                logger.id(logger.debug, self,
+                        'Matched query user profile link{plural}:'
+                        ' {color_links}',
+                        plural=('' if len(links) == 1 else 's'),
+                        color_links=links,
+                )
+
+        return links
+
     def parse_links(self):
         """
         Returns a list of links found in thing
@@ -323,12 +360,12 @@ class _ParserStrategy(object):
             for link in self.parse_links():
                 match = Instagram.IG_LINK_REGEX.search(link)
                 if match:
-                    usernames.append(match.group(2))
+                    usernames.append(match.group('user'))
 
                 else:
                     match = Instagram.IG_LINK_QUERY_REGEX.search(link)
                     if match:
-                        usernames.append(match.group(2))
+                        usernames.append(match.group('user'))
 
             if not usernames:
                 from_link = False
@@ -482,9 +519,6 @@ class _CommentParser(_ParserStrategy):
     def _thing_html(self):
         return self.thing.body_html
 
-    def _parse_links(self):
-        return self._parse_links_from_html()
-
 class _SubmissionParser(_ParserStrategy):
     """
     Submission parsing strategy
@@ -504,7 +538,7 @@ class _SubmissionParser(_ParserStrategy):
         return self.thing.selftext_html or ''
 
     def _parse_links(self):
-        links = self._parse_links_from_html()
+        links = _ParserStrategy._parse_links(self)
         # check the post's url in case it links to an instagram profile
         if self._link_matches(self.thing.url):
             links.append(self.thing.url)

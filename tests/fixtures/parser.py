@@ -321,3 +321,12 @@ def post_multi_ats():
     """
     return load_pickle('post_multi_ats')
 
+@pytest.fixture(scope='session')
+def post_ig_url_in_title():
+    """
+    praw.models.Submission linking to non-instagram content with the title
+    'Top half a bit...young, bottom half all woman '
+    '(nikumikyo, insta: https://www.instagram.com/nikumikyo/)'
+    """
+    return load_pickle('post_nikumikyo')
+

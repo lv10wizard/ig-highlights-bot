@@ -120,15 +120,23 @@ class Instagram(object):
     _MEDIA_PATH_PTN = r'p'
     _MEDIA_CODE_PTN = r'[\w\-]{2,}'
     IG_LINK_REGEX = re.compile(
-            r'({0})/({1})(?!/{2}/?)(?:/[?].+)?'.format(
-            # \___/|\___/\________/\_________/
-            #   |  |  |      |           \
-            #   |  |  |      |      optionally match trailing queries
-            #   |  |  |    don't match if this is a media code
-            #   |  |  \
-            #   |  |  capture username
-            #   | match path separator '/'
-            # capture base url
+            r'(?P<url>'
+            # \______/
+            #     \
+            #   capture the entire match as 'url'
+            r'(?P<baseurl>{0})/(?P<user>{1})(?!/{2}/?)(?:/[?].+)?'
+            # \______________/|\___________/\________/\_________/
+            #         |       |      |          |           \
+            #         |       |      |          |      optionally match
+            #         |       |      |          |         trailing queries
+            #         |       |      |    don't match if this is a media code
+            #         |       |      /
+            #         |       |  capture username
+            #         |       match path separator '/'
+            #       capture base url
+            r')'.format(
+            # \
+            # end of 'url' group
 
                 _BASE_URL_PTN,
                 USERNAME_PTN,
@@ -138,14 +146,23 @@ class Instagram(object):
     )
 
     IG_LINK_QUERY_REGEX = re.compile(
-            r'({0})/{1}/{2}/[?].*?taken-by=({3}).*$'.format(
-            # \___/ \_/ \_/  | \__________________/
-            #   |    |   |   |           \
-            #   |    |   |   |  match query string & capture taken-by username
-            #   |    |   |  match '?'
-            #   |    |  match media code eg. 'BL7JX3LgxQ'
-            #   |  match media code path
-            # capture base url
+            r'(?P<url>'
+            # \______/
+            #     \
+            #   capture entire match as 'url' group
+            r'(?P<baseurl>{0})/{1}/{2}/[?].*?taken-by=(?P<user>{3}).*$'
+            # \______________/ \_/ \_/  | \__________________________/
+            #         |         |   |   |             \
+            #         |         |   |   |  match query string & capture
+            #         |         |   |   |  taken-by username as 'user'
+            #         |         |   |  match '?'
+            #         |         |  match media code eg. 'BL7JX3LgxQ'
+            #         |       match media code path
+            #       capture base url
+            r')'.format(
+            # \
+            # end of 'url' group
+
                 _BASE_URL_PTN,
                 _MEDIA_PATH_PTN,
                 _MEDIA_CODE_PTN,
@@ -154,12 +171,12 @@ class Instagram(object):
     )
 
     IG_AT_USER_REGEX = re.compile(
-            r'(?:^|\s*|[(\[])@({0})(?:[)\]]|\s+|$)'.format(
-            # \_____________/|\___/\_____________/
-            #       |        |  |        \
-            #       |        |  |    match whitespace or end of string
-            #       |        |  |    or a set of acceptable ending delimiters
-            #       |        | capture username
+            r'(?:^|\s*|[(\[])@(?P<user>{0})(?:[)\]]|\s+|$)'.format(
+            # \_____________/|\___________/\_____________/
+            #       |        |      |             |
+            #       |        |      |    match whitespace or end of string
+            #       |        |      |    or set of acceptable ending delimiters
+            #       |        |   capture username
             #       |      only match if username is preceded by '@'
             #       |      -- basically limit guesses at username matches
             #     match start of string or whitespace or a set of acceptable
