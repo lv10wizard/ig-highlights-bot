@@ -174,28 +174,32 @@ class Instagram(object):
     #                               |       match 'ig'
     #                           match 'insta' or 'instagram'
 
+    _INSTAGRAM_KEYWORD_SEP = r'\s*[\:\-]'
+
     # _IG_KEYWORD*: strings that are likely to indicate that the inner substring
     # contains an instagram username.
     _IG_KEYWORD_PREFIX = [
-            # match eg. '(IG): ', 'isnta ', etc
-            r'\(?{0}\)?:?\s*'.format(_INSTAGRAM_KEYWORD),
-            #    \_/    \\_/
-            #     |     / |
+            # match eg. '(IG): ', 'insta ', etc
+            r'\(?{0}\)?{1}?\s*'.format(
+            #    \_/   \__/\_/
+            #     |     /   |
             #     |     \ optionally match any spaces
-            #     |   optionally match ':'
+            #     |   optionally match separators eg. ':'
             #    match instagram keywords
+                _INSTAGRAM_KEYWORD, _INSTAGRAM_KEYWORD_SEP,
+            ),
 
             # match eg. 'I think this is their instagram ...'
             #       or  'Her instagram name: ...'
-            r'(?:[\w:]+\s+)*{0}(?:\s+\w+)*?:?\s+'.format(
-            # \____________/\_/\__________/ \  \
+            r'(?:[\w:]+\s+)*{0}(?:\s+\w+)*?{1}?\s+'.format(
+            # \____________/\_/\__________/\__/  \
             #       |        |      |       / match trailing spaces
-            #       |        |      |   optionally match ':'
+            #       |        |      |   optionally match separators eg. ':'
             #       |        |   match any extra words
             #       |      match instagram keywords
             #    match any leading words; include ':' in case of something like
             #       'Here: ...'
-                _INSTAGRAM_KEYWORD,
+                _INSTAGRAM_KEYWORD, _INSTAGRAM_KEYWORD_SEP,
             ),
     ]
     _IG_KEYWORD_PREFIX = '|'.join(_IG_KEYWORD_PREFIX)

@@ -81,6 +81,14 @@ def triippyunicorn():
     return load_pickle('triippyunicorn')
 
 @pytest.fixture(scope='session')
+def sugarnatty88():
+    """
+    praw.models.Comment containing a soft-linked user
+    (IG - ...)
+    """
+    return load_pickle('sugarnatty88')
+
+@pytest.fixture(scope='session')
 def nachosarah():
     """
     praw.models.Comment containing a soft-linked user

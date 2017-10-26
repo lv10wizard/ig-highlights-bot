@@ -88,6 +88,7 @@ def test_instagram_does_not_overmatch_ig_user_strings(string):
     'rockopera on IG.',
     'Diablo_sam on IG. She\'s awesome. ',
     'Source: ig triippyunicorn',
+    'IG - Sugarnatty88',
 ])
 def test_instagram_matches_has_ig_keyword_strings(string):
     assert Instagram.HAS_IG_KEYWORD_REGEX.search(string)
@@ -105,6 +106,8 @@ def test_instagram_does_not_overmatch_has_ig_keyword_strings(string):
     ('I\'m pretty sure this is foobar on insta', 'foobar'),
     ('Diablo_sam on IG. She\'s awesome. ', 'Diablo_sam'),
     ('Source: ig triippyunicorn', 'triippyunicorn'),
+    ('IG - Sugarnatty88', 'Sugarnatty88'),
+    ('Her IG - Sugarnatty88', 'Sugarnatty88'),
     ('stephxohaven on insta and snap', 'stephxohaven'),
 ])
 def test_instagram_matches_potential_ig_user_strings(string, expected):

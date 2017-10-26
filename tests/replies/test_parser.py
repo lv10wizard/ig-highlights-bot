@@ -133,7 +133,7 @@ def test_parser_matches_non_english_word(vyvan_le):
     assert p.ig_usernames == ['vyvan.le']
 
 def test_parser_matches_instagram_prefix(
-        yassibenitez, coffeequeennn, triippyunicorn,
+        yassibenitez, coffeequeennn, triippyunicorn, sugarnatty88,
 ):
     Y = Parser(yassibenitez)
     assert not Y.ig_links
@@ -146,6 +146,10 @@ def test_parser_matches_instagram_prefix(
     T = Parser(triippyunicorn)
     assert not T.ig_links
     assert T.ig_usernames == ['triippyunicorn']
+
+    S = Parser(sugarnatty88)
+    assert not S.ig_links
+    assert S.ig_usernames == ['sugarnatty88']
 
 def test_parser_does_not_over_match_prefix(nachosarah):
     N = Parser(nachosarah)
