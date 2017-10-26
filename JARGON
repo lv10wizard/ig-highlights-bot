@@ -135,7 +135,7 @@ p+a+w*g+
 p+e+n+i+s+e*s*
 p+e+r+v+(?:e+r+t+)?
 (?:p+h+o+t+o+)?s+h+o+p+(?:e+d+|t+)? # 'photoshopped', 'shopped', etc
-p+l+[sz]+
+p+(?:[au]+h*)?l+[ae]*[sz]+e*
 pov
 ppl
 p+u+s+(?:i+e+|y+)s*
