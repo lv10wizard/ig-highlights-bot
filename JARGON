@@ -136,7 +136,7 @@ p+a+w*g+
 p+e+n+i+s+e*s*
 p+e+r+v+(?:e+r+t+)?
 (?:p+h+o+t+o+)?s+h+o+p+(?:e+d+|t+)? # 'photoshopped', 'shopped', etc
-p+(?:[au]+h*)?l+[ae]*[sz]+e*
+p+(?:[aou]+h*)?l+[ae]*[sz]+e*
 pov
 ppl
 p+u+s+(?:i+e+|y+)s*
@@ -148,6 +148,7 @@ r+i+g+h+t+
 r+i+p+
 rtf?m # read the fine manual
 rule\d+ # 'rule34', etc
+s+(?:[aou]+h*)?w+e+t+ # 'sweeeeeet', 'saaaahweeeet',
 s+c*h+w+i+f+t+y+
 s+c*h+l+u+r+p+
 s+e+l+f+(?:p+i+c+|s+h+o+t+)?

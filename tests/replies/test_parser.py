@@ -50,7 +50,8 @@ from src.replies import Parser
     'lmaoh', 'ughhhhh', 'uuuuuugh', 'ugggggggh', 'uuuggggghhhhh', 'bulbasaur',
     'pikaaachuuuu', 'squirrrrtle', 'pleeeeease', 'ppppplease', 'pleaaaase',
     'pleaseeeee', 'plssss', 'puhleeezeeee', 'plaese', 'indeeeeed',
-    'indeeeeeedddd',
+    'indeeeeeedddd', 'poleeeeze', 'pohleeease', 'saaweeeeet', 'sweeeeetttt',
+    'suuuhhhweeeeet',
 ] + ['o'*(i+2) for i in range(15)])
 def test_parser_detects_jargon(word):
     assert Parser.is_jargon(word)
