@@ -68,7 +68,8 @@ JARGON_DEFAULTS_PATH = os.path.join(ROOT_DIR, 'JARGON')
 POKEMON_DEFAULTS_PATH = os.path.join(ROOT_DIR, 'POKEMON')
 
 AUTHOR = 'lv10wizard'
-COMPOSE_MESSAGE_BASE_URL = 'https://www.reddit.com/message/compose/'
+HELP_URL = '/74dtgu'
+COMPOSE_MESSAGE_BASE_URL = '/message/compose/'
 THING_ID_PLACEHOLDER = '____THING_ID_PLACEHOLDER____'
 CONTACT_SUBJECT_SKELETON = 'Instagram highlights bot ({0})'.format(
         THING_ID_PLACEHOLDER
@@ -93,7 +94,6 @@ BLACKLIST_URL_FMT = (
         ))
 )
 REPO_URL = 'https://github.com/lv10wizard/ig-highlights-bot'
-HELP_URL = 'https://www.reddit.com/u/igHighlightsBot/comments/74dtgu'
 
 PREFIX_SUBREDDIT = 'r/'
 PREFIX_USER = 'u/'
