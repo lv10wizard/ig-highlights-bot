@@ -193,7 +193,7 @@ w+a+i+t+
 w+e+l+ # 'welllll', etc
 w+h*[au]+t+ # 'whaaaat', 'waaaaat', 'wuuuuuuuutttt', etc
 w+h*e+l+p+
-w+h*o+a+(?:h+[aeou]+)?h* # 'woahhhh', 'whoahohhoho', etc
+w+h*[op]+a+(?:h+[aeou]+)?h* # 'woahhhh', 'whoahohhoho', etc
 w*h*y+ # 'whyyyy', 'wwwhhhyyyyy', 'yyyyyyy', etc
 w*o{2,}m*(?:f+|p+h+)? # 'oof', 'woof', 'wwoooof', 'oomph', etc
 w+h*o+s+h+ # 'woosh', 'wooooosh', 'whoosh', etc
