@@ -12,7 +12,6 @@ a[fs]af*p # 'afap', 'asap', 'asafp'
 a+h+w*
 (?:a+p+l+e*|b+u+b+l+e*)?[bw]+h*o+t+(?:i+e+|[ae]*y+)s* # 'applebooty', ...
 (?:a+p+l+e*|b+u+b+l+e*)?b+u+t+(?:o+c*k+)?s* # 'bubblebutt', ...
-a+s+(?:h+o+l+)?e*s*
 aslp?
 atm
 a+u+t+o+m+a+t+a+ # 'automata' (pychant doesn't consider this as english)
@@ -52,6 +51,8 @@ d+[ir]+[dn]+l+ # 'dirndl' & misspellings
 dmhs
 d+o+w+n+(?:b+l+o+[uw]+s+e*|s+h+i+r+t+)s*
 d+u+d+e+
+# 'asssss', 'asshoooleeeeee', 'dumbasssss', 'dumbassholes', etc
+(?:d+u+m+b*)?a+s+(?:h*o+l+)?e*s*
 d+u+h+
 eli5
 emoji
