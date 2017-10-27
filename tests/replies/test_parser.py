@@ -56,6 +56,7 @@ from src.replies import Parser
     'perrrfect', 'perfeeeccct', 'perfectionnnn', 'purrrrfectioooon', 'dumbass',
     'dumbasssss', 'dumbassssshooooole', 'dumbassoles', 'asshooooooles',
     'dumbassholessss', 'dumbasses', 'hnrrrrhhhh', 'hrrruunngggrrrff', 'HRNH',
+    'bwahahahah', 'bwwwahahahhaha', 'wahahhhaaaha',
 ] + ['o'*(i+2) for i in range(15)])
 def test_parser_detects_jargon(word):
     assert Parser.is_jargon(word)

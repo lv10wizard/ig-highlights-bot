@@ -561,7 +561,7 @@ class Parser(object):
     # XXX: internet acronyms evolve rapidly. this regex is not and will never
     # be comprehensive.
     _LAUGH_VOWELS = 'aeou'
-    _LAUGH_CONSONANTS = 'hjkxz'
+    _LAUGH_CONSONANTS = 'hjkwxz'
     _JARGON_VARIATIONS = [
             # https://stackoverflow.com/a/16453542
             '(?:l+[ouea]+)+l+z*', # 'lol', 'lllool', 'lololol', etc
