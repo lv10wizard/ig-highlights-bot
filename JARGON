@@ -136,6 +136,7 @@ o+w+(?:i+e+)? # 'ow', 'oww', 'owww', etc
 p2p
 p+a+w*g+
 p+e+n+i+s+e*s*
+p+[eu]+r+f+e+c+t+(?:i+o+n+)?
 p+e+r+v+(?:e+r+t+)?
 (?:p+h+o+t+o+)?s+h+o+p+(?:e+d+|t+)? # 'photoshopped', 'shopped', etc
 p+(?:[aou]+h*)?l+[ae]*[sz]+e*
