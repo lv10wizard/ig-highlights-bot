@@ -58,6 +58,7 @@ emoji
 e+n+h+a+n+c+e+
 (?:f+a+p+s*)+ # 'fap', 'fapfapfap', 'faaappp', etc
 f+a+k+e+
+[fg]+a+g+(?:o+t+)? # 'fagggg', 'gagggg', 'fagggootttt', etc
 f+a+m+
 fdau
 ffs
@@ -103,6 +104,7 @@ j+e+[bs]+u+s+(?:c+r*h*i*r*i*s+t+)?
 jk
 kthxbye
 l+a+w+d+y*
+l+e+[sz]+(?:b*i+a+n+|b*o+h*)?[sz]* # 'lezboooss', 'lesbiaaaan', etc
 (?:lm)?ftfy # 'lmftfy', 'ftfy'
 lmgtfy
 lmk
