@@ -125,6 +125,7 @@ class StreamMixin(RedditInstanceMixin):
         while self.__is_alive:
             try:
                 for thing in self._stream:
+                    self.__reset_delay()
                     yield thing
 
             except (RequestException, ResponseException, ServerError) as e:
@@ -161,8 +162,6 @@ class StreamMixin(RedditInstanceMixin):
                         pass
                 else:
                     raise
-            else:
-                self.__reset_delay()
 
 @add_metaclass(abc.ABCMeta)
 class _SubredditsStreamMixin(StreamMixin):
