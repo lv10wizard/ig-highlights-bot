@@ -1,6 +1,12 @@
+import re
+
 from praw.models import Comment
 
 from .parser import Parser
+from constants import (
+        PREFIX_SUBREDDIT,
+        SUBREDDITS_DEFAULTS_PATH,
+)
 from src import (
         database,
         reddit,
@@ -145,15 +151,117 @@ class Filter(object):
 
         # this will most likely incur an extra network hit
         if reddit.is_banned_from(thing):
-            # TODO: add to blacklist
             logger.id(logger.info, self,
                     'I am banned from {color_subreddit}: skipping.',
                     color_subreddit=reddit.prefix_subreddit(
                         thing.subreddit.display_name
                     ),
             )
+
+            # XXX: I'm not sure if this method should have side-effects but it
+            # makes sense to handle banned subreddits in this centralized
+            # location from a duplication standpoint.
+            self._remove_banned(thing)
+
             return False
         return True
+
+    def _remove_banned(self, thing):
+        """
+        Removes the thing's subreddit from the SubredditsDatabase and SUBREDDITS
+        file and blacklists the subreddit if the bot is banned.
+
+        Effectively, this prevents the bot from attempting to process to things
+        from subreddits it has been banned from.
+        """
+        if reddit.is_banned_from(thing):
+            display_name = reddit.subreddit_display_name(thing)
+            if display_name:
+                self.blacklist.add(display_name, prefix=PREFIX_SUBREDDIT)
+
+                try:
+                    subreddits = self.subreddits
+                except AttributeError:
+                    subreddits = database.SubredditsDatabase()
+                    self.subreddits = subreddits
+
+                logger.id(logger.info, self,
+                        'Removing {color_subreddit} ...',
+                        color_subreddit=display_name,
+                )
+                with subreddits:
+                    subreddits.delete(thing)
+
+                # remove the subreddit from the SUBREDDITS file so that the
+                # database is not re-initialized with banned subreddits on boot
+                logger.id(logger.debug, self,
+                        'Removing {color_subreddit} from \'{path}\' ...',
+                        color_subreddit=display_name,
+                        path=SUBREDDITS_DEFAULTS_PATH,
+                )
+                try:
+                    with open(SUBREDDITS_DEFAULTS_PATH, 'r') as fd:
+                        subreddits_from_file = fd.read().split('\n')
+                except (IOError, OSError):
+                    logger.id(logger.warn, self,
+                            'Failed to read \'{path}\'!',
+                            path=SUBREDDITS_DEFAULTS_PATH,
+                            exc_info=True,
+                    )
+                else:
+                    # ensure that the display_name is not prefixed
+                    display_name_raw = reddit.split_prefixed_name(display_name)
+                    display_name_raw = display_name_raw[1]
+                    name_regex = re.compile(
+                            r'^{0}$'.format(display_name_raw),
+                            flags=re.IGNORECASE,
+                    )
+                    # remove all matches in the subreddits file in case there
+                    # are duplicates
+                    matches = [
+                            name for name in subreddits_from_file
+                            if name_regex.search(name)
+                    ]
+                    for name in matches:
+                        try:
+                            subreddits_from_file.remove(name)
+                        except ValueError:
+                            # this shouldn't happen
+                            logger.id(logger.warn, self,
+                                    'Failed to remove \'{name}\'!',
+                                    name=name,
+                                    exc_info=True,
+                            )
+                    # this may cause the SUBREDDITS file to be wiped if it is
+                    # successfully opened for writing but fails to write for
+                    # whatever reason
+                    try:
+                        with open(SUBREDDITS_DEFAULTS_PATH, 'w') as fd:
+                            fd.write('\n'.join(subreddits_from_file))
+                    except (IOError, OSError):
+                        logger.id(logger.warn, self,
+                                'Failed to remove {color_matches} from'
+                                ' \'{path}\'!',
+                                color_matches=matches,
+                                path=SUBREDDITS_DEFAULTS_PATH,
+                        )
+                    else:
+                        logger.id(logger.info, self,
+                                'Removed #{num} subreddit{plural}:'
+                                ' {color_matches}',
+                                num=len(matches),
+                                plural=('' if len(matches) == 1 else 's'),
+                                color_matches=matches,
+                        )
+
+        else:
+            logger.id(logger.debug, self,
+                    'Not removing {color_subreddit}:'
+                    ' I am not banned from that subreddit.',
+                    color_subreddit=reddit.prefix_subreddit(
+                        reddit.subreddit_display_name(thing)
+                    ),
+            )
 
     def _prune_already_posted_users(self, submission, ig_usernames):
         """

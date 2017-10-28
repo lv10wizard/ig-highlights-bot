@@ -386,8 +386,12 @@ X. --dry-run Controversial
     X. don't delete thing
     >> the bot should probably delete regardless of mode
 - fix test_parser creating actual databases
-- blacklist subredits the bot has been banned from
-    - read SubredditMessages saying "banned from /r/..."
+O. blacklist subredits the bot has been banned from
+    X. read SubredditMessages saying "banned from /r/..."
+        >> just checking .user_is_banned property
+    O. remove subreddit
+        O. from database
+        O. from SUBREDDITS file
 - test stale ig queue
 - test replies
     - test comments are stored properly
