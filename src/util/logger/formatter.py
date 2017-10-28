@@ -4,6 +4,7 @@ from __future__ import print_function
 import logging
 import re
 import sys
+import time
 
 from six import (
         binary_type,
@@ -363,10 +364,34 @@ class Formatter(logging.Formatter):
         import random
         msg = Formatter.__stringify(msg)
         try:
-            msg_color = color_dict[msg]
+            msg_color = color_dict[msg][0]
         except KeyError:
             msg_color = random.choice(valid)
-            color_dict[msg] = msg_color
+        finally:
+            color_dict[msg] = (msg_color, time.time())
+
+            # free up memory so that colorized strings that appear infrequently
+            # aren't needlessly holding onto it
+            num_pruned = 0
+            EXPIRE_THRESHOLD = 3 * 60 * 60
+            to_prune = [
+                    msg for msg in color_dict.keys()
+                    # elapsed > EXPIRE => hasn't been used in a while
+                    if time.time() - color_dict[msg][1] > EXPIRE_THRESHOLD
+            ]
+            for msg in to_prune:
+                if __DEBUG__:
+                    print('Pruning colorized message: \'{msg}\' ...'.format(
+                        msg=msg
+                    ))
+                del color_dict[msg]
+                num_pruned += 1
+            if __DEBUG__ and num_pruned > 0:
+                print('Pruned #{num} colorized message{plural}'.format(
+                    num=num_pruned,
+                    plural=('' if num_pruned == 1 else 's'),
+                ))
+
         return msg_color
 
     @staticmethod
