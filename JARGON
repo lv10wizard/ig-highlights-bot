@@ -71,6 +71,8 @@ fwiw
 g+a+g+
 g+a+y+
 g+[aou]+[hw]*[dt]+(?:d+a+(?:y+[au]*h*)?m+n*) # 'guhhd', 'gahdamn'
+# 'giggitygiggitygigggity', 'gigady', 'giggity', 'giggitygoo', etc
+(?:g+i+g+[aeiouy]+[dt]+(?:[ie]+|e*y+))+\w*
 g+b?t+f+o+ # get (blown) the fuck out
 [gj]e+[sz](?:u[sz])? # 'geez', 'jeez', 'gees', 'geeeezus', etc
 gf?g # good (fucking) game
