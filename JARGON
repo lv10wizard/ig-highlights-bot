@@ -48,6 +48,7 @@ d+[ao]+w*g+
 d+a+(?:y+[au]*h*)?m+n*
 d+i+c+k+s*
 di+nga+li+ng
+d+[ei]+n+g+[aeiou]+h*s+ # 'dinguuuus', etc
 d+[ir]+[dn]+l+ # 'dirndl' & misspellings
 dmhs
 d+o+w+n+(?:b+l+o+[uw]+s+e*|s+h+i+r+t+)s*
