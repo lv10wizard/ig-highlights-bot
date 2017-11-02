@@ -112,6 +112,8 @@ def _attr_name(attr, obj):
 def expose_modules(path, prefix, locals, all_array=[]):
     """
     Exposes modules' (.py) __all__ elements by appending them to {all_array}
+    if no __all__ is defined, this will expose all top-level attributes in the
+    module that do not start with '_'
 
     path (str) - the path to where the modules are stored (see get_all_modules)
     prefix (str) - the __name__ variable of the caller module
@@ -131,6 +133,7 @@ def expose_modules(path, prefix, locals, all_array=[]):
         if (
                 hasattr(imported_module, '__all__')
                 and attr in imported_module.__all__
+                or not attr.startswith('_')
         ):
             _debug('\t\t\texposing ...')
             attr_name = _attr_name(attr, attr_obj)
