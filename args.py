@@ -30,6 +30,7 @@ IG_DB           = 'ig-db'
 IG_DB_LIKES     = 'ig-db-likes'
 IG_DB_COMMENTS  = 'ig-db-comments'
 IG_DB_LINKS_RAW = 'ig-db-links-raw'
+IG_CHOICES      = 'ig-db-choices'
 
 DUMP_CHOICES = sorted(list(database.SUBCLASSES.keys()))
 try:
@@ -52,6 +53,7 @@ except OSError:
     IG_DB_DISPLAY_CHOICES = []
 else:
     IG_DB_DISPLAY_CHOICES = sorted([name[:-3] for name in IG_DB_CHOICES])
+IG_DB_DISPLAY_CHOICES += ['*']
 
 def to_opt_str(arg_str):
     return arg_str.replace('-', '_')
@@ -422,6 +424,39 @@ def print_instagram_database_links(cfg, order, *user_databases):
 
     print_instagram_database_wrapper(do_print_links, order, *user_databases)
 
+def print_igdb_choices(cfg, do_print=True):
+    if not do_print:
+        return
+
+    print('--{0} choices:'.format(IG_DB))
+    line = []
+    sep = ', '
+    first_char = None
+    for c in IG_DB_DISPLAY_CHOICES:
+        formatted_line = sep.join(line)
+        c_first = c[0].lower()
+        if first_char != c_first:
+            # separate the choices by the first letter
+            end = ''
+            if formatted_line:
+                end = sep
+            end += '\n\n'
+            print(formatted_line, end=end)
+            first_char = c_first
+            line = [c]
+
+        # '..., <c>, ' => 2 * len(sep)
+        elif len(formatted_line) + 2*len(sep) + len(c) >= 80:
+            print(formatted_line, end=sep+'\n')
+            line = [c]
+
+        else:
+            line.append(c)
+
+    if line:
+        # print the trailing database choices
+        print(sep.join(line))
+
 def handle(cfg, args):
     handlers = {
             SHUTDOWN: shutdown,
@@ -437,6 +472,7 @@ def handle(cfg, args):
             IG_DB_LIKES: print_instagram_database,
             IG_DB_COMMENTS: print_instagram_database,
             IG_DB_LINKS_RAW: print_instagram_database_links,
+            IG_CHOICES: print_igdb_choices,
     }
     order = {
             IG_DB: None,
@@ -481,12 +517,13 @@ def parse():
     )
     parser.add_argument('-d', '--{0}'.format(DRY_RUN), action='store_true',
             help='Runs the bot normally but disables it from replying to'
-            ' comments',
+            ' comments and posts. This mode is intended as a sort of "live"'
+            ' test.'
     )
 
     parser.add_argument('-P', '--logging-path', metavar='PATH',
             help='Set the root directory to save logs to (this overrides the'
-            ' config setting)',
+            ' config setting).',
     )
     parser.add_argument('-L', '--logging-level',
             choices=[
@@ -496,10 +533,10 @@ def parse():
                 logger.ERROR, 'ERROR',
                 logger.CRITICAL, 'CRITICAL',
             ],
-            help='Set the logging level (this overrides the config setting)',
+            help='Set the logging level (this overrides the config setting).',
     )
     parser.add_argument('-N', '--logging-no-color', action='store_true',
-            help='Turn off logging colors (this overrides the config setting)',
+            help='Turn off logging colors (this overrides the config setting).',
     )
 
     parser.add_argument('--{0}'.format(SHUTDOWN), action='store_true',
@@ -509,13 +546,13 @@ def parse():
     parser.add_argument('--{0}'.format(ADD_SUBREDDIT),
             metavar='SUBREDDIT', nargs='+',
             help='Add subreddit(s) to the comment stream (these are subreddits'
-            ' that the bot crawls by default)',
+            ' that the bot crawls).',
     )
     parser.add_argument('--{0}'.format(RM_SUBREDDIT),
             metavar='SUBREDDIT', nargs='+',
             help='Remove subreddit(s) from the comment stream (the bot will'
             ' no longer crawl these subreddits but will still make replies if'
-            ' summoned)',
+            ' summoned).',
     )
 
     user_example = 'user(s) (eg. \'{0}{1}\')'.format(reddit.PREFIX_USER, AUTHOR)
@@ -530,7 +567,7 @@ def parse():
             metavar='NAME', nargs='+',
             help='Blacklist {user} or {sub} so that the bot no longer replies'
             ' to those user(s) or to comments/posts in those subreddit(s).'
-            ' {note}'.format(
+            ' {note}.'.format(
                 user=user_example,
                 sub=sub_example,
                 note=note,
@@ -540,7 +577,7 @@ def parse():
             metavar='NAME', nargs='+',
             help='Remove {user} or {sub} from the blacklist so that the bot can'
             ' reply to those user(s) or comments/posts in those subreddit(s).'
-            ' {note}'.format(
+            ' {note}.'.format(
                 user=user_example,
                 sub=sub_example,
                 note=note,
@@ -563,7 +600,7 @@ def parse():
     )
 
     parser.add_argument('--{0}'.format(DELETE_DATA), action='store_true',
-            help='Remove all data saved by the program',
+            help='Remove all data saved by the program.',
     )
 
     dump_choices = DUMP_CHOICES + ['*']
@@ -574,31 +611,34 @@ def parse():
             ),
     )
 
-    ig_choices = IG_DB_DISPLAY_CHOICES + ['*']
-    ig_actual_choices = IG_DB_CHOICES + ig_choices
+    ig_actual_choices = IG_DB_CHOICES + IG_DB_DISPLAY_CHOICES
     parser.add_argument('--{0}'.format(IG_DB),
             metavar='NAME', nargs='+',
             choices=ig_actual_choices,
             help='Dump the specified instagram user databases to stdout.'
-            ' Choices: {0}'.format(ig_choices),
+            ' See --{0} for choices.'.format(IG_CHOICES),
     )
     parser.add_argument('--{0}'.format(IG_DB_LIKES), metavar='NAME',
             nargs='+', choices=ig_actual_choices,
             help='Dump the specified instagram user databases to stdout'
             ' sorted by most likes -> least likes.'
-            ' See --{0} for choices'.format(IG_DB),
+            ' See --{0} for choices.'.format(IG_CHOICES),
     )
     parser.add_argument('--{0}'.format(IG_DB_COMMENTS), metavar='NAME',
             nargs='+', choices=ig_actual_choices,
             help='Dump the specified instagram user databases to stdout'
             ' sorted by most comments -> least comments.'
-            ' See --{0} for choices'.format(IG_DB),
+            ' See --{0} for choices.'.format(IG_CHOICES),
     )
     parser.add_argument('--{0}'.format(IG_DB_LINKS_RAW), metavar='NAME',
             nargs='+', choices=ig_actual_choices,
             help='Dump the specified instagram user databases\' links to stdout'
             ' sorted by most comments -> least comments.'
-            ' See --{0} for choices'.format(IG_DB),
+            ' See --{0} for choices.'.format(IG_CHOICES),
+    )
+    parser.add_argument('-I', '--{0}'.format(IG_CHOICES),
+            action='store_true',
+            help='List valid --{0} choices.'.format(IG_DB),
     )
 
     return vars(parser.parse_args())
