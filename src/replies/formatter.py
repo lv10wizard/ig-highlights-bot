@@ -25,7 +25,9 @@ class Formatter(object):
     COMMENT_CHARACTER_LIMIT = 1e4
     # tag usernames in the bot's replies so we can parse them back out easily
     USER_TAG = '[](#ig@{user_raw})'
-    HEADER_FMT = '{0}[@{{user}}]({{link}}) highlights:'.format(USER_TAG)
+    HEADER_HIGHLIGHTS = 'highlights:'
+    HEADER_PRIVATE = '(private account)'
+    HEADER_FMT = '{0}[@{{user}}]({{link}}) {{suffix}}'.format(USER_TAG)
     FOOTER_FMT = (
             '---\n^I&#32;am&#32;a&#32;bot.'
             '&#32;Did&#32;I&#32;get&#32;something&#32;wrong?'
@@ -80,7 +82,7 @@ class Formatter(object):
     def __str__(self):
         return self.__class__.__name__
 
-    def format(self, ig_list, thing):
+    def format(self, ig_list, thing, from_link, is_guess):
         """
         Formats the data into one or more reddit comment reply strings
 
@@ -88,6 +90,8 @@ class Formatter(object):
                 1st element = reply body (<= COMMENT_CHARACTER_LIMIT)
                 2nd element = list of ig_users included in the first element
                     (sublist of ig_list)
+
+                or an empty list if no reply should be made
         """
         replies = []
         current_reply = []
@@ -105,28 +109,47 @@ class Formatter(object):
         )]
 
         for ig in ig_list:
+            if ig.is_private and (from_link or is_guess):
+                # don't link private profiles if there was already a link or
+                # if the parser guessed the username (in case it guessed wrong)
+                # -- the bot re-linking a private profile provides no real value
+                #    and linking a guessed username that is private would
+                #    dramatically increase the number of false positives
+                logger.id(logger.info, self,
+                        'Skipping {color_user}: {verb} private profile',
+                        color_user=ig.user,
+                        verb=('linked' if from_link else 'guessed'),
+                )
+                continue
+
             header = Formatter.HEADER_FMT.format(
                     user_raw=ig.user,
                     # escape markdown characters
                     # (eg. '_foo_' => italicized 'foo')
                     user=re.sub(r'(_)', r'\\\1', ig.user),
                     link=ig.url,
+                    suffix=(
+                        Formatter.HEADER_HIGHLIGHTS
+                        if not ig.is_private
+                        else Formatter.HEADER_PRIVATE
+                    ),
             )
             highlights = []
-            media = ig.top_media
-            for i, media_link in enumerate(media):
-                logger.id(logger.debug, self,
-                        '[{i:>{pad}}/{num}] {color_user}: {link}',
-                        i=i+1,
-                        pad=get_padding(len(media)),
-                        num=len(media),
-                        color_user=ig.user,
+            if not ig.is_private:
+                media = ig.top_media
+                for i, media_link in enumerate(media):
+                    logger.id(logger.debug, self,
+                            '[{i:>{pad}}/{num}] {color_user}: {link}',
+                            i=i+1,
+                            pad=get_padding(len(media)),
+                            num=len(media),
+                            color_user=ig.user,
+                            link=media_link,
+                    )
+                    highlights.append(Formatter.HIGHLIGHT_FMT.format(
+                        i=Formatter._inflect.number_to_words(i+1),
                         link=media_link,
-                )
-                highlights.append(Formatter.HIGHLIGHT_FMT.format(
-                    i=Formatter._inflect.number_to_words(i+1),
-                    link=media_link,
-                ))
+                    ))
 
             current_reply.append(header)
             current_reply.append(' - '.join(highlights))
@@ -177,7 +200,9 @@ class Formatter(object):
         idx = 0
         # XXX: assumes each whole reply constitutes two elements
         step = 2
-        full_reply = Formatter.LINE_DELIM.join(current_reply + footer)
+        full_reply = Formatter.LINE_DELIM.join(
+                list(filter(None, current_reply)) + footer
+        )
         while len(full_reply) >= Formatter.COMMENT_CHARACTER_LIMIT:
             # the total size of the current reply exceeds the maximum allowed
             # comment character length
@@ -186,7 +211,7 @@ class Formatter(object):
             # until the reply is under the character limit
             idx -= step
             full_reply = Formatter.LINE_DELIM.join(
-                    current_reply[:idx] + footer
+                    list(filter(None, current_reply[:idx])) + footer
             )
 
         # don't de-sync the reply & ig_users list in case an overflow happens

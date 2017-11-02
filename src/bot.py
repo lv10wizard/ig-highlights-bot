@@ -149,7 +149,7 @@ class IgHighlightsBot(RunForeverMixin, SubredditsCommentStreamMixin):
                         color_comment=reddit.display_id(comment),
                 )
 
-                ig_usernames = self.filter.replyable_usernames(comment)
+                ig_usernames, _, _ = self.filter.replyable_usernames(comment)
                 if ig_usernames:
                     self.filter.enqueue(comment, ig_usernames)
 

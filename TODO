@@ -392,6 +392,18 @@ O. blacklist subredits the bot has been banned from
     O. remove subreddit
         O. from database
         O. from SUBREDDITS file
+- cancel fetch if insta user has < 1k followers
+    ? make 1k a config option?
+- post link to private profiles if:
+    - no link was given
+        O. '@username', 'ig: ...', '... on ig', and/or 'taken-by=username' links
+            >> not handling 'taken-by=username' links
+        O. DO NOT link string usernames
+        - handle 'taken-by=username' links
+    - user has >= N followers (N=1k)
+    O. differentiate private profiles in instagram database
+        O. add 'is_private' property to Instagram class
+? reply to summoner instead of trigger comment(s)
 - test stale ig queue
 - test replies
     - test comments are stored properly

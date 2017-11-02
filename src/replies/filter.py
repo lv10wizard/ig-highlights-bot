@@ -351,9 +351,18 @@ class Filter(object):
             self, thing, prelim_check=True, check_thread=True
     ):
         """
-        Returns a list of instagram usernames contained in the thing that the
-        bot can reply to or an empty list if the bot cannot reply to the thing
-        for any reason.
+        Returns a tuple(list, from_link, is_guess) where
+
+                the list consists of instagram usernames contained in the thing
+                that the bot can reply to or an empty list if the bot cannot
+                reply to the thing for any reason.
+
+                from_link - a bool indicating that the usernames were parsed
+                from hard-links (eg. https://instagram.com/instagram)
+
+                is_guess - a bool indicating that the usernames were parsed
+                from single word strings that look like instagram usernames
+                (eg. 'foobar')
 
         prelim_check (bool, optional) - whether preliminary thing checks
                 should be preformed. If this is False, the thing will be
@@ -363,11 +372,18 @@ class Filter(object):
                 in terms of reddit's ratelimit)
         """
         usernames = []
+        from_link = None
+        is_guess = None
         # filter out things that the bot cannot reply to
         if thing and (not prelim_check or self._can_reply(thing)):
             parsed_thing = Parser(thing)
             thing_usernames = parsed_thing.ig_usernames
-            # filter out things that contain no instagram usernames
+            # XXX: these values must be set after .ig_usernames is referenced
+            # since parsing is done lazily (.from_link, .is_guess are not set
+            # until usernames have been parsed)
+            from_link = parsed_thing.from_link
+            is_guess = parsed_thing.is_guess
+            # filter out things that the bot should not reply to
             if thing_usernames:
                 new_usernames = self._prune_already_posted_users(
                         reddit.get_submission_for(thing), thing_usernames,
@@ -385,7 +401,7 @@ class Filter(object):
                     if not too_many_replies:
                         usernames = new_usernames
 
-        return usernames
+        return (usernames, from_link, is_guess)
 
     # TODO? move; this doesn't really belong here ...
     def enqueue(self, thing, ig_usernames, mention=None):

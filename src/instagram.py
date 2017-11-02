@@ -273,10 +273,10 @@ class Instagram(object):
             ),
 
             # match a possible instagram username if it is the only word
-            r'^@?({0})$'.format(USERNAME_PTN),
-            # |\_____/ \
-            # |   |  only match entire word
-            # \  capture possible username string
+            r'^(?P<guess>{0})$'.format(USERNAME_PTN),
+            # |\____________/ \
+            # |      |       only match entire word
+            # \    capture possible username string
             # only match entire word
     ]
     IG_USER_STRING_REGEX = re.compile(
@@ -442,6 +442,20 @@ class Instagram(object):
             return None
 
     @property
+    def is_private(self):
+        private = None
+        if os.path.exists(self.__db_path):
+            try:
+                media_cache = self.__cache
+            except AttributeError:
+                media_cache = database.InstagramDatabase(self.__db_path)
+                self.__cache = media_cache
+
+            private = media_cache.is_private_account
+
+        return private
+
+    @property
     def top_media(self):
         """
         Cached wrapper around __get_top_media worker
@@ -480,8 +494,9 @@ class Instagram(object):
         Returns the user's most popular media (the exact number is defined in
                 the config)
                 or None if the fetch was interrupted
-                or False if the user's profile is private or not a user page
+                or False if the user's profile is not a user page
                     (eg. instagram.com/about)
+                or True if the user's profile is private
         """
         if depth > 1:
             # probably about to recurse infinitely.
@@ -529,12 +544,16 @@ class Instagram(object):
             try:
                 media_cache = self.__cache
             except AttributeError:
-                media_cache = database.InstagramDatabase(self.__db_path)
+                self.__cache = database.InstagramDatabase(self.__db_path)
+                media_cache = self.__cache
             if media_cache.size() == 0:
                 # re-fetch an outdated existing cache
                 # (outdated meaning the cached version no longer reflects
                 #  the way the database behaves in code)
                 data = self.__get_top_media(True, depth=depth+1)
+            elif self.is_private:
+                # return True to indicate that the profile is private
+                data = True
             else:
                 data = media_cache.get_top_media(num_highlights)
                 if num_highlights > 0 and not data:
@@ -696,16 +715,147 @@ class Instagram(object):
             self.__enqueue()
         return is_rate_limited
 
+    def __get_meta_data(self):
+        """
+        Fetches user meta data (eg. num followers, is private, etc)
+
+        Returns a tuple(exists, is_private, num_followers) where
+
+                exists - bool indicating whether the user account exists
+
+                is_private - bool indicating whether the user account is private
+
+                num_followers - int number of followers of the account
+
+                or None if the bot is instagram ratelimited, instagram is
+                        experiencing server issues (ie, 500-level code), or
+                        the request timed out
+        """
+        logger.id(logger.info, self, 'Fetching meta data ...')
+
+        if self.__handle_rate_limit() or Instagram.has_server_error():
+            return
+
+        response = Instagram._requestor.request(
+                Instagram.META_ENDPOINT.format(self.user),
+        )
+        if response is None:
+            return
+
+        try:
+            self._rate_limit.insert(response.url)
+        except database.UniqueConstraintFailed:
+            logger.id(logger.critical, self,
+                    'Failed to count rate-limit hit (#{num} used):'
+                    ' {url}',
+                    num=self._rate_limit.num_used(),
+                    url=response.url,
+                    exc_info=True,
+            )
+            # TODO? raise
+        else:
+            self._rate_limit.commit()
+
+        if response.status_code // 100 == 5:
+            Instagram._server_error_timestamp = time.time()
+            Instagram._server_error_delay = requestor.choose_delay(
+                    Instagram._server_error_delay or 1
+            )
+            logger.id(logger.debug, self,
+                    'Setting Instagram delay = {delay}'
+                    ' (expires @ {strftime})',
+                    delay=Instagram._server_error_delay,
+                    strftime='%m/%d, %H:%M:%S',
+                    strf_time=(
+                        Instagram._server_error_timestamp
+                        + Instagram._server_error_delay
+                    ),
+            )
+            return
+
+        exists = None
+        is_private = None
+        num_followers = -1
+
+        if Instagram.has_server_error():
+            logger.id(logger.debug, self,
+                    'Resetting Instagram delay (t={strftime}) ...',
+                    strftime='%H:%M:%S',
+            )
+            Instagram._server_error_timestamp = 0
+            Instagram._server_error_delay = 0
+
+        if response.status_code == 404:
+            exists = False
+        else:
+            try:
+                data = response.json()
+            except ValueError:
+                # not a valid user (eg. /about page)
+                exists = False
+
+            else:
+                try:
+                    is_private = data['user']['is_private']
+                    num_followers = data['user']['followed_by']['count']
+                except KeyError:
+                    logger.id(logger.warn, self,
+                            'Meta data json structure changed!',
+                            exc_info=True,
+                    )
+                    logger.id(logger.debug, self,
+                            'json:\n\n{pprint_data}\n\n',
+                            pprint_data=data,
+                    )
+                else:
+                    exists = True
+
+        return (exists, is_private, num_followers)
+
     def __fetch_data(self):
         """
         Fetches user data from instagram
 
-        Returns True if successfully fetches all of the user's data
+        Returns True if all of the user's data was fetched successfully or
+                        the account is private
                 or None if fetching was interrupted
-                or False if the user is not valid (404 or a private/non-user page
-                    eg. instagram.com/about)
+                or False if the user does not exist or is not a user page
+                        eg. instagram.com/about
         """
         success = None
+
+        # don't bother looking up the user's metadata if they are already
+        # queued since that should mean that they already passed these
+        # checks
+        if self.user not in Instagram._ig_queue:
+            data = self.__get_meta_data()
+            if not data:
+                return
+
+            exists, is_private, num_followers = data
+            if not exists:
+                try:
+                    self.__cache.flag_as_bad()
+
+                except AttributeError:
+                    self.__cache = database.InstagramDatabase(self.__db_path)
+                    self.__cache.flag_as_bad()
+
+                success = False
+
+            elif is_private:
+                try:
+                    self.__cache.flag_as_private()
+
+                except AttributeError:
+                    self.__cache = database.InstagramDatabase(self.__db_path)
+                    self.__cache.flag_as_private()
+
+                success = True
+
+            if success is not None:
+                return success
+
         if not self.__handle_rate_limit():
             data = None
             last_id = Instagram._ig_queue.get_last_id_for(self.user)
@@ -773,8 +923,8 @@ class Instagram(object):
                         if Instagram.has_server_error():
                             logger.id(logger.debug, self,
                                     'Resetting Instagram delay'
-                                    ' (t={timestamp}) ...',
-                                    timestamp=time.time(),
+                                    ' (t={strftime}) ...',
+                                    strftime='%H:%M:%S',
                             )
                             Instagram._server_error_timestamp = 0
                             Instagram._server_error_delay = 0

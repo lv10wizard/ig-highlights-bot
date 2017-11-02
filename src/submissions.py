@@ -39,7 +39,7 @@ class Submissions(ProcessMixin, SubredditsSubmissionsStreamMixin):
                         color_submission=reddit.display_id(submission),
                 )
 
-                ig_usernames = self.filter.replyable_usernames(submission)
+                ig_usernames, _, _ = self.filter.replyable_usernames(submission)
                 if ig_usernames:
                     self.filter.enqueue(submission, ig_usernames)
 

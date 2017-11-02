@@ -133,7 +133,7 @@ class Replier(ProcessMixin, RedditInstanceMixin):
             with self.potential_subreddits:
                 self.potential_subreddits.delete(submission)
 
-    def _reply(self, thing, ig_list, ig_list_usernames):
+    def _reply(self, thing, ig_list, ig_list_usernames, from_link, is_guess):
         """
         Replies to a single thing with (potentially) multiple instagram user
         highlights
@@ -148,8 +148,23 @@ class Replier(ProcessMixin, RedditInstanceMixin):
                 color_list=ig_list_usernames,
         )
 
-        reply_list = self.formatter.format(ig_list, thing)
-        if len(reply_list) > self.cfg.max_replies_per_comment:
+        reply_list = self.formatter.format(ig_list, thing, from_link, is_guess)
+        if not reply_list:
+            # nothing to reply
+            # most likely a linked/guessed private profile
+            logger.id(logger.info, self,
+                    'No data to reply to {color_thing}: skipping.',
+                    color_thing=reddit.display_id(thing),
+            )
+            logger.id(logger.debug, self,
+                    '\nfrom_link: {yesno_fromlink}'
+                    '\nis_guess:  {yesno_isguess}',
+                    yesno_fromlink=from_link,
+                    yesno_isguess=is_guess,
+            )
+            return
+
+        elif len(reply_list) > self.cfg.max_replies_per_comment:
             # too many replies formed
             logger.id(logger.info, self,
                     '{color_thing} (by {color_author}) almost made me reply'
@@ -240,7 +255,7 @@ class Replier(ProcessMixin, RedditInstanceMixin):
             # (this is also duplicated work but it ensures that things are
             #  replied-to properly; ie, all instagram users linked to by the
             #  thing are responded to)
-            ig_usernames = self.filter.replyable_usernames(
+            ig_usernames, from_link, is_guess = self.filter.replyable_usernames(
                     thing,
                     # don't bother with preliminary checks; they should have
                     # already passed
@@ -284,8 +299,7 @@ class Replier(ProcessMixin, RedditInstanceMixin):
                     ig_list = list(filter(None, ig_list))
                     ig_list_usernames = [ig.user for ig in ig_list]
                     if len(ig_usernames) != len(ig_list):
-                        # there were some private/non-user pages linked in the
-                        # thing
+                        # there were some non-user pages linked in the thing
                         missing = set(ig_usernames) - set(ig_list_usernames)
                         logger.id(logger.info, self,
                                 '[{color_thing}] Skipping #{num}'
@@ -317,7 +331,13 @@ class Replier(ProcessMixin, RedditInstanceMixin):
                         ):
                             self._add_potential_subreddit(submission)
 
-                    self._reply(thing, ig_list, ig_list_usernames)
+                    self._reply(
+                            thing,
+                            ig_list,
+                            ig_list_usernames,
+                            from_link,
+                            is_guess,
+                    )
 
     def _run_forever(self):
         # XXX: instantiated here so that the _reddit instance is constructed

@@ -207,6 +207,14 @@ class _ParserStrategy(object):
 
     def __init__(self, thing):
         self.thing = thing
+        # track whether the usernames were parsed from links or guesses
+        # XXX: this assumes that usernames are exclusively parsed from links
+        # and other ('@username', suffix, prefix, guesses). that is, if a
+        # single username was from a link, this assumes that all were from
+        # links. similarly, if one username was a guess then all usernames
+        # were guesses.
+        self.from_link = None
+        self.is_guess = None
 
     def __str__(self):
         return ':'.join([
@@ -353,7 +361,7 @@ class _ParserStrategy(object):
         """
         usernames = Parser._username_cache[self.thing.fullname]
         if usernames is None:
-            from_link = True
+            self.from_link = True
             usernames = []
             # look for usernames from links first since they are all but
             # guaranteed to be accurate
@@ -368,7 +376,7 @@ class _ParserStrategy(object):
                         usernames.append(match.group('user'))
 
             if not usernames:
-                from_link = False
+                self.from_link = False
                 # try looking username-like strings in the thing in
                 # case the user soft-linked one or more usernames
                 # eg. '@angiegoesboom'
@@ -408,7 +416,7 @@ class _ParserStrategy(object):
                         color=usernames,
                 )
 
-                if not from_link:
+                if not self.from_link:
                     # prune previous bad matches (eg. usernames that were
                     # deleted due to downvotes)
                     usernames_db = _ParserStrategy._bad_usernames
@@ -448,7 +456,6 @@ class _ParserStrategy(object):
 
         Returns a list of username candidates
         """
-        LENGTH_THRESHOLD = 4
         usernames = []
         body_split = self._thing_text.split('\n')
         # try looking for a non-dictionary, non-jargon word.
@@ -466,11 +473,12 @@ class _ParserStrategy(object):
         ):
             matches = []
             for text in body_split:
-                # flatten the list of matches
-                # https://stackoverflow.com/a/8481590
-                matches += list(itertools.chain.from_iterable(
-                        Instagram.IG_USER_STRING_REGEX.findall(text.strip())
-                ))
+                # XXX: .search() will only match one user per line
+                match = Instagram.IG_USER_STRING_REGEX.search(text.strip())
+                if match:
+                    if match.group('guess'):
+                        self.is_guess = True
+                    matches += list(filter(None, match.groups()))
 
             for name in matches:
                 if not name:
@@ -676,6 +684,21 @@ class Parser(object):
             self.__ig_usernames = usernames
 
         return usernames.copy()
+
+    @property
+    def from_link(self):
+        """
+        Returns True if the parsed usernames correspond to hard-linked usernames
+        """
+        return self._strategy.from_link if self._strategy else None
+
+    @property
+    def is_guess(self):
+        """
+        Returns True if the parsed usernames correspond to guesses
+                (single word string that looks like a username)
+        """
+        return self._strategy.is_guess if self._strategy else None
 
 
 __all__ = [

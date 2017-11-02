@@ -116,6 +116,17 @@ def test_instagram_matches_potential_ig_user_strings(string, expected):
     assert expected in match.groups()
 
 @pytest.mark.parametrize('string', [
+    'stephxohaven',
+    'vyvan.le',
+    'chaileeson',
+    'hanny_madani',
+])
+def test_instagram_guesses_potential_ig_user_strings(string):
+    match = Instagram.IG_USER_STRING_REGEX.search(string)
+    assert match
+    assert match.group('guess') == string
+
+@pytest.mark.parametrize('string', [
     'Yo that\'s not cool',
     'Story of my life.',
     'Sauce? sauce sauce',

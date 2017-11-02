@@ -47,16 +47,18 @@ class Mentions(ProcessMixin, StreamMixin):
         )
 
         replyable_thing = False
-        ig_usernames = self.filter.replyable_usernames(submission)
+        ig_usernames, _, _ = self.filter.replyable_usernames(submission)
         if ig_usernames:
             replyable_thing = True
             self.filter.enqueue(submission, ig_usernames, mention)
 
         for comment in submission.comments.list():
-            ig_usernames = self.filter.replyable_usernames(comment)
+            ig_usernames, _, _ = self.filter.replyable_usernames(comment)
             if ig_usernames:
                 replyable_thing = True
                 self.filter.enqueue(comment, ig_usernames, mention)
+        # TODO? reply once to the mention with all ig_usernames instead of to
+        # each individual submission/comment
 
         # XXX: flagging bad actors from failed mentions temporarily(?) turned
         # off because there are too many false positive cases. further, I doubt
