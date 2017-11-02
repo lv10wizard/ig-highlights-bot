@@ -43,6 +43,7 @@ BAD_ACTOR_THRESHOLD             = 'bad_actor_threshold'
 
 SECTION_INSTAGRAM               = 'INSTAGRAM'
 INSTAGRAM_CACHE_EXPIRE_TIME     = 'instagram_cache_expire_time'
+MIN_FOLLOWER_COUNT              = 'min_follower_count'
 
 SECTION_LOGGING                 = 'LOGGING'
 LOGGING_PATH                    = 'logging_path'
@@ -429,6 +430,10 @@ class Config(object):
     @property
     def instagram_cache_expire_time(self):
         return self.__get_time(SECTION_INSTAGRAM, INSTAGRAM_CACHE_EXPIRE_TIME)
+
+    @property
+    def min_follower_count(self):
+        return self.__get(SECTION_INSTAGRAM, MIN_FOLLOWER_COUNT, 'getint')
 
     # ##################################################################
     # [LOGGING]

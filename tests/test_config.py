@@ -92,6 +92,7 @@ def test_config__str__(tmpdir_factory):
     ('bad_actor_threshold', 3),
 
     ('instagram_cache_expire_time', config.parse_time('7d')),
+    ('min_follower_count', 1000),
 
     ('logging_path',
         config.resolve_path(

@@ -822,7 +822,6 @@ class Instagram(object):
                 or False if the user does not exist or is not a user page
                         eg. instagram.com/about
         """
-        success = None
 
         # don't bother looking up the user's metadata if they are already
         # queued since that should mean that they already passed these
@@ -841,7 +840,7 @@ class Instagram(object):
                     self.__cache = database.InstagramDatabase(self.__db_path)
                     self.__cache.flag_as_bad()
 
-                success = False
+                return False
 
             elif is_private:
                 try:
@@ -851,11 +850,30 @@ class Instagram(object):
                     self.__cache = database.InstagramDatabase(self.__db_path)
                     self.__cache.flag_as_private()
 
-                success = True
+                return True
 
-            if success is not None:
-                return success
+            if num_followers < Instagram.cfg.min_follower_count:
+                # don't fetch any data for accounts with too few followers.
+                # this should hopefully prevent any inadvertent doxxing by
+                # the bot. it should also help prune false positive username
+                # guesses.
+                logger.id(logger.info, self,
+                        '{color_user} has too few followers: skipping.'
+                        ' ({num_followers < {min_count})',
+                        num_followers=num_followers,
+                        min_count=Instagram.cfg.min_follower_count,
+                )
 
+                try:
+                    self.__cache.flag_as_bad()
+
+                except AttributeError:
+                    self.__cache = database.InstagramDatabase(self.__db_path)
+                    self.__cache.flag_as_bad()
+
+                return False
+
+        success = None
         if not self.__handle_rate_limit():
             data = None
             last_id = Instagram._ig_queue.get_last_id_for(self.user)
