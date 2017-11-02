@@ -27,7 +27,7 @@ from src.database import (
         BadUsernamesDatabase,
         SubredditsDatabase,
 )
-from src.instagram import Instagram
+from src import instagram
 from src.util import (
         logger,
         remove_duplicates,
@@ -251,7 +251,7 @@ class _ParserStrategy(object):
                 color_sanitized=url,
         )
 
-        match = Instagram.IG_LINK_REGEX.search(url)
+        match = instagram.IG_LINK_REGEX.search(url)
         if match:
             logger.id(logger.debug, self,
                     'Matched user profile link: {color_link}',
@@ -262,7 +262,7 @@ class _ParserStrategy(object):
         else:
             # try looking for the username in the query in case
             # it is a media link
-            match = Instagram.IG_LINK_QUERY_REGEX.search(url)
+            match = instagram.IG_LINK_QUERY_REGEX.search(url)
             if match:
                 logger.id(logger.debug, self,
                         'Matched query user profile link:'
@@ -306,7 +306,7 @@ class _ParserStrategy(object):
 
         links = [
                 match[0] for match in
-                Instagram.IG_LINK_REGEX.findall(self._thing_text)
+                instagram.IG_LINK_REGEX.findall(self._thing_text)
         ]
         if links:
             logger.id(logger.debug, self,
@@ -318,7 +318,7 @@ class _ParserStrategy(object):
         else:
             links = [
                     match[0] for match in
-                    Instagram.IG_LINK_QUERY_REGEX.findall(self._thing_text)
+                    instagram.IG_LINK_QUERY_REGEX.findall(self._thing_text)
             ]
             if links:
                 logger.id(logger.debug, self,
@@ -366,12 +366,12 @@ class _ParserStrategy(object):
             # look for usernames from links first since they are all but
             # guaranteed to be accurate
             for link in self.parse_links():
-                match = Instagram.IG_LINK_REGEX.search(link)
+                match = instagram.IG_LINK_REGEX.search(link)
                 if match:
                     usernames.append(match.group('user'))
 
                 else:
-                    match = Instagram.IG_LINK_QUERY_REGEX.search(link)
+                    match = instagram.IG_LINK_QUERY_REGEX.search(link)
                     if match:
                         usernames.append(match.group('user'))
 
@@ -392,7 +392,7 @@ class _ParserStrategy(object):
                 )
 
                 # try '@username'
-                usernames = Instagram.IG_AT_USER_REGEX.findall(self._thing_text)
+                usernames = instagram.IG_AT_USER_REGEX.findall(self._thing_text)
                 # TODO: this should not be turned on if the bot is
                 # crawling any popular subreddit -- but how to determine
                 # if a subreddit is popular?
@@ -467,14 +467,14 @@ class _ParserStrategy(object):
                 len(self._thing_text.strip().split()) == 1
                 # thing looks like it could contain an instagram user
                 or any(
-                    Instagram.HAS_IG_KEYWORD_REGEX.search(text.strip())
+                    instagram.HAS_IG_KEYWORD_REGEX.search(text.strip())
                     for text in body_split
                 )
         ):
             matches = []
             for text in body_split:
                 # XXX: .search() will only match one user per line
-                match = Instagram.IG_USER_STRING_REGEX.search(text.strip())
+                match = instagram.IG_USER_STRING_REGEX.search(text.strip())
                 if match:
                     if match.group('guess'):
                         self.is_guess = True
