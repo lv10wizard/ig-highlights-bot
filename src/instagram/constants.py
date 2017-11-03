@@ -5,7 +5,7 @@ import re
 # imposed (this is a rolling limit per max_age, eg. 3000 / hr)
 # XXX: I don't think this should be a config option since the user shouldn't
 # be allowed to change this to any number they wish
-RATE_LIMIT_THRESHOLD = 1000
+RATELIMIT_THRESHOLD = 1000
 
 BASE_URL_VARIATIONS = [
         'instagram.com',
