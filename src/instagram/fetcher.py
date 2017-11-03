@@ -1,4 +1,7 @@
+import re
 import time
+
+from six import string_types
 
 from .constants import (
         MEDIA_ENDPOINT,
@@ -281,15 +284,76 @@ class Fetcher(object):
 
         return (exists, is_private, num_followers)
 
-    def _handle_bad_json(self):
+    def _handle_bad_json(self, err):
         """
+        Handles the case where the media endpoint returns invalid json
         """
-        pass
+        try:
+            num_tries = self.__bad_json_tries
+        except AttributeError:
+            num_tries = 0
+        self.__bad_json_tries = num_tries + 1
+
+        if num_tries < 10:
+            delay = 5
+            logger.id(logger.debug, self,
+                    'Bad json! Retrying in {time} (#{num}) ...',
+                    time=delay,
+                    num=num_tries,
+                    exc_info=True,
+            )
+
+            if (
+                    logger.is_enabled_for(logger.DEBUG)
+                    and isinstance(err.args[0], string_types)
+            ):
+                # try to determine some context
+                # ' ... line 1 column 69152 (char 69151)'
+                match = re.search(r'[(]char (\d+)[)]', err.args[0])
+                if match:
+                    # TODO: dynamically determine context amount from error
+                    # -- probably should shift to util/json.py or something
+                    ctx = 100
+                    idx = int(match.group(1))
+                    start = max(0, idx - ctx)
+                    end = min(idx + ctx, len(response.text))
+                    logger.id(logger.debug, self,
+                            'Response snippet @ {idx}'
+                            ' [{start} : {end}]:'
+                            '\n\n{snippet}\n\n',
+                            idx=idx,
+                            start=start,
+                            end=end,
+                            snippet=response.text[
+                                start:end
+                            ],
+                    )
+
+            if hasattr(self.killed, 'wait'):
+                do_wait = self.killed.wait
+            else:
+                do_wait = time.sleep
+            do_wait(delay)
+
+        else:
+            # too many retries hitting bad json; maybe the endpoint changed?
+            logger.id(logger.critical, self,
+                    'Too many bad json retries! Did the endpoint change?'
+                    ' ({endpoint})',
+                    endpoint=MEDIA_ENDPOINT,
+                    exc_info=True,
+            )
+            self._enqueue()
+            raise
 
     def _reset_bad_json(self):
         """
+        Resets the cached variables used to handle bad json
         """
-        pass
+        try:
+            del self.__bad_json_tries
+        except AttributeError:
+            pass
 
     def _parse_data(self, data):
         """
@@ -352,7 +416,8 @@ class Fetcher(object):
                     try:
                         data = response.json()
                     except ValueError as e:
-                        self._handle_bad_json()
+                        # I'm not sure why this happens
+                        self._handle_bad_json(e)
 
                     else:
                         self._reset_bad_json()
