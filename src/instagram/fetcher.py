@@ -5,6 +5,7 @@ from .constants import (
         META_ENDPOINT,
         RATELIMIT_THRESHOLD,
 )
+from .cache import Cache
 from .instagram import Instagram
 from src.database import (
         InstagramRateLimitDatabase,
@@ -74,6 +75,12 @@ class Fetcher(object):
                 # TODO? raise
             else:
                 Fetcher.ratelimit.commit()
+
+    @classproperty
+    def is_ratelimited(cls):
+        num_used = Fetcher.ratelimit.num_used()
+        num_remaining = RATELIMIT_THRESHOLD - num_used
+        return num_remaining <= 0
 
     @staticmethod
     def _handle_rate_limit():
@@ -185,11 +192,14 @@ class Fetcher(object):
 
         return response
 
-# ######################################################################
+    # ##################################################################
 
     def __init__(self, user, killed=None):
         self.user = user
         self.killed = killed
+        self.cache = Cache(user)
+        self.last_id = None
+        self._fetch_started = False
 
     def __str__(self):
         result = [__name__, self.__class__.__name__]
@@ -197,7 +207,24 @@ class Fetcher(object):
             result.append(self.user)
         return ':'.join(result)
 
-    def get_meta_data(self):
+    @property
+    def _killed(self):
+        """
+        Returns whether the optional killed flag is set
+        """
+        was_killed = bool(self.killed)
+        if hasattr(self.killed, 'is_set'):
+            was_killed = self.killed.is_set()
+
+        if was_killed:
+            self._enqueue()
+        return was_killed
+
+    def _enqueue(self):
+        if self._fetch_started:
+            self.cache.enqueue(self.last_id)
+
+    def _get_meta_data(self):
         """
         Fetches user meta data (eg. num followers, is private, etc)
 
@@ -254,6 +281,27 @@ class Fetcher(object):
 
         return (exists, is_private, num_followers)
 
+    def _handle_bad_json(self):
+        """
+        """
+        pass
+
+    def _reset_bad_json(self):
+        """
+        """
+        pass
+
+    def _parse_data(self, data):
+        """
+        """
+        pass
+
+    def should_fetch(self):
+        """
+        Returns True if the user's data should be (re-)fetched
+        """
+        pass # TODO: basically copy/paste __get_top_media()
+
     def fetch_data(self):
         """
         Fetches user data from instagram
@@ -264,7 +312,87 @@ class Fetcher(object):
                 or False if the user does not exist or is not a user page
                         eg. instagram.com/about
         """
-        pass
+        success = None
+        data = None
+        self.last_id = self.cache.queued_last_id
+
+        msg = ['Fetching data']
+        if self.last_id:
+            msg.append('(starting @ {last_id})')
+        msg.append('...')
+        logger.id(logger.info, self,
+                ' '.join(msg),
+                last_id=self.last_id,
+        )
+
+        try:
+            while not data or data['more_available']:
+                if self._killed:
+                    break
+
+                response = Fetcher.request(
+                        MEDIA_ENDPOINT.format(self.user),
+                        params={
+                            'max_id': self.last_id,
+                        },
+                )
+                if (
+                        response is None
+                        or response is False
+                        or Fetcher.has_server_issue(response)
+                ):
+                    self._enqueue()
+                    break
+
+                # seeing one actual response indicates that the fetch has
+                # started in earnest
+                self._fetch_started = True
+
+                if response.status_code == 200:
+                    try:
+                        data = response.json()
+                    except ValueError as e:
+                        self._handle_bad_json()
+
+                    else:
+                        self._reset_bad_json()
+                        success = self._parse_data(data)
+                        if success is False:
+                            # private/non-user page
+                            break
+                        if not data['more_available']:
+                            # parsed the last set of items
+                            success = True
+
+                elif response.status_code == 404:
+                    # I'm not sure this can happen
+                    success = False
+                    break
+
+                elif response.status_code // 100 == 4:
+                    # client error
+                    self._enqueue()
+                    response.raise_for_status()
+
+        except (KeyError, TypeError):
+            if data:
+                logger.id(logger.debug, self,
+                        'data:\n\n{pprint_data}\n\n',
+                        pprint_data=data,
+                )
+            logger.id(logger.critical, self,
+                    'Failed to fetch {color_user}\'s media!'
+                    ' Response structure changed.',
+                    color_user=self.user,
+                    exc_info=True,
+            )
+            self._enqueue()
+            raise
+
+        if success is False:
+            self.cache.flag_as_bad()
+
+        return success
 
 
 __all__ = [

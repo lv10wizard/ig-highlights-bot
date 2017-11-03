@@ -49,7 +49,6 @@ class Instagram(object):
     def __init__(self, user, killed=None):
         # all instagram usernames are lowercase
         self.user = user.lower()
-        self.killed = killed
 
         if not Instagram._cfg:
             logger.id(logger.critical, self,
