@@ -58,7 +58,7 @@ class IgHighlightsBot(RunForeverMixin, SubredditsCommentStreamMixin):
         )
 
         # initialize stuff that requires correct credentials
-        instagram.Instagram.initialize(cfg, self._reddit.username)
+        instagram.initialize(cfg, self._reddit.username)
         self.filter = replies.Filter(
                 cfg, self._reddit.username_raw, self.blacklist,
         )
