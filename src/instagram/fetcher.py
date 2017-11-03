@@ -130,6 +130,14 @@ class Fetcher(object):
         return is_ratelimited
 
     @staticmethod
+    def _is_bad_response(response):
+        return (
+                response is None
+                or response is False
+                or Fetcher.has_server_issue(response)
+        )
+
+    @staticmethod
     def has_server_issue(response):
         return response is not None and response.status_code // 100 == 5
 
@@ -244,11 +252,7 @@ class Fetcher(object):
         logger.id(logger.info, self, 'Fetching meta data ...')
 
         response = Fetcher.request(META_ENDPOINT.format(self.user))
-        if (
-                response is None
-                or response is False
-                or Fetcher.has_server_issue(response)
-        ):
+        if Fetcher._is_bad_response(response):
             return
 
         exists = None
@@ -400,11 +404,7 @@ class Fetcher(object):
                             'max_id': self.last_id,
                         },
                 )
-                if (
-                        response is None
-                        or response is False
-                        or Fetcher.has_server_issue(response)
-                ):
+                if Fetcher._is_bad_response(response):
                     self._enqueue()
                     break
 
