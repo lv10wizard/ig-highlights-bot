@@ -198,12 +198,12 @@ IG_USER_STRING_REGEX = [
 
         # match a prefixed potential instagram username
         # eg. 'IG: foobar'
-        r'^(?:{1})@?(?P<prefix>{0})$'.format(
-        # |\_____/\_______________/ \
-        # |   |           |       only match if at the end of string
-        # |   |        capture possible username string
-        # \ match instagram keywords prefix
-        # only match if at the beginning of the string
+        r'(?:^|\s+)(?:{1})@?(?P<prefix>{0})$'.format(
+        # \_______/\_____/\_______________/ \
+        #     |   |           |       only match if at the end of string
+        #     |   |        capture possible username string
+        #     / match instagram keywords prefix
+        #   only match if at the beginning of the string
             USERNAME_PTN, _IG_KEYWORD_PREFIX,
         ),
 

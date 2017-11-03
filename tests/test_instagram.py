@@ -109,6 +109,7 @@ def test_instagram_does_not_overmatch_has_ig_keyword_strings(string):
     ('IG - Sugarnatty88', 'Sugarnatty88'),
     ('Her IG - Sugarnatty88', 'Sugarnatty88'),
     ('stephxohaven on insta and snap', 'stephxohaven'),
+    ('Allie love on the right. IG is baristaallie', 'baristaallie'),
 ])
 def test_instagram_matches_potential_ig_user_strings(string, expected):
     match = instagram.IG_USER_STRING_REGEX.search(string)
