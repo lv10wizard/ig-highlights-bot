@@ -406,6 +406,9 @@ O. post link to private profiles if:
         O. add 'is_private' property to Instagram class
 ? reply to summoner instead of trigger comment(s)
 - use .executemany in InstagramDatabase._delete
+? differentiate between non-existant IG user & too few followers
+    both are just flagged as BAD right now
+
 - test stale ig queue
 - test replies
     - test comments are stored properly

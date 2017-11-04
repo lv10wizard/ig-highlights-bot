@@ -9,7 +9,6 @@ from .constants import (
         RATELIMIT_THRESHOLD,
 )
 from .cache import Cache
-from .instagram import Instagram
 from src.database import (
         InstagramRateLimitDatabase,
         UniqueConstraintFailed,
@@ -47,6 +46,8 @@ class Fetcher(object):
 
     @classproperty
     def requestor(cls):
+        from .instagram import Instagram
+
         if not Fetcher._requestor:
             Fetcher._requestor = requestor.Requestor(
                     headers={
@@ -211,12 +212,22 @@ class Fetcher(object):
         self.cache = Cache(user)
         self.last_id = None
         self._fetch_started = False
+        self._valid_response = True
 
     def __str__(self):
         result = [__name__, self.__class__.__name__]
         if self.user:
             result.append(self.user)
         return ':'.join(result)
+
+    @property
+    def valid_response(self):
+        """
+        Returns True if the last request (if any) returned a valid response
+                or False if the last response was not valid and not fatal
+                        see: _is_bad_response
+        """
+        return self._valid_response
 
     @property
     def _killed(self):
@@ -234,59 +245,6 @@ class Fetcher(object):
     def _enqueue(self):
         if self._fetch_started:
             self.cache.enqueue(self.last_id)
-
-    def _get_meta_data(self):
-        """
-        Fetches user meta data (eg. num followers, is private, etc)
-
-        Returns a tuple(exists, is_private, num_followers) where
-                exists (bool) - whether the user account exists
-                is_private (bool) - whether the account is private
-                num_followers (int) - the number of followers of the account
-
-                or None if the bot is instagram ratelimited, instagram is
-                        experiencing server issues (ie, 500-level status code)
-                        or the request timed out
-        """
-        # TODO: skip if self.user is in ig_queue
-        logger.id(logger.info, self, 'Fetching meta data ...')
-
-        response = Fetcher.request(META_ENDPOINT.format(self.user))
-        if Fetcher._is_bad_response(response):
-            return
-
-        exists = None
-        is_private = None
-        num_followers = -1
-
-        if response.status_code == 404:
-            # the user does not exist
-            exists = False
-
-        else:
-            try:
-                data = response.json()
-            except ValueError:
-                # not a valid user (eg. /about page)
-                exists = False
-
-            else:
-                try:
-                    is_private = data['user']['is_private']
-                    num_followers = data['user']['followed_by']['count']
-                except KeyError:
-                    logger.id(logger.exception, self,
-                            'Meta data json structure changed!',
-                            exc_info=True,
-                    )
-                    logger.id(logger.debug, self,
-                            'json:\n\n{pprint_data}\n\n',
-                            pprint_data=data,
-                    )
-                else:
-                    exists = True
-
-        return (exists, is_private, num_followers)
 
     def _handle_bad_json(self, err):
         """
@@ -391,18 +349,76 @@ class Fetcher(object):
 
         return success
 
+    @property
     def should_fetch(self):
         """
         Returns True if the user's data should be (re-)fetched
         """
-        pass # TODO: basically copy/paste __get_top_media()
+        # either cache is expired or does not exist
+        # or data was queued for this user from a previous fetch
+        # (ie: a fetch should be resumed)
+        # -- queued data should imply expired I think
+        return self.cache.expired or self.cache.queued_last_id
+
+    def get_meta_data(self):
+        """
+        Fetches user meta data (eg. num followers, is private, etc)
+
+        Returns a tuple(exists, is_private, num_followers) where
+                exists (bool) - whether the user account exists
+                is_private (bool) - whether the account is private
+                num_followers (int) - the number of followers of the account
+
+                or None if the bot is instagram ratelimited, instagram is
+                        experiencing server issues (ie, 500-level status code)
+                        or the request timed out
+        """
+        # TODO: skip if self.user is in ig_queue
+        logger.id(logger.info, self, 'Fetching meta data ...')
+
+        response = Fetcher.request(META_ENDPOINT.format(self.user))
+        if Fetcher._is_bad_response(response):
+            self._valid_response = False
+            return
+
+        exists = None
+        is_private = None
+        num_followers = -1
+
+        if response.status_code == 404:
+            # the user does not exist
+            exists = False
+
+        else:
+            try:
+                data = response.json()
+            except ValueError:
+                # not a valid user (eg. /about page)
+                exists = False
+
+            else:
+                try:
+                    is_private = data['user']['is_private']
+                    num_followers = data['user']['followed_by']['count']
+                except KeyError:
+                    logger.id(logger.exception, self,
+                            'Meta data json structure changed!',
+                            exc_info=True,
+                    )
+                    logger.id(logger.debug, self,
+                            'json:\n\n{pprint_data}\n\n',
+                            pprint_data=data,
+                    )
+                else:
+                    exists = True
+
+        return (exists, is_private, num_followers)
 
     def fetch_data(self):
         """
         Fetches user data from instagram
 
-        Returns True if all of the user's data was fetched successfully or
-                        the account is private
+        Returns True if all of the user's data was fetched successfully
                 or None if fetching was interrupted
                 or False if the user does not exist or is not a user page
                         eg. instagram.com/about
@@ -480,6 +496,8 @@ class Fetcher(object):
 
         if success is False:
             self.cache.flag_as_bad()
+        elif success is None:
+            self._valid_response = False
 
         return success
 
