@@ -1,19 +1,10 @@
-import errno
 import os
-import re
-import time
-
-from six import string_types
 
 from .constants import BASE_URL
 from .cache import Cache
 from .fetcher import Fetcher
 from constants import EMAIL
-from src.database import InstagramDatabase
-from src.util import (
-        logger,
-        requestor,
-)
+from src.util import logger
 from src.util.version import get_version
 
 
