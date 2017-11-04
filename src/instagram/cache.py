@@ -20,6 +20,8 @@ class Cache(object):
 
     def __init__(self, user):
         self.user = user
+        self.__the_cache = None
+        self.__the_inprogress_cache = None
 
         if not Cache._ig_queue:
             Cache._ig_queue = InstagramQueueDatabase()
@@ -55,22 +57,18 @@ class Cache(object):
 
     @property
     def __cache(self):
-        try:
-            return self.__the_cache
-        except AttributeError:
+        if not self.__the_cache:
             self.__the_cache = InstagramDatabase(self.dbpath)
-            return self.__the_cache
+        return self.__the_cache
 
     @property
     def __fetch_cache(self):
         """
         In-progress fetch cache used to compare missing database elements
         """
-        try:
-            return self.__the_inprogress_cache
-        except AttributeError:
+        if not self.__the_inprogress_cache:
             self.__the_inprogress_cache = InstagramDatabase(self.seenpath)
-            return self.__the_inprogress_cache
+        return self.__the_inprogress_cache
 
     def _get_path(self, basename_fmt):
         basename = basename_fmt.format(self.user)
