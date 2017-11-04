@@ -55,6 +55,7 @@ class InstagramDatabase(Database):
         )
 
     def _delete(self, codes):
+        # TODO: .executemany instead
         def do_delete(code):
             self._db.execute(
                     'DELETE FROM cache WHERE code = ?',

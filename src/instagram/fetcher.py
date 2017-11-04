@@ -361,8 +361,35 @@ class Fetcher(object):
 
     def _parse_data(self, data):
         """
+        Parses a single iteration of the user's media data
+
+        Returns True if the final set of items was successfully parsed
+                or False if the /media endpoint returned no items
+                or None if there are still more items to be processed
         """
-        pass
+        success = None
+        if data['status'].lower() == 'ok' and data['items']:
+            self.last_id = data['items'][-1]['id']
+
+            with self.cache:
+                for item in data['items']:
+                    self.cache.insert(item)
+
+            if not data['more_available']:
+                # just parsed the last set of items
+                self.cache.finish()
+                success = True
+
+        elif not data['items']:
+            logger.id(logger.info, self, 'No data: halting ...')
+            logger.id(logger.debug, self,
+                    '\n\tstatus = \'{status}\'\titems = {pprint_items}\n',
+                    status=data['status'],
+                    pprint_items=data['items'],
+            )
+            success = False
+
+        return success
 
     def should_fetch(self):
         """
@@ -425,9 +452,6 @@ class Fetcher(object):
                         if success is False:
                             # private/non-user page
                             break
-                        if not data['more_available']:
-                            # parsed the last set of items
-                            success = True
 
                 elif response.status_code == 404:
                     # I'm not sure this can happen

@@ -37,7 +37,7 @@ class Cache(object):
             return getattr(self.__cache, attr)
 
     def __enter__(self):
-        return
+        return self
 
     def __exit__(self, exc_type, exc_value, traceback):
         if exc_type is None and exc_value is None and traceback is None:
@@ -250,7 +250,60 @@ class Cache(object):
         # override the update method since insert has update baked in
         pass
 
-    def remove_fetch_cache(self):
+    def finish(self):
+        """
+        This method handles the cleanup/conclusion of an in-progress fetch.
+        """
+        self._prune_missing()
+        self._remove_fetch_cache()
+        # remove any queued instagram data for the user, if any
+        if self.user in Cache._ig_queue:
+            with Cache._ig_queue:
+                Cache._ig_queue.delete(self.user)
+
+    def _prune_missing(self):
+        """
+        Removes extraneous elements in the cache that were not seen during
+        the most recent fetch.
+
+        This assumes that the fetch database is transient (that is it is
+        only used during and immediately after a single fetch)
+        """
+        if not os.path.exists(self.seenpath):
+            # nothing to prune: the in-progress fetch database doesn't exist
+            return
+
+        cached_codes = self.__cache.get_all_codes()
+        fetched_codes = self.__fetch_cache.get_all_codes()
+        missing = cached_codes - fetched_codes
+
+        logger.id(logger.info, self,
+                'Fetched #{num} item{plural}',
+                num=len(fetched_codes),
+                plural=('' if len(fetched_codes) == 1 else 's'),
+        )
+
+        if missing:
+            logger.id(logger.debug, self,
+                    '\ncached:  #{num_cached}'
+                    '\nfetched: #{num_fetched}',
+                    num_cached=len(cached_codes),
+                    num_fetched=len(fetched_codes),
+            )
+            logger.id(logger.info, self,
+                    '#{num} item{plural} missing: pruning ...',
+                    num=len(missing),
+                    plural=('' if len(missing) == 1 else 's'),
+            )
+            logger.id(logger.debug, self,
+                    'missing codes:\n\n{color}\n\n',
+                    color=missing,
+            )
+
+            with self.__cache:
+                self.__cache.delete(missing)
+
+    def _remove_fetch_cache(self):
         """
         Removes the in-progress fetch cache. This should be called once the
         fetch has completed.
