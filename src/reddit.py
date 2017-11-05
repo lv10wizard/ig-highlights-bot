@@ -9,6 +9,7 @@ from prawcore.exceptions import (
         Forbidden,
         OAuthException,
         RequestException,
+        ResponseException,
 )
 from six import (
         iteritems,
@@ -130,7 +131,7 @@ def _network_wrapper(callback, thing, *args, **kwargs):
         try:
             result = callback(thing, *args, **kwargs)
 
-        except RequestException:
+        except (RequestException, ResponseException):
             logger.id(logger.warn, thing.__repr__(),
                     '{callback} failed! retrying in {time} ...',
                     callback=callback.__name__,
@@ -364,28 +365,30 @@ class Reddit(praw.Reddit):
         praw_ini_login = not (manual_username and manual_password)
 
         # try to auth immediately to catch anything wrong with credentials
-        try:
-            self.user.me()
+        def login(_):
+            try:
+                self.user.me()
 
-        except (Forbidden, OAuthException) as e:
-            msg = ['\'{username}\' login failed! Please double check that']
-            if praw_ini_login:
-                msg.append(
-                        'praw.ini ([{section}]) contains the correct'
-                        ' login information'
-                )
+            except (Forbidden, OAuthException) as e:
+                msg = ['\'{username}\' login failed! Please double check that']
+                if praw_ini_login:
+                    msg.append(
+                            'praw.ini ([{section}]) contains the correct'
+                            ' login information'
+                    )
+                    if manual_login:
+                        msg.append('and that')
+
                 if manual_login:
-                    msg.append('and that')
+                    msg.append('you entered the correct username/password')
 
-            if manual_login:
-                msg.append('you entered the correct username/password')
-
-            logger.id(logger.exception, self,
-                    ' '.join(msg),
-                    username=self.username_raw or '<Not Set>',
-                    section=cfg.praw_sitename,
-            )
-            raise
+                logger.id(logger.exception, self,
+                        ' '.join(msg),
+                        username=self.username_raw or '<Not Set>',
+                        section=cfg.praw_sitename,
+                )
+                raise
+        _network_wrapper(login, self.user)
 
         logger.id(logger.debug, self,
                 '\n\tclient id:  {client_id}'
