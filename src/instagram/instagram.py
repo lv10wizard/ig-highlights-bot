@@ -109,13 +109,16 @@ class Instagram(object):
                     # re-fetch an outdated existing cache
                     # (ie: an existing database file no longer reflects the
                     #  way the database behaves in code)
-                    logger.id(logger.debug, self,
-                            'Fetching outdated cache ...',
-                    )
-                    media = self.fetcher.fetch_data()
-                    if media:
-                        # fetch succeeded; reset the media value
-                        media = None
+                    media = self._check_metadata()
+
+                    if self.fetcher.valid_response and media is None:
+                        logger.id(logger.debug, self,
+                                'Fetching outdated cache ...',
+                        )
+                        media = self.fetcher.fetch_data()
+                        if media:
+                            # fetch succeeded; reset the media value
+                            media = None
 
                 # check again in case an outdated database fetch failed
                 if self.fetcher.valid_response and media is None:
@@ -133,36 +136,41 @@ class Instagram(object):
         Checks the user's metadata to determine if the bot should fetch
         the user's media data.
         """
-        result = None
-        metadata = self.fetcher.get_meta_data()
-        if metadata:
-            exists, private, followers = metadata
-            min_followers = Instagram._cfg.min_follower_count
+        try:
+            result = self.__metadata
+        except AttributeError:
+            result = None
+            metadata = self.fetcher.get_meta_data()
+            if metadata:
+                exists, private, followers = metadata
+                min_followers = Instagram._cfg.min_follower_count
 
-            if not exists or followers < min_followers:
-                if not exists:
-                    logger.id(logger.info, self,
-                            '{color_user} does not exist!',
-                            color_user=self.user,
-                    )
+                if not exists or followers < min_followers:
+                    if not exists:
+                        logger.id(logger.info, self,
+                                '{color_user} does not exist!',
+                                color_user=self.user,
+                        )
 
-                elif followers < min_followers:
-                    logger.id(logger.info, self,
-                            '{color_user} has too few followers:'
-                            ' skipping. ({num} < {min_count})',
-                            color_user=self.user,
-                            num=followers,
-                            min_count=min_followers,
-                    )
-                # the user does not exist or has too few followers
-                # TODO? differentiate between 404 & too few followers
-                self.cache.flag_as_bad()
-                result = False
+                    elif followers < min_followers:
+                        logger.id(logger.info, self,
+                                '{color_user} has too few followers:'
+                                ' skipping. ({num} < {min_count})',
+                                color_user=self.user,
+                                num=followers,
+                                min_count=min_followers,
+                        )
+                    # the user does not exist or has too few followers
+                    # TODO? differentiate between 404 & too few followers
+                    self.cache.flag_as_bad()
+                    result = False
 
-            elif private:
-                # the user's profile is private
-                self.cache.flag_as_private()
-                result = True
+                elif private:
+                    # the user's profile is private
+                    self.cache.flag_as_private()
+                    result = True
+
+            self.__metadata = result
 
         return result
 
