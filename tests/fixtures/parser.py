@@ -191,6 +191,19 @@ def multiline_random():
     return load_pickle('multiline_random')
 
 @pytest.fixture(scope='session')
+def multiline_single_word_usernames():
+    """
+    praw.models.Comment containing multiple instagram usernames:
+
+    morganlux
+    ladybug__espresso
+    asdfasdfasdf
+    fullmetalifrit
+    blond.dieee
+    """
+    return load_pickle('multiline_single_word_usernames')
+
+@pytest.fixture(scope='session')
 def jessicabolusi_medialink():
     """
     praw.models.Comment containing an instagram media link with a user profile

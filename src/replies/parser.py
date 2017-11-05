@@ -462,17 +462,14 @@ class _ParserStrategy(object):
         # XXX: matching a false positive will typically result in a
         # private/no-data instagram user if not a 404. relying on the instagram
         # user not having any data to prevent a reply is unwise.
-        if (
-                # single word in thing
-                len(self._thing_text.strip().split()) == 1
-                # thing looks like it could contain an instagram user
-                or any(
-                    instagram.HAS_IG_KEYWORD_REGEX.search(text.strip())
-                    for text in body_split
-                )
-        ):
-            matches = []
-            for text in body_split:
+        matches = []
+        for text in body_split:
+            if (
+                    # single word in thing
+                    len(text.strip().split()) == 1
+                    # thing looks like it could contain an instagram user
+                    or instagram.HAS_IG_KEYWORD_REGEX.search(text.strip())
+            ):
                 # XXX: .search() will only match one user per line
                 match = instagram.IG_USER_STRING_REGEX.search(text.strip())
                 if match:
@@ -480,27 +477,27 @@ class _ParserStrategy(object):
                         self.is_guess = True
                     matches += list(filter(None, match.groups()))
 
-            for name in matches:
-                if not name:
-                    continue
+        for name in matches:
+            if not name:
+                continue
 
-                # only include strings that could be usernames
-                do_add = False
-                reason = '???'
-                # not too short
-                if len(name) <= 5:
-                    reason = 'too short ({0})'.format(len(name))
+            # only include strings that could be usernames
+            do_add = False
+            reason = '???'
+            # not too short
+            if len(name) <= 5:
+                reason = 'too short ({0})'.format(len(name))
+            else:
+                # not some kind of internet jagon
+                match = Parser.is_jargon(name)
+                if match:
+                    reason = 'is jargon: \'{0}\''.format(match.group(0))
+                # not an english word
+                elif Parser.is_english(name):
+                    reason = 'is english: \'{0}\''.format(name)
+
                 else:
-                    # not some kind of internet jagon
-                    match = Parser.is_jargon(name)
-                    if match:
-                        reason = 'is jargon: \'{0}\''.format(match.group(0))
-                    # not an english word
-                    elif Parser.is_english(name):
-                        reason = 'is english: \'{0}\''.format(name)
-
-                    else:
-                        do_add = True
+                    do_add = True
 
                 if do_add:
                     usernames.append(name)

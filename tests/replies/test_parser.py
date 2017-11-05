@@ -213,6 +213,16 @@ def test_parser_matches_multiline_user_string(capbarista_multiline_prefix):
     assert not C.ig_links
     assert C.ig_usernames == ['capbarista']
 
+def test_parser_matches_multiline_user_strings(multiline_single_word_usernames):
+    M = Parser(multiline_single_word_usernames)
+    assert not M.ig_links
+    assert len(M.ig_usernames) == 5
+    assert 'morganlux' in M.ig_usernames
+    assert 'ladybug__espresso' in M.ig_usernames
+    assert 'asdfasdfasdf' in M.ig_usernames
+    assert 'fullmetalifrit' in M.ig_usernames
+    assert 'blond.dieee' in M.ig_usernames
+
 def test_parser_does_not_match_multiline_random_text(multiline_random):
     p = Parser(multiline_random)
     assert not p.ig_links
