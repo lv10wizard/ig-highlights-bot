@@ -4,6 +4,7 @@ import time
 
 from six import add_metaclass
 from prawcore.exceptions import (
+        BadJSON,
         Redirect,
         RequestException,
         ResponseException,
@@ -26,6 +27,11 @@ class StreamMixin(RedditInstanceMixin):
     This mixin handles delaying the next fetch when either a RequestException or
     ServerError is thrown (internet hiccup, reddit down).
     """
+
+    _RETRYABLE = (
+            BadJSON,
+            RequestException,
+    )
 
     @property
     def _stream_method(self):
@@ -130,7 +136,7 @@ class StreamMixin(RedditInstanceMixin):
 
             except (RequestException, ResponseException, ServerError) as e:
                 # retry all RequestExceptions
-                is_retryable = isinstance(e, RequestException)
+                is_retryable = isinstance(e, StreamMixin._RETRYABLE)
 
 #                 if hasattr(e, 'original_exception'):
 #                     # RequestException
