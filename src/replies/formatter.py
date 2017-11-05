@@ -10,7 +10,7 @@ from constants import (
         THING_ID_PLACEHOLDER,
 )
 from src import reddit
-from src.instagram import Instagram
+from src import instagram
 from src.util import (
         get_padding,
         logger,
@@ -66,7 +66,7 @@ class Formatter(object):
                     Formatter.USER_TAG
             )
             pattern = escaped_user_tag.format(
-                    user_raw='({0})'.format(Instagram.USERNAME_PTN)
+                    user_raw='({0})'.format(instagram.USERNAME_PTN)
             )
             user_re = re.compile(pattern)
             Formatter.USER_TAG_REGEX = user_re
