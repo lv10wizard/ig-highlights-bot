@@ -168,6 +168,14 @@ def alica_davis():
     return load_pickle('alica.davis')
 
 @pytest.fixture(scope='session')
+def fullmetalifrit_markdownlink():
+    """
+    praw.models.Comment containing a soft-linked user without '@'
+    ([Fullmetalifrit on IG](...))
+    """
+    return load_pickle('fullmetalifrit_markdownlink')
+
+@pytest.fixture(scope='session')
 def capbarista_multiline_prefix():
     """
     praw.models.Comment containing a soft-linked user without '@'

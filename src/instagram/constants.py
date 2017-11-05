@@ -166,11 +166,11 @@ _IG_KEYWORD_SUFFIX = r'\s+(?:on\s+{0}|\({0}\))[!.]?'.format(
 )
 
 HAS_IG_KEYWORD_REGEX = re.compile(
-        '(?!.*[?])(?:^{0}|\s*{1}(?:\s+|$))'.format(
-        #\_______/   \__/ \_____________/
-        #    |         \        \
-        #    |         /    match instagram keyword suffix
-        #    |      match instagram keyword prefix
+        '(?!.*[?])(?:(?:^|\s+){0}|\s*{1}(?:\s*\]|\s+|$))'.format(
+        #\_______/   \__________/ \___________________/
+        #    |            |                 /
+        #    |            |            match instagram keyword suffix
+        #    |          match instagram keyword prefix
         # do not match if a '?' appears anywhere in the string
             _IG_KEYWORD_PREFIX,
             _IG_KEYWORD_SUFFIX,
@@ -183,16 +183,17 @@ IG_USER_STRING_REGEX = [
         # suffix regex
         # match a suffixed potential instagram username
         # eg. 'this is foobar on insta'
-        r'(?:^|\s+)@?(?P<suffix>{0})(?:{1})(?:\s+|$)'.format(
-        # \_______/\_______________/\_____/\_______/
-        #     |            |           |      \
-        #     |            |           |   only match if at the end of the
-        #     |            |           |     string or followed by spaces
-        #     |            |           |
-        #     |            |       match instagram keywords suffix
-        #     |     capture possible username string
-        #   only match if at the beginning of the string or preceded by
-        #       spaces
+        r'(?:^|\s+|\[\s*)@?(?P<suffix>{0})(?:{1})(?:\s*\]|\s+|$)'.format(
+        # \_____________/\_______________/\_____/\_____________/
+        #        |               |           |         \
+        #        |               |           |   only match if at the end of the
+        #        |               |           |     string or followed by spaces
+        #        |               |           |     or markdown link
+        #        |               |           |
+        #        |               |         match instagram keywords suffix
+        #        |        capture possible username string
+        #      only match if at the beginning of the string or preceded by
+        #       spaces or markdown link text
             USERNAME_PTN, _IG_KEYWORD_SUFFIX
         ),
 
