@@ -140,17 +140,23 @@ class Instagram(object):
             min_followers = Instagram._cfg.min_follower_count
 
             if not exists or followers < min_followers:
-                # the user does not exist or has too few followers
-                # TODO? differentiate between 404 & too few followers
-                self.cache.flag_as_bad()
-                if followers < min_followers:
+                if not exists:
+                    logger.id(logger.info, self,
+                            '{color_user} does not exist!',
+                            color_user=self.user,
+                    )
+
+                elif followers < min_followers:
                     logger.id(logger.info, self,
                             '{color_user} has too few followers:'
                             ' skipping. ({num} < {min_count})',
                             color_user=self.user,
                             num=followers,
-                            min_count=min_follower_count,
+                            min_count=min_followers,
                     )
+                # the user does not exist or has too few followers
+                # TODO? differentiate between 404 & too few followers
+                self.cache.flag_as_bad()
                 result = False
 
             elif private:
