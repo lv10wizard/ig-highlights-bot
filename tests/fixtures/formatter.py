@@ -15,6 +15,7 @@ def formatter_reply():
                 user_raw=username,
                 user=re.sub(r'(_)', r'\\\1', username),
                 link='https://www.instagram.com/foobar',
+                suffix=Formatter.HEADER_HIGHLIGHTS,
             ),
             ' '.join(
                 Formatter.HIGHLIGHT_FMT.format(
