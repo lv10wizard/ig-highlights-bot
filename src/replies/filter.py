@@ -22,6 +22,7 @@ class Filter(object):
     # authors that should not be replied to
     IGNORED = list(map(lambda author: author.lower(), [
         'automoderator',
+        'poster_bot2',
     ]))
 
     def __init__(self, cfg, username, blacklist):
