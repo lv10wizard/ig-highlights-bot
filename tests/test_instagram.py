@@ -12,7 +12,7 @@ USERNAME_REGEX = re.compile(
 )
 
 @pytest.mark.parametrize('string', [
-    'foobar', '1foo', 'a', 'foo__', 'foo.bar.a_xx99_', '__blahhh',
+    'foobar', '1foo', 'a', 'foo__', 'foo.bar.a_xx99_', '__blahhh', 'meow',
 ])
 def test_instagram_username_matches(string):
     assert USERNAME_REGEX.search(string)
@@ -114,6 +114,7 @@ def test_instagram_does_not_overmatch_has_ig_keyword_strings(string):
     ('stephxohaven on insta and snap', 'stephxohaven'),
     ('Allie love on the right. IG is baristaallie', 'baristaallie'),
     ('[Fullmetalifrit on IG](https://instagram.com/p/BWoPSy7A7Ig/) ', 'Fullmetalifrit'),
+    ('Meow', 'Meow'),
 ])
 def test_instagram_matches_potential_ig_user_strings(string, expected):
     match = instagram.IG_USER_STRING_REGEX.search(string)

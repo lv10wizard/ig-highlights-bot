@@ -499,16 +499,16 @@ class _ParserStrategy(object):
                 else:
                     do_add = True
 
-                if do_add:
-                    usernames.append(name)
+            if do_add:
+                usernames.append(name)
 
-                else:
-                    logger.id(logger.debug, self,
-                            'Potential username, {color_name}, failed:'
-                            ' {reason}',
-                            color_name=name,
-                            reason=reason,
-                    )
+            else:
+                logger.id(logger.debug, self,
+                        'Potential username, {color_name}, failed:'
+                        ' {reason}',
+                        color_name=name,
+                        reason=reason,
+                )
 
         return usernames
 

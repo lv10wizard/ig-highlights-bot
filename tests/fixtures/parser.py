@@ -351,3 +351,11 @@ def post_ig_url_in_title():
     """
     return load_pickle('post_nikumikyo')
 
+@pytest.fixture(scope='session')
+def post_meow():
+    """
+    praw.models.Submission linking to non-instagram content with the title
+    'Meow'
+    """
+    return load_pickle('post_meow')
+

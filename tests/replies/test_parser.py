@@ -329,3 +329,9 @@ def test_parser_does_match_post_ig_url_in_title(post_ig_url_in_title):
     assert len(p.ig_links) == 1
     assert p.ig_usernames == ['nikumikyo']
 
+def test_parser_does_match_post_meow(post_meow):
+    # 'Meow'
+    p = Parser(post_meow)
+    assert not p.ig_links
+    assert not p.ig_usernames
+
