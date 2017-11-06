@@ -215,7 +215,7 @@ class Fetcher(object):
         self._valid_response = True
 
     def __str__(self):
-        result = [__name__, self.__class__.__name__]
+        result = [Fetcher.ME, self.__class__.__name__]
         if self.user:
             result.append(self.user)
         return ':'.join(result)

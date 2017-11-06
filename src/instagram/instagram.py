@@ -167,6 +167,11 @@ class Instagram(object):
 
                 elif private:
                     # the user's profile is private
+                    logger.id(logger.info, self,
+                            '{color_user} is private!',
+                            color_user=self.user,
+                    )
+
                     self.cache.flag_as_private()
                     result = True
 
