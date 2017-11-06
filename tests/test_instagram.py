@@ -99,9 +99,11 @@ def test_instagram_matches_has_ig_keyword_strings(string):
 @pytest.mark.parametrize('string', [
     'IG: foobar maybe?',
     'is this @_blah on insta?',
+    'Possibly nikinikiii on insta?',
+    'mollyjcurley on ig? not sure though',
 ])
-def test_instagram_does_not_overmatch_has_ig_keyword_strings(string):
-    assert not instagram.HAS_IG_KEYWORD_REGEX.search(string)
+def test_instagram_matches_has_ig_keyword_question_strings(string):
+    assert instagram.HAS_IG_KEYWORD_REGEX.search(string)
 
 @pytest.mark.parametrize('string,expected', [
     ('IG: foobar', 'foobar'),
@@ -115,6 +117,7 @@ def test_instagram_does_not_overmatch_has_ig_keyword_strings(string):
     ('Allie love on the right. IG is baristaallie', 'baristaallie'),
     ('[Fullmetalifrit on IG](https://instagram.com/p/BWoPSy7A7Ig/) ', 'Fullmetalifrit'),
     ('Meow', 'Meow'),
+    ('Possibly nikinikiii on insta?', 'nikinikiii'),
 ])
 def test_instagram_matches_potential_ig_user_strings(string, expected):
     match = instagram.IG_USER_STRING_REGEX.search(string)
@@ -138,7 +141,6 @@ def test_instagram_guesses_potential_ig_user_strings(string):
     'Sauce? sauce sauce',
     'Name?',
     'I\'m okay with this',
-    'maybe blah on instagram? actually on second thought nvm',
 ])
 def test_instagram_does_not_overmatch_potential_ig_user_strings(string):
     assert not instagram.IG_USER_STRING_REGEX.search(string)

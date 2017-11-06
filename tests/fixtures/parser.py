@@ -204,6 +204,22 @@ def multiline_single_word_usernames():
     return load_pickle('multiline_single_word_usernames')
 
 @pytest.fixture(scope='session')
+def nikinikiii_question():
+    """
+    praw.models.Comment containing an instagram suffix question:
+    'Possibly nikinikiii on insta?'
+    """
+    return load_pickle('nikinikiii_question')
+
+@pytest.fixture(scope='session')
+def mollyjcurley_question():
+    """
+    praw.models.Comment containing an instagram suffix question:
+    'mollyjcurley on ig? not sure though'
+    """
+    return load_pickle('mollyjcurley_question')
+
+@pytest.fixture(scope='session')
 def jessicabolusi_medialink():
     """
     praw.models.Comment containing an instagram media link with a user profile

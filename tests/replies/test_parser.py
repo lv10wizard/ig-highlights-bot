@@ -203,6 +203,17 @@ def test_parser_matches_instagram_suffix(
     assert not F.ig_links
     assert F.ig_usernames == ['fullmetalifrit']
 
+def test_parser_matches_instagram_suffix_question(
+        nikinikiii_question, mollyjcurley_question,
+):
+    N = Parser(nikinikiii_question)
+    assert not N.ig_links
+    assert N.ig_usernames == ['nikinikiii']
+
+    M = Parser(mollyjcurley_question)
+    assert not M.ig_links
+    assert M.ig_usernames == ['mollyjcurley']
+
 def test_parser_does_not_match_invalid_username(alica_davis):
     A = Parser(alica_davis)
     assert not A.ig_links

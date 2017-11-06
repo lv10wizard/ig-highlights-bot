@@ -164,14 +164,14 @@ _IG_KEYWORD_SUFFIX = r'\s+(?:on\s+{0}|\({0}\))[!.]?'.format(
 #                         match ' on instagram'
         _INSTAGRAM_KEYWORD,
 )
+_IG_KEYWORD_SUFFIX_VALID_ENDING_CHARS = r'[\?\]]'
 
 HAS_IG_KEYWORD_REGEX = re.compile(
-        '(?!.*[?])(?:(?:^|\s+){0}|\s*{1}(?:\s*\]|\s+|$))'.format(
-        #\_______/   \__________/ \___________________/
-        #    |            |                 /
-        #    |            |            match instagram keyword suffix
-        #    |          match instagram keyword prefix
-        # do not match if a '?' appears anywhere in the string
+        '(?:(?:^|\s+){0}|\s*{1}(?:\s*\]|\s+|$))'.format(
+        #   \__________/ \___________________/
+        #        |                /
+        #        |            match instagram keyword suffix
+        #      match instagram keyword prefix
             _IG_KEYWORD_PREFIX,
             _IG_KEYWORD_SUFFIX,
         ),
@@ -183,18 +183,20 @@ IG_USER_STRING_REGEX = [
         # suffix regex
         # match a suffixed potential instagram username
         # eg. 'this is foobar on insta'
-        r'(?:^|\s+|\[\s*)@?(?P<suffix>{0})(?:{1})(?:\s*\]|\s+|$)'.format(
-        # \_____________/\_______________/\_____/\_____________/
+        r'(?:^|\s+|\[\s*)@?(?P<suffix>{0})(?:{1})(?:\s*{2}\s*|\s+|$)'.format(
+        # \_____________/\_______________/\_____/\_________________/
         #        |               |           |         \
         #        |               |           |   only match if at the end of the
         #        |               |           |     string or followed by spaces
-        #        |               |           |     or markdown link
+        #        |               |           |     or set of valid characters
         #        |               |           |
         #        |               |         match instagram keywords suffix
         #        |        capture possible username string
         #      only match if at the beginning of the string or preceded by
         #       spaces or markdown link text
-            USERNAME_PTN, _IG_KEYWORD_SUFFIX
+            USERNAME_PTN,
+            _IG_KEYWORD_SUFFIX,
+            _IG_KEYWORD_SUFFIX_VALID_ENDING_CHARS,
         ),
 
         # match a prefixed potential instagram username
