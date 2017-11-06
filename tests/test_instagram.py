@@ -69,7 +69,7 @@ def test_instagram_matches_ig_links_query_strings(link, expected):
     ('(@k.01.bulgakova) ', 'k.01.bulgakova'),
     (' [@k.01.bulgakova] ', 'k.01.bulgakova'),
 ])
-def test_instagram_matches_ig_user_strings(string, expected):
+def test_instagram_matches_at_ig_user_strings(string, expected):
     match = instagram.IG_AT_USER_REGEX.search(string)
     assert match
     assert match.group('user') == expected
@@ -77,8 +77,10 @@ def test_instagram_matches_ig_user_strings(string, expected):
 @pytest.mark.parametrize('string', [
    '@Alíca.dávis on Instagram, minus the accents',
    '@Alíca.dávis',
+    'Love her. Melvinbrucefrench@yahoo.com',
+    'Ya. HMU if you wanna chat throwawaymedic08@gmail',
 ])
-def test_instagram_does_not_overmatch_ig_user_strings(string):
+def test_instagram_does_not_overmatch_at_ig_user_strings(string):
     assert not instagram.IG_AT_USER_REGEX.search(string)
 
 @pytest.mark.parametrize('string', [

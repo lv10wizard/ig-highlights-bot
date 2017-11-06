@@ -228,6 +228,22 @@ def jessicabolusi_medialink():
     return load_pickle('jessicabolusi_medialink')
 
 @pytest.fixture(scope='session')
+def melvinbrucefrench_email():
+    """
+    praw.models.Comment containing:
+    'Love her. Melvinbrucefrench@yahoo.com'
+    """
+    return load_pickle('melvinbrucefrench_email')
+
+@pytest.fixture(scope='session')
+def throwawaymedic08_email():
+    """
+    praw.models.Comment containing:
+    'Ya. HMU if you wanna chat throwawaymedic08@gmail'
+    """
+    return load_pickle('throwawaymedic08_email')
+
+@pytest.fixture(scope='session')
 def thanks_():
     """
     praw.models.Comment containing the word 'Thanks'

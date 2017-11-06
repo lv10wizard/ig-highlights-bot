@@ -106,16 +106,20 @@ IG_LINK_QUERY_REGEX = re.compile(
 )
 
 IG_AT_USER_REGEX = re.compile(
-        r'(?:^|\s*|[(\[])@(?P<user>{0})(?:[)\]]|\s+|$)'.format(
-        # \_____________/|\___________/\_____________/
-        #       |        |      |             |
-        #       |        |      |    match whitespace or end of string
-        #       |        |      |    or set of acceptable ending delimiters
-        #       |        |   capture username
-        #       |      only match if username is preceded by '@'
-        #       |      -- basically limit guesses at username matches
-        #     match start of string or whitespace or a set of acceptable
-        #     starting characters
+        r'(?:^|\s*(?<!\w)|[(\[])@(?P<user>{0})(?:[)\]]|\s+|$)'.format(
+        #    | \________/ \___/ |\___________/\_____________/
+        #    |     |        /   |      |             /
+        #    |     |        \   |      |    match whitespace or end of string
+        #    |     |        /   |      |    or set of acceptable ending
+        #    |     |        \   |      |    delimiters
+        #    |     |        /   |  capture username
+        #    |     |        \   |  capture username
+        #    |     |        /  only match if username is preceded by '@'
+        #    |     |     allow valid set of leading characters
+        #    |   allow 0+ leading whitespace so long as it is not preceded by
+        #    |   a word-character
+        #  match start of string
+
             USERNAME_PTN,
         ),
         flags=re.IGNORECASE,

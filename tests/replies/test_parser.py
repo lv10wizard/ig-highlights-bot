@@ -113,6 +113,17 @@ def test_parser_matches_multiple_ats(post_multi_ats):
     assert 'omandm' in M.ig_usernames
     assert 'avatarmetal' in M.ig_usernames
 
+def test_parser_does_not_overmatch_at_user(
+        melvinbrucefrench_email, throwawaymedic08_email,
+):
+    M = Parser(melvinbrucefrench_email)
+    assert not M.ig_links
+    assert not M.ig_usernames
+
+    T = Parser(throwawaymedic08_email)
+    assert not T.ig_links
+    assert not T.ig_usernames
+
 def test_parser_ig_links(haileypandolfi, viktoria_kay):
     H = Parser(haileypandolfi)
     V = Parser(viktoria_kay)
