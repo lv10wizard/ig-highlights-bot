@@ -52,7 +52,7 @@ class InstagramDatabase(Database):
         self._db.execute(
                 'INSERT INTO'
                 ' cache(code, num_likes, num_comments, created)'
-                ' VALUES(?, ?, ?, ?, ?)',
+                ' VALUES(?, ?, ?, ?)',
                 (code, num_likes, num_comments, created),
         )
 
