@@ -127,9 +127,11 @@ class Cache(object):
         Returns whether the cache is expired (database age > threshold)
 
         Returns True if no cached data exists
+                or None if .dbpath could not be stat'd
         """
         from .instagram import Instagram
 
+        cache_mtime = 0
         expired = False
 
         try:
@@ -137,7 +139,7 @@ class Cache(object):
         except OSError as e:
             if e.errno == ENOENT:
                 # no cached media
-                cache_mtime = 0
+                pass
 
             else:
                 logger.id(logger.critical, self,
@@ -147,17 +149,20 @@ class Cache(object):
                         path=self.dbpath,
                         exc_info=True,
                 )
+                return None
 
-        else:
-            cache_age = time.time() - cache_mtime
-            threshold = Instagram._cfg.instagram_cache_expire_time
-            expired = cache_age > threshold
-            if cache_mtime > 0 and expired:
+        cache_age = time.time() - cache_mtime
+        threshold = Instagram._cfg.instagram_cache_expire_time
+        expired = cache_age > threshold
+        if expired:
+            if cache_mtime > 0:
                 logger.id(logger.debug, self,
                         'Cache expired! ({time_age} > {time_expire})',
                         time_age=cache_age,
                         time_expire=threshold,
                 )
+            else:
+                logger.id(logger.debug, self, 'New cache!')
 
         return expired
 
