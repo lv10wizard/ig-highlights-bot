@@ -29,7 +29,6 @@ class InstagramDatabase(Database):
         return (
                 'cache('
                 '   code TEXT PRIMARY KEY NOT NULL,'
-                '   link TEXT NOT NULL,'
                 '   num_likes INTEGER NOT NULL,'
                 '   num_comments INTEGER DEFAULT 0,'
                 '   created REAL NOT NULL'
@@ -37,11 +36,8 @@ class InstagramDatabase(Database):
         )
 
     def __unpack(self, item):
-        from src.instagram import MEDIA_LINK_FMT
-
         return (
                 item['code'],
-                MEDIA_LINK_FMT.format(item['code']),
                 item['likes']['count'],
                 item['comments']['count'],
                 item['date'],
@@ -52,12 +48,12 @@ class InstagramDatabase(Database):
         )
 
     def _insert(self, item):
-        code, link, num_likes, num_comments, created = self.__unpack(item)
+        code, num_likes, num_comments, created = self.__unpack(item)
         self._db.execute(
                 'INSERT INTO'
-                ' cache(code, link, num_likes, num_comments, created)'
+                ' cache(code, num_likes, num_comments, created)'
                 ' VALUES(?, ?, ?, ?, ?)',
-                (code, link, num_likes, num_comments, created),
+                (code, num_likes, num_comments, created),
         )
 
     def _delete(self, codes):
@@ -76,11 +72,11 @@ class InstagramDatabase(Database):
             do_delete(codes)
 
     def _update(self, item):
-        code, link, num_likes, num_comments, created = self.__unpack(item)
+        code, num_likes, num_comments, created = self.__unpack(item)
         self._db.execute(
                 'UPDATE cache SET num_likes = ?, num_comments = ?'
-                ' WHERE code = ? AND link = ?',
-                (num_likes, num_comments, code, link),
+                ' WHERE code = ?',
+                (num_likes, num_comments, code),
         )
 
     def size(self):
@@ -247,15 +243,19 @@ class InstagramDatabase(Database):
                 (may return a list with len < num if the database does not
                  contain enough links to populate the list)
         """
+        from src.instagram import MEDIA_LINK_FMT
+
         cursor = self._db.execute(
-                'SELECT link FROM cache ORDER BY {0}'.format(self.order_string)
+                'SELECT code FROM cache ORDER BY {0}'.format(self.order_string)
         )
         media = []
         for row in cursor:
             if len(media) == num:
                 break
-            if row['link'] not in media:
-                media.append(row['link'])
+
+            link = MEDIA_LINK_FMT.format(row['code'])
+            if link not in media:
+                media.append(link)
 
         return media
 
@@ -316,10 +316,9 @@ class InstagramDatabase(Database):
                     # XXX: co-opt the existing columns to flag the username
                     self._db.execute(
                             'INSERT INTO'
-                            ' cache(code, link, num_likes, num_comments,'
-                            ' created) VALUES(?, ?, ?, ?, ?)',
+                            ' cache(code, num_likes, num_comments, created)'
+                            ' VALUES(?, ?, ?, ?)',
                             (
-                                flag,
                                 flag,
                                 -1,
                                 -1,
