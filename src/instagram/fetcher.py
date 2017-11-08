@@ -4,7 +4,7 @@ import time
 from six import string_types
 
 from .constants import (
-        MEDIA_ENDPOINT,
+        MEDIA_ENDPOINT, # XXX: broken as of Nov 7, 2017 (always 404s)
         META_ENDPOINT,
         RATELIMIT_THRESHOLD,
 )
@@ -302,7 +302,7 @@ class Fetcher(object):
             logger.id(logger.critical, self,
                     'Too many bad json retries! Did the endpoint change?'
                     ' ({endpoint})',
-                    endpoint=MEDIA_ENDPOINT,
+                    endpoint=META_ENDPOINT,
                     exc_info=True,
             )
             self._enqueue()
@@ -317,6 +317,9 @@ class Fetcher(object):
         except AttributeError:
             pass
 
+    def _has_more(self, data):
+        return data['user']['media']['page_info']['has_next_page']
+
     def _parse_data(self, data):
         """
         Parses a single iteration of the user's media data
@@ -326,14 +329,15 @@ class Fetcher(object):
                 or None if there are still more items to be processed
         """
         success = None
-        if data['status'].lower() == 'ok' and data['items']:
-            self.last_id = data['items'][-1]['id']
+        nodes = data['user']['media']['nodes']
+        if nodes:
+            self.last_id = nodes[-1]['id']
 
             with self.cache:
-                for item in data['items']:
+                for item in nodes:
                     self.cache.insert(item)
 
-            if not data['more_available']:
+            if not self._has_more(data):
                 # just parsed the last set of items
                 self.cache.finish()
                 success = True
@@ -437,12 +441,12 @@ class Fetcher(object):
         )
 
         try:
-            while not data or data['more_available']:
+            while not data or self._has_more(data):
                 if self._killed:
                     break
 
                 response = Fetcher.request(
-                        MEDIA_ENDPOINT.format(self.user),
+                        META_ENDPOINT.format(self.user),
                         params={
                             'max_id': self.last_id,
                         },

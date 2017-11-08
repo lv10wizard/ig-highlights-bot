@@ -21,8 +21,10 @@ BASE_URL_VARIATIONS = [
 BASE_URL = BASE_URL_VARIATIONS[0]
 
 # https://stackoverflow.com/a/33783840
+# XXX: the media endpoint seems to be shutdown as of Nov 7, 2017
 MEDIA_ENDPOINT = 'https://www.{0}/{{0}}/media'.format(BASE_URL)
 META_ENDPOINT = 'https://www.{0}/{{0}}/?__a=1'.format(BASE_URL)
+MEDIA_LINK_FMT = 'https://www.{0}/p/{{0}}'.format(BASE_URL)
 
 # https://stackoverflow.com/a/17087528
 # "30 symbols ... only letters, numbers, periods, and underscores"

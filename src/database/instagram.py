@@ -37,12 +37,18 @@ class InstagramDatabase(Database):
         )
 
     def __unpack(self, item):
+        from src.instagram import MEDIA_LINK_FMT
+
         return (
                 item['code'],
-                item['link'],
+                MEDIA_LINK_FMT.format(item['code']),
                 item['likes']['count'],
                 item['comments']['count'],
-                item['created_time'],
+                item['date'],
+
+                # TODO: store the following as well
+                # item['display_src'], # full-sized source url
+                # item['caption'],
         )
 
     def _insert(self, item):
