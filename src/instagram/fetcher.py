@@ -347,13 +347,8 @@ class Fetcher(object):
                 self.cache.finish()
                 success = True
 
-        elif not data['items']:
+        else:
             logger.id(logger.info, self, 'No data: halting ...')
-            logger.id(logger.debug, self,
-                    '\n\tstatus = \'{status}\'\titems = {pprint_items}\n',
-                    status=data['status'],
-                    pprint_items=data['items'],
-            )
             success = False
 
         return success
