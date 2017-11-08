@@ -35,8 +35,13 @@ class Fetcher(object):
 
     @classproperty
     def ME(cls):
-        # 'src.instagram' -> 'instagram'
-        return __name__.rsplit('.', 1)[-1]
+        try:
+            # 'src.instagram.fetcher' -> 'instagram'
+            return __name__.rsplit('.')[-2]
+        except IndexError:
+            # directory structure changed, probably.
+            # this should return 'fetcher' (the name of this file)
+            return __name__.rsplit('.')[-1]
 
     @classproperty
     def ratelimit(cls):
