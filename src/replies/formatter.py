@@ -1,6 +1,7 @@
 import re
 
 import inflect
+from six import iteritems
 
 from constants import (
         BLACKLIST_URL_FMT,
@@ -22,26 +23,38 @@ class Formatter(object):
     Comment reply text formatter
     """
 
+    NUM_PREFIX = {
+            3: 'k',
+            6: 'm',
+            9: 'b',
+            12: 't',
+    }
+
     COMMENT_CHARACTER_LIMIT = 1e4
+
+    SPACE = '&#32;'
     # tag usernames in the bot's replies so we can parse them back out easily
     USER_TAG = '[](#ig@{user_raw})'
     HEADER_HIGHLIGHTS = 'highlights:'
     HEADER_PRIVATE = '(private account)'
     HEADER_FMT = '{0}[@{{user}}]({{link}}) {{suffix}}'.format(USER_TAG)
     FOOTER_FMT = (
-            '---\n^I&#32;am&#32;a&#32;bot.'
-            '&#32;Did&#32;I&#32;get&#32;something&#32;wrong?'
-            '&#32;Downvote&#32;to&#32;delete.'
-            '&#32;[[Contact]({contact_url})]'
-            # '&#32;[[Source]({source_url})]'
-            '&#32;[[Block]({blacklist_url})]'
-            '&#32;[[FAQ]({help_url})]'
+            '---\n^I am a bot.'
+            ' Did I get something wrong?'
+            ' Downvote to delete.'
+            ' [[Contact]({contact_url})]'
+            ' [[Block]({blacklist_url})]'
+            # ' [[Source]({source_url})]'
+            ' [[FAQ]({help_url})]'
             # non-standard bot codeword to let other bots know that this comment
             # was posted by a bot (see: https://www.reddit.com/2r4qt8)
-            '&#32;[](#bot)'
+            ' [](#bot)'.replace(' ', SPACE)
     )
     HIGHLIGHT_FMT = '[{i}]({link})'
+    METADATA_FMT = '^[ {data} ]'.replace(' ', SPACE)
     LINE_DELIM = '\n\n'
+
+    USER_SEPARATOR = '\n\n&nbsp;\n\n'
 
     _inflect = None
 
@@ -73,6 +86,41 @@ class Formatter(object):
 
         return user_re.findall(body)
 
+    @staticmethod
+    def format_large_number(num):
+        """
+        Returns a human-readable number of followers similar to instagram's
+        implementation
+
+        eg. 1234      -> '1,234'
+            567892    -> '567.9k'
+            2093321   -> '2.1m'
+        """
+        if num < 1e4: # 10,000
+            # https://stackoverflow.com/a/10742904
+            return '{:,}'.format(num)
+
+        for exp, prefix in iteritems(Formatter.NUM_PREFIX):
+            fraction = float(num) / float(10**exp)
+            if 1 <= fraction < 1e3:
+                return '{0:.1f}{1}'.format(fraction, prefix)
+
+        # fallback to the highest defined defined prefix
+        highest = max(Formatter.NUM_PREFIX)
+        # comma separated in case there are more than 1,000 digits
+        return '{0:,.1f}{1}'.format(
+                float(num) / float(10**highest),
+                Formatter.NUM_PREFIX[highest],
+        )
+
+    @staticmethod
+    def format_url(url):
+        """
+        Returns a condensed markdown url
+        """
+        no_scheme = url.split('://', 1)[-1]
+        return '[{0}]({1})'.format(no_scheme, url)
+
     def __init__(self, username):
         self.username = username
 
@@ -96,8 +144,7 @@ class Formatter(object):
         replies = []
         current_reply = []
         ig_users = []
-        # wrap the string in a list so it is easier to work with
-        FOOTER = [Formatter.FOOTER_FMT.format(
+        FOOTER = Formatter.FOOTER_FMT.format(
                 contact_url=CONTACT_URL.replace(
                     THING_ID_PLACEHOLDER, reddit.display_id(thing)
                 ),
@@ -106,7 +153,7 @@ class Formatter(object):
                     to=self.username,
                 ),
                 help_url=HELP_URL,
-        )]
+        )
 
         for ig in ig_list:
             if ig.is_private and (from_link or is_guess):
@@ -122,6 +169,7 @@ class Formatter(object):
                 )
                 continue
 
+            user_reply = []
             header = Formatter.HEADER_FMT.format(
                     user_raw=ig.user,
                     # escape markdown characters
@@ -134,8 +182,9 @@ class Formatter(object):
                         else Formatter.HEADER_PRIVATE
                     ),
             )
+
             highlights = []
-            if not ig.is_private:
+            if not ig.private:
                 media = ig.top_media
                 for i, media_link in enumerate(media):
                     logger.id(logger.debug, self,
@@ -151,8 +200,30 @@ class Formatter(object):
                         link=media_link,
                     ))
 
-            current_reply.append(header)
-            current_reply.append(' - '.join(highlights))
+            metadata = []
+            if ig.num_posts and ig.num_posts >= 0:
+                posts = '{0} posts'.format(
+                        Formatter.format_large_number(ig.num_posts)
+                )
+                metadata.append(posts)
+            if ig.num_followers and ig.num_followers >= 0:
+                followers = '~{0} followers'.format(
+                        Formatter.format_large_number(ig.num_followers)
+                )
+                metadata.append(followers)
+            if ig.private and ig.external_url:
+                # external_urls are typically sponsored/donation links.
+                # private accounts don't typically specify links but if they
+                # do, there is a chance that it is useful.
+                metadata.append(Formatter.format_url(ig.external_url))
+
+            user_reply.append(header)
+            user_reply.append(' - '.join(highlights))
+            user_reply.append(Formatter.METADATA_FMT.format(
+                data=' | '.join(metadata).replace(' ', Formatter.SPACE)
+            ))
+            user_reply = list(filter(None, user_reply))
+            current_reply.append(Formatter.LINE_DELIM.join(user_reply))
             ig_users.append(ig)
 
             # try to add the current reply if its character length exceeds
@@ -198,10 +269,12 @@ class Formatter(object):
         Returns (current_reply, ig_users) if the reply was not added
         """
         idx = 0
-        # XXX: assumes each whole reply constitutes two elements
-        step = 2
-        full_reply = Formatter.LINE_DELIM.join(
-                list(filter(None, current_reply)) + footer
+        # the number of elements in current_reply that constitutes a reply
+        # for a single user
+        step = 1
+        full_reply = (
+                Formatter.USER_SEPARATOR.join(filter(None, current_reply))
+                + Formatter.LINE_DELIM + footer
         )
         while len(full_reply) >= Formatter.COMMENT_CHARACTER_LIMIT:
             # the total size of the current reply exceeds the maximum allowed
@@ -210,8 +283,10 @@ class Formatter(object):
             # truncate individual ig_user highlights from the end of the reply
             # until the reply is under the character limit
             idx -= step
-            full_reply = Formatter.LINE_DELIM.join(
-                    list(filter(None, current_reply[:idx])) + footer
+            full_reply = (
+                    Formatter.USER_SEPARATOR.join(
+                        filter(None, current_reply[:idx])
+                    ) + Formatter.LINE_DELIM + footer
             )
 
         # don't de-sync the reply & ig_users list in case an overflow happens
