@@ -52,6 +52,7 @@ d+[ei]+n+g+[aeiou]+h*s+ # 'dinguuuus', etc
 d+[ir]+[dn]+l+ # 'dirndl' & misspellings
 dmhs
 d+o+w+n+(?:b+l+o+[uw]+s+e*|s+h+i+r+t+)s*
+d+o+w+n+v+o+t+e+d*
 d+u+d+e+
 # 'asssss', 'asshoooleeeeee', 'dumbasssss', 'dumbassholes', etc
 (?:d+u+m+b*)?a+s+(?:h*o+l+)?e*s*
@@ -191,6 +192,7 @@ ty(?:vm)?
 # 'uuuuuh', 'uuuuuhhhhh', 'uhoh', 'ummmm', 'ughhh', etc
 u+[ghm]+(?:|o+h+)?
 u+p+s+(?:k+i+r+t+|h+o+r+t+)s*
+u+p+v+o+t+e+d*
 vip
 vlog
 wa*i+f+(?:e*y+|u+) # 'waifuuuu', 'wifey', etc
