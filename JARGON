@@ -39,7 +39,7 @@ cgi
 c+o{2,}l+ # 'cooooool', etc
 co+lsto+ry+b+r+(?:[eaou]+|e+w+)h* # coolstorybro
 c+r+e+p+\w* # 'creeeeeepy', 'creeper', 'creepshot', etc
-c+u+t+i*e+(?:p+i+e+)?
+(?:c+u+t+i*e+|q+t+)(?:p+i+e+|3[.]14\d*)?
 c+u+[sz]+
 d+a+f+u*(?:c*k*|q+) # 'dafuq', 'dafuuuuck', etc
 d+a+t+\w{3,} # 'datass', 'daaaateverything', etc

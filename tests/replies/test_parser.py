@@ -60,7 +60,8 @@ from src.replies import Parser
     'giggity', 'giggitygigittieee', 'ggiggittiiiieee', 'giggiteeeee',
     'gigggaddiiiii', 'creepshot', 'creeeeeeper', 'creeepy', 'creepcreepy',
     'diiiingus', 'trippy', 'trippppyyy', 'trrrripppeeeyyy', 'triiiippiiieee',
-    'downvoted', 'upvoted', 'downvote', 'upvote',
+    'downvoted', 'upvoted', 'downvote', 'upvote', 'cutiepieee', 'qt3.14',
+    'cutie3.14', 'qt3.14159265359', 'cutie3.14159265359', 'qtpie',
 ] + ['o'*(i+2) for i in range(15)])
 def test_parser_detects_jargon(word):
     assert Parser.is_jargon(word)
