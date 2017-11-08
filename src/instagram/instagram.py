@@ -125,7 +125,12 @@ class Instagram(object):
                         media = None
 
                 # check again in case an outdated database fetch failed
-                if self.fetcher.valid_response and media is None:
+                if (
+                        # lookup only if all fetches succeeded (if any)
+                        (self.fetcher.valid_response and media is None)
+                        # or the user account is private
+                        or self.private
+                ):
                     media = self._lookup_top_media()
 
             # XXX: even the retry/resume value is cached so the expectation
