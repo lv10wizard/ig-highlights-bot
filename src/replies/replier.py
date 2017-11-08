@@ -147,6 +147,12 @@ class Replier(ProcessMixin, RedditInstanceMixin):
                 color_thing=reddit.display_id(thing),
                 color_list=ig_list_usernames,
         )
+        logger.id(logger.debug, self,
+                '\nfrom_link: {yesno_fromlink}'
+                '\nis_guess:  {yesno_isguess}',
+                yesno_fromlink=from_link,
+                yesno_isguess=is_guess,
+        )
 
         reply_list = self.formatter.format(ig_list, thing, from_link, is_guess)
         if not reply_list:
@@ -155,12 +161,6 @@ class Replier(ProcessMixin, RedditInstanceMixin):
             logger.id(logger.info, self,
                     'No data to reply to {color_thing}: skipping.',
                     color_thing=reddit.display_id(thing),
-            )
-            logger.id(logger.debug, self,
-                    '\nfrom_link: {yesno_fromlink}'
-                    '\nis_guess:  {yesno_isguess}',
-                    yesno_fromlink=from_link,
-                    yesno_isguess=is_guess,
             )
             return
 

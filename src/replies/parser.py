@@ -106,80 +106,6 @@ def load_jargon():
 
     return jargon
 
-class _Cache(object):
-    """
-    Inter-process parsed thing cache
-    """
-
-    _manager = multiprocessing.Manager()
-
-    # the amount of time before the cache is cleared.
-    # too long and the bot may miss any edits to the thing
-    # (and the cache may start to impact memory significantly),
-    # too short and the number of potential network hits rises.
-    EXPIRE_TIME = parse_time('15m')
-
-    NON_FATAL_ERR = [ECONNABORTED, EPIPE]
-
-    def __init__(self, name=None):
-        self.name = name
-        self._expire_timer = multiprocessing.Value(ctypes.c_float, 0.0)
-        self.cache = _Cache._manager.dict()
-
-    def __str__(self):
-        result = [__name__, self.__class__.__name__]
-        if self.name:
-            result.append(self.name)
-        return ':'.join(result)
-
-    def __setitem__(self, key, item):
-        try:
-            self.cache[key] = item
-        except (BrokenPipeError, ConnectionAbortedError) as e:
-            if e.errno in _Cache.NON_FATAL_ERR:
-                # Software caused connection abort
-                # (shutdown interrupted lookup)
-                pass
-            else:
-                raise
-
-    def __getitem__(self, key):
-        self._clear()
-        try:
-            item = self.cache[key]
-        except (BrokenPipeError, ConnectionAbortedError) as e:
-            if e.errno in _Cache.NON_FATAL_ERR:
-                # Software caused connection abort
-                # (shutdown interrupted lookup)
-                item = []
-            else:
-                raise
-        except KeyError:
-            item = None
-        return item
-
-    def _clear(self):
-        """
-        Clears the cache if the time since it was last cleared exceeds the
-        threshold
-        """
-        elapsed = time.time() - self._expire_timer.value
-        if elapsed > _Cache.EXPIRE_TIME:
-            logger.id(logger.debug, self,
-                    'Clearing cache (#{num}) ...',
-                    num=len(self.cache),
-            )
-            # XXX: this may cause a thing to be parsed back-to-back if it was
-            # parsed just before clear()
-            try:
-                self.cache.clear()
-            except (BrokenPipeError, ConnectionAbortedError) as e:
-                if e.errno in _Cache.NON_FATAL_ERR:
-                    pass
-                else:
-                    raise
-            self._expire_timer.value = time.time()
-
 @add_metaclass(abc.ABCMeta)
 class _ParserStrategy(object):
     """
@@ -334,24 +260,19 @@ class _ParserStrategy(object):
         """
         Returns a list of links found in thing
         """
-        links = Parser._link_cache[self.thing.fullname]
-        if links is None:
-            logger.id(logger.debug, self,
-                    'Parsing {thing} ...',
-                    thing=reddit.get_type_from_fullname(self.thing.fullname),
-            )
+        logger.id(logger.debug, self,
+                'Parsing {thing} ...',
+                thing=reddit.get_type_from_fullname(self.thing.fullname),
+        )
 
-            links = remove_duplicates(self._parse_links())
-            # cache the links in case a new Parser is instantiated for
-            # the same thing, potentially from a different process
-            Parser._link_cache[self.thing.fullname] = links
-            if links:
-                logger.id(logger.info, self,
-                        'Found #{num} link{plural}: {color}',
-                        num=len(links),
-                        plural=('' if len(links) == 1 else 's'),
-                        color=links,
-                )
+        links = remove_duplicates(self._parse_links())
+        if links:
+            logger.id(logger.info, self,
+                    'Found #{num} link{plural}: {color}',
+                    num=len(links),
+                    plural=('' if len(links) == 1 else 's'),
+                    color=links,
+            )
 
         return links
 
@@ -359,94 +280,91 @@ class _ParserStrategy(object):
         """
         Returns a list of unique usernames corresponding to parse_links
         """
-        usernames = Parser._username_cache[self.thing.fullname]
-        if usernames is None:
-            self.from_link = True
-            usernames = []
-            # look for usernames from links first since they are all but
-            # guaranteed to be accurate
-            for link in self.parse_links():
-                match = instagram.IG_LINK_REGEX.search(link)
+        self.from_link = True
+        usernames = []
+        # look for usernames from links first since they are all but
+        # guaranteed to be accurate
+        for link in self.parse_links():
+            match = instagram.IG_LINK_REGEX.search(link)
+            if match:
+                usernames.append(match.group('user'))
+
+            else:
+                match = instagram.IG_LINK_QUERY_REGEX.search(link)
                 if match:
                     usernames.append(match.group('user'))
 
-                else:
-                    match = instagram.IG_LINK_QUERY_REGEX.search(link)
-                    if match:
-                        usernames.append(match.group('user'))
+        if not usernames:
+            self.from_link = False
+            # try looking username-like strings in the thing in
+            # case the user soft-linked one or more usernames
+            # eg. '@angiegoesboom'
 
-            if not usernames:
-                self.from_link = False
-                # try looking username-like strings in the thing in
-                # case the user soft-linked one or more usernames
-                # eg. '@angiegoesboom'
+            # XXX: this will increase the frequency of 404s from general
+            # bad matches and may cause the bot to link incorrect user
+            # data if someone soft-links eg. a twitter user and a
+            # different person owns the same username on instagram.
+            logger.id(logger.debug, self,
+                    '\nLooking for soft-linked users in text:'
+                    ' \'{text}\'\n',
+                    text=self._thing_text,
+            )
 
-                # XXX: this will increase the frequency of 404s from general
-                # bad matches and may cause the bot to link incorrect user
-                # data if someone soft-links eg. a twitter user and a
-                # different person owns the same username on instagram.
-                logger.id(logger.debug, self,
-                        '\nLooking for soft-linked users in text:'
-                        ' \'{text}\'\n',
-                        text=self._thing_text,
+            # try '@username'
+            usernames = instagram.IG_AT_USER_REGEX.findall(self._thing_text)
+            # TODO: this should not be turned on if the bot is
+            # crawling any popular subreddit -- but how to determine
+            # if a subreddit is popular?
+            # XXX: turn off trying random-ish strings as usernames
+            # if the bot is crawling /r/all or if we failed to load
+            # the JARGON file
+            if (
+                    not usernames
+                    and Parser._JARGON_FROM_FILE
+                    and 'all' not in _ParserStrategy._subreddits
+            ):
+                # try looking for possible username strings
+                usernames = self._get_potential_user_strings()
+
+        usernames = remove_duplicates(usernames)
+        if usernames:
+            logger.id(logger.info, self,
+                    'Found #{num} username{plural}: {color}',
+                    num=len(usernames),
+                    plural=('' if len(usernames) == 1 else 's'),
+                    color=usernames,
+            )
+
+            if not self.from_link:
+                # prune previous bad matches (eg. usernames that were
+                # deleted due to downvotes)
+                usernames_db = _ParserStrategy._bad_usernames
+                patterns = usernames_db.get_bad_username_patterns()
+                bad_username_regex = re.compile(
+                        '^(?:{0})$'.format('|'.join(patterns)),
+                        flags=re.IGNORECASE,
                 )
 
-                # try '@username'
-                usernames = instagram.IG_AT_USER_REGEX.findall(self._thing_text)
-                # TODO: this should not be turned on if the bot is
-                # crawling any popular subreddit -- but how to determine
-                # if a subreddit is popular?
-                # XXX: turn off trying random-ish strings as usernames
-                # if the bot is crawling /r/all or if we failed to load
-                # the JARGON file
-                if (
-                        not usernames
-                        and Parser._JARGON_FROM_FILE
-                        and 'all' not in _ParserStrategy._subreddits
-                ):
-                    # try looking for possible username strings
-                    usernames = self._get_potential_user_strings()
+                pruned = []
+                for name in usernames:
+                    if bad_username_regex.search(name):
+                        usernames.remove(name)
+                        pruned.append(name)
 
-            usernames = remove_duplicates(usernames)
-            if usernames:
-                logger.id(logger.info, self,
-                        'Found #{num} username{plural}: {color}',
-                        num=len(usernames),
-                        plural=('' if len(usernames) == 1 else 's'),
-                        color=usernames,
-                )
-
-                if not self.from_link:
-                    # prune previous bad matches (eg. usernames that were
-                    # deleted due to downvotes)
-                    usernames_db = _ParserStrategy._bad_usernames
-                    patterns = usernames_db.get_bad_username_patterns()
-                    bad_username_regex = re.compile(
-                            '^(?:{0})$'.format('|'.join(patterns)),
-                            flags=re.IGNORECASE,
+                if pruned:
+                    logger.id(logger.info, self,
+                            'Pruned #{num} previous bad match{plural}:'
+                            ' {color_pruned}',
+                            num=len(pruned),
+                            plural=('' if len(pruned) == 1 else 'es'),
+                            color_pruned=pruned,
                     )
+                if not usernames:
+                    logger.id(logger.info, self, 'All usernames pruned!')
 
-                    pruned = []
-                    for name in usernames:
-                        if bad_username_regex.search(name):
-                            usernames.remove(name)
-                            pruned.append(name)
-
-                    if pruned:
-                        logger.id(logger.info, self,
-                                'Pruned #{num} previous bad match{plural}:'
-                                ' {color_pruned}',
-                                num=len(pruned),
-                                plural=('' if len(pruned) == 1 else 'es'),
-                                color_pruned=pruned,
-                        )
-                    if not usernames:
-                        logger.id(logger.info, self, 'All usernames pruned!')
-
-            # force all usernames to lowercase since instagram does not
-            # differentiate between cap/low-case
-            usernames = [name.lower() for name in usernames]
-            Parser._username_cache[self.thing.fullname] = usernames
+        # force all usernames to lowercase since instagram does not
+        # differentiate between cap/low-case
+        usernames = [name.lower() for name in usernames]
 
         return usernames.copy()
 
@@ -554,12 +472,6 @@ class Parser(object):
     """
     Parses reddit things for instagram user links
     """
-
-    # XXX: I think creating these here is ok so long as this module is loaded
-    # by the main process so that child processes inherit them. otherwise child
-    # processes may create another version .. I think.
-    _link_cache = _Cache('links')
-    _username_cache = _Cache('usernames')
 
     _en_US = None # 'murican
     _en_GB = None # british
