@@ -27,11 +27,24 @@ class Fetcher(object):
 
     _ratelimit = None
     _requestor = None
+    _cfg = None
 
     # 500-level response status code timing
     # a 500-level status code indicates an error on instagram's side
     _500_timestamp = 0
     _500_delay = 0
+
+    _EXPOSE_PROPS = [
+            'exists',
+            'private',
+            'verified',
+            'full_name',
+            'external_url',
+            'biography',
+            'num_followers',
+            'num_follows',
+            'num_posts',
+    ]
 
     @classproperty
     def ME(cls):
@@ -219,11 +232,96 @@ class Fetcher(object):
         self._fetch_started = False
         self._valid_response = True
 
+        self._exists = None
+        self._private = None
+        self._verified = None
+        self._full_name = None
+        self._external_url = None
+        self._biography = None
+        self._num_followers = None
+        self._num_follows = None # num accounts the user follows
+        self._num_posts = None
+
+        if not Fetcher._cfg:
+            from .instagram import Instagram
+            Fetcher._cfg = Instagram._cfg
+
     def __str__(self):
         result = [Fetcher.ME, self.__class__.__name__]
         if self.user:
             result.append(self.user)
         return ':'.join(result)
+
+    def _get_meta_property(self, attr):
+        result = None
+        if hasattr(self, attr):
+            if getattr(self, attr) is None:
+                self._get_meta_data()
+            result = getattr(self, attr)
+        else:
+            # most likely a programmer error (eg. typo)
+            logger.id(logger.critical, self,
+                    'No such attribute \'{attr}\'!',
+                    attr=attr,
+            )
+
+        return result
+
+    @property
+    def exists(self):
+        """ Returns whether the account exists """
+        return self._get_meta_property('_exists')
+
+    @property
+    def private(self):
+        """ Returns whether the account is private """
+        return self._get_meta_property('_private')
+
+    @property
+    def verified(self):
+        """ Returns whether the account is verified """
+        return self._get_meta_property('_verified')
+
+    @property
+    def full_name(self):
+        """ Returns the account's full_name """
+        return self._get_meta_property('_full_name')
+
+    @property
+    def external_url(self):
+        """ Returns the account's external_url """
+        return self._get_meta_property('_external_url')
+
+    @property
+    def biography(self):
+        """ Returns the account's biography """
+        return self._get_meta_property('_biography')
+
+    @property
+    def num_followers(self):
+        """ Returns the account's number of followers """
+        return self._get_meta_property('_num_followers') or -1
+
+    @property
+    def has_enough_followers(self):
+        """
+        Returns True if the account has enough followers for a fetch to occur
+                or False if the account does not have enough followers
+                or None if _num_followers is not set
+        """
+        if self.num_followers < 0:
+            return None
+        return self.num_followers >= Fetcher._cfg.min_follower_count
+
+    @property
+    def num_follows(self):
+        """ Returns the number of users the account follows """
+        return self._get_meta_property('_num_follows') or -1
+
+    @property
+    def num_posts(self):
+        """ Returns the account's number of public posts """
+        return self._get_meta_property('_num_posts') or -1
 
     @property
     def valid_response(self):
@@ -364,59 +462,132 @@ class Fetcher(object):
         # -- queued data should imply expired I think
         return self.cache.expired or self.cache.queued_last_id
 
-    def get_meta_data(self):
+    def _parse_meta_data(self, data):
         """
-        Fetches user meta data (eg. num followers, is private, etc)
+        Parses the user's meta data if it has not yet been parsed for this
+        instance
+        """
 
-        Returns a tuple(exists, is_private, num_followers) where
-                exists (bool) - whether the user account exists
-                is_private (bool) - whether the account is private
-                num_followers (int) - the number of followers of the account
+        def parse(data, entire_data, *keys):
+            try:
+                # lookup the next dictionary key
+                result = data[keys[0]]
+            except KeyError:
+                logger.id(logger.debug, self,
+                        'data:\n{pprint_data}',
+                        pprint_data=entire_data,
+                )
+                logger.id(logger.warn, self,
+                        'Meta-data json structure changed!'
+                        ' No such key=\'{key}\'',
+                        key=keys[0],
+                        exc_info=True,
+                )
+                return None
 
-                or None if the bot is instagram ratelimited, instagram is
-                        experiencing server issues (ie, 500-level status code)
-                        or the request timed out
+            if not isinstance(result, dict) or len(keys) == 1:
+                # either the current key resulted in a non-dictionary
+                # or parsed through all of the given keys
+                return result
+            else:
+                # continue parsing the keys
+                return parse(result, entire_data, *keys[1:])
+
+        def set_meta_val(attr, data, *keys):
+            # only set if the attribute already exists
+            if hasattr(self, attr):
+                # and if the attribute is None
+                # XXX: this is an issue if a valid value for an attribute is
+                # None.
+                if getattr(self, attr) is None:
+                    result = parse(data, data, *keys)
+                    logger.id(logger.debug, self,
+                            '{attr}: {val}',
+                            attr=attr,
+                            val=result,
+                    )
+                    setattr(self, attr, result)
+
+            else:
+                # probably a typo
+                logger.id(logger.critical, self,
+                        'No such attribute \'{attr}\'!',
+                        attr=attr,
+                )
+
+        set_meta_val('_private', data, 'user', 'is_private')
+        set_meta_val('_verified', data, 'user', 'is_verified')
+        set_meta_val('_full_name', data, 'user', 'full_name')
+        set_meta_val('_external_url', data, 'user', 'external_url')
+        # TODO: does an empty biography == None or == ''?
+        set_meta_val('_biography', data, 'user', 'biography')
+        set_meta_val('_num_followers', data, 'user', 'followed_by', 'count')
+        set_meta_val('_num_follows', data, 'user', 'follows', 'count')
+        set_meta_val('_num_posts', data, 'user', 'media', 'count')
+
+        if self._private:
+            logger.id(logger.info, self,
+                    '{color_user} is private!',
+                    color_user=self.user,
+            )
+            self.cache.flag_as_private()
+
+        if self.has_enough_followers is False:
+            logger.id(logger.info, self,
+                    '{color_user} has too few followers:'
+                    ' skipping. ({num} < {min_count})',
+                    color_user=self.user,
+                    num=self._num_followers,
+                    min_count=Fetcher._cfg.min_follower_count,
+            )
+            # TODO? differentiate between non-existant & too few followers
+            self.cache.flag_as_bad()
+
+    def _set_does_not_exist(self):
+        self._exists = False
+        logger.id(logger.info, self,
+                '{color_user} does not exist!',
+                color_user=self.user,
+        )
+        self.cache.flag_as_bad()
+
+    def _get_meta_data(self):
+        """
+        Fetches & parses user meta data (eg. num followers, is private, etc)
         """
         # TODO: skip if self.user is in ig_queue
         logger.id(logger.info, self, 'Fetching meta data ...')
 
-        response = Fetcher.request(META_ENDPOINT.format(self.user))
-        if Fetcher._is_bad_response(response):
-            self._valid_response = False
-            return
+        data = None
+        while not data:
+            response = Fetcher.request(META_ENDPOINT.format(self.user))
+            if Fetcher._is_bad_response(response):
+                self._valid_response = False
+                return
 
-        exists = None
-        is_private = None
-        num_followers = -1
+            if response.status_code == 200:
+                self._exists = True
 
-        if response.status_code == 404:
-            # the user does not exist
-            exists = False
-
-        else:
-            try:
-                data = response.json()
-            except ValueError:
-                # not a valid user (eg. /about page)
-                exists = False
-
-            else:
                 try:
-                    is_private = data['user']['is_private']
-                    num_followers = data['user']['followed_by']['count']
-                except KeyError:
-                    logger.id(logger.exception, self,
-                            'Meta data json structure changed!',
-                            exc_info=True,
-                    )
-                    logger.id(logger.debug, self,
-                            'json:\n\n{pprint_data}\n\n',
-                            pprint_data=data,
-                    )
-                else:
-                    exists = True
+                    data = response.json()
+                except ValueError as e:
+                    # either bad json or a non-user page
+                    if response.text.strip().startswith('{'):
+                        # most likely bad json
+                        self._handle_bad_json(e)
+                    else:
+                        # most likely a non-user page (eg. /about)
+                        return
 
-        return (exists, is_private, num_followers)
+            elif response.status_code == 404:
+                self._set_does_not_exist()
+
+            elif response.status_code // 100 == 4:
+                response.raise_for_status()
+
+        if data:
+            self._reset_bad_json()
+            self._parse_meta_data(data)
 
     def fetch_data(self):
         """
@@ -426,6 +597,8 @@ class Fetcher(object):
                 or None if fetching was interrupted
                 or False if the user does not exist or is not a user page
                         eg. instagram.com/about
+                        or if the user's account is private
+                        or if the user has too few followers
         """
         success = None
         data = None
@@ -460,6 +633,8 @@ class Fetcher(object):
                 self._fetch_started = True
 
                 if response.status_code == 200:
+                    self._exists = True
+
                     try:
                         data = response.json()
                     except ValueError as e:
@@ -468,13 +643,21 @@ class Fetcher(object):
 
                     else:
                         self._reset_bad_json()
-                        success = self._parse_data(data)
+                        self._parse_meta_data(data)
+                        if self.has_enough_followers is False:
+                            success = False
+
+                        if success is None:
+                            success = self._parse_data(data)
+
+                        # XXX: not an 'elif' in case _parse_data changed the
+                        # success value.
                         if success is False:
-                            # private/non-user page
+                            # private/non-user page/not enough followers
                             break
 
                 elif response.status_code == 404:
-                    # I'm not sure this can happen
+                    self._set_does_not_exist()
                     success = False
                     break
 
@@ -498,9 +681,7 @@ class Fetcher(object):
             self._enqueue()
             raise
 
-        if success is False:
-            self.cache.flag_as_bad()
-        elif success is None:
+        if success is None:
             self._valid_response = False
 
         return success

@@ -65,6 +65,15 @@ class Instagram(object):
             result.append(self.user)
         return ':'.join(result)
 
+    def __getattr__(self, attr):
+        try:
+            return self.__getattribute__(attr)
+        except AttributeError:
+            if attr in Fetcher._EXPOSE_PROPS:
+                return getattr(self.fetcher, attr)
+            else:
+                raise
+
     @property
     def url(self):
         return 'https://www.{0}/{1}'.format(BASE_URL, self.user)
@@ -95,30 +104,25 @@ class Instagram(object):
             media = None
 
             if self.fetcher.should_fetch:
-                media = self._check_metadata()
-
-                if self.fetcher.valid_response and media is None:
-                    # metadata check passed
-                    media = self.fetcher.fetch_data()
-                    if media:
-                        # fetch succeeded; reset the media value
-                        media = None
+                media = self.fetcher.fetch_data()
+                if media:
+                    # fetch succeeded; reset the media value
+                    media = None
 
             if self.fetcher.valid_response and media is None:
                 if self.cache.size() == 0:
                     # re-fetch an outdated existing cache
                     # (ie: an existing database file no longer reflects the
                     #  way the database behaves in code)
-                    media = self._check_metadata()
-
-                    if self.fetcher.valid_response and media is None:
-                        logger.id(logger.debug, self,
-                                'Fetching outdated cache ...',
-                        )
-                        media = self.fetcher.fetch_data()
-                        if media:
-                            # fetch succeeded; reset the media value
-                            media = None
+                    # XXX: this logging will be incorrect if the cache is
+                    # created before this point
+                    logger.id(logger.debug, self,
+                            'Fetching outdated cache ...',
+                    )
+                    media = self.fetcher.fetch_data()
+                    if media:
+                        # fetch succeeded; reset the media value
+                        media = None
 
                 # check again in case an outdated database fetch failed
                 if self.fetcher.valid_response and media is None:
@@ -130,54 +134,6 @@ class Instagram(object):
             self.__cached_top_media = media
 
         return media
-
-    def _check_metadata(self):
-        """
-        Checks the user's metadata to determine if the bot should fetch
-        the user's media data.
-        """
-        try:
-            result = self.__metadata
-        except AttributeError:
-            result = None
-            metadata = self.fetcher.get_meta_data()
-            if metadata:
-                exists, private, followers = metadata
-                min_followers = Instagram._cfg.min_follower_count
-
-                if not exists or followers < min_followers:
-                    if not exists:
-                        logger.id(logger.info, self,
-                                '{color_user} does not exist!',
-                                color_user=self.user,
-                        )
-
-                    elif followers < min_followers:
-                        logger.id(logger.info, self,
-                                '{color_user} has too few followers:'
-                                ' skipping. ({num} < {min_count})',
-                                color_user=self.user,
-                                num=followers,
-                                min_count=min_followers,
-                        )
-                    # the user does not exist or has too few followers
-                    # TODO? differentiate between 404 & too few followers
-                    self.cache.flag_as_bad()
-                    result = False
-
-                elif private:
-                    # the user's profile is private
-                    logger.id(logger.info, self,
-                            '{color_user} is private!',
-                            color_user=self.user,
-                    )
-
-                    self.cache.flag_as_private()
-                    result = True
-
-            self.__metadata = result
-
-        return result
 
     def _lookup_top_media(self):
         """
