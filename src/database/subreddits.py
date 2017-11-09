@@ -23,9 +23,7 @@ class SubredditsDatabase(Database):
         Database.__init__(self, *args, **kwargs)
 
         if do_seed is None:
-            do_seed = not os.path.exists(
-                    Database.resolve_path(SubredditsDatabase.PATH)
-            )
+            do_seed = not os.path.exists(self._resolved_path)
         self.do_seed = bool(do_seed)
 
     @property
