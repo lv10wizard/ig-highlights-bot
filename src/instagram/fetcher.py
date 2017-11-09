@@ -111,7 +111,7 @@ class Fetcher(object):
         # try a 429-based ratelimit
         expire = Fetcher._429_timestamp + Fetcher._429_delay
         if expire > 0:
-            time_left = time.time() - expire
+            time_left = expire - time.time()
 
         # try the self-imposed ratelimit
         if time_left < 0:
