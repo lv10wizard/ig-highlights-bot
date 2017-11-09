@@ -29,6 +29,7 @@ class Replier(ProcessMixin, RedditInstanceMixin):
         ProcessMixin.__init__(self)
         RedditInstanceMixin.__init__(self, cfg, rate_limited)
 
+        self.rate_limited = rate_limited
         self.blacklist = blacklist
         self.subreddits = SubredditsDatabase()
         self.potential_subreddits = PotentialSubredditsDatabase()
@@ -349,7 +350,12 @@ class Replier(ProcessMixin, RedditInstanceMixin):
 
         delay = 1
         while not self._killed.is_set():
-            self._process_reply_queue()
+            # don't bother processing the reply queue if the bot is ratelimited
+            # from making replies to reddit
+            self.rate_limited.wait_out_ratelimit(self._killed)
+
+            if not self._killed.is_set():
+                self._process_reply_queue()
 
             # sleep a bit in case all queues are empty to prevent wasteful CPU
             # spin

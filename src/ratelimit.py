@@ -78,7 +78,10 @@ class Flag(object):
                 self._remove_last_reset()
 
     def __str__(self):
-        return self.__class__.__name__
+        return ':'.join([
+            __name__,
+            self.__class__.__name__,
+        ])
 
     def _remove_last_reset(self):
         """
@@ -176,6 +179,37 @@ class Flag(object):
     def wait(self, timeout=None):
         self._event.wait(timeout)
 
+    def wait_out_ratelimit(self, event=None):
+        """
+        Waits the remaining ratelimit time, if any.
+
+        event ({threading,multiprocessing}.Event, optional) -
+                The object to use to wait out the remaining time (with the
+                object's .wait attribute). If this is not specified, waiting
+                will take place with time.sleep (meaning processes will
+                become unresponsive during the wait period).
+                    Default: None => waits with time.sleep
+        """
+        delay = self.remaining
+        if delay > 0:
+            if not (event or hasattr(event, 'wait')):
+                logger.id(logger.debug, self,
+                        'No \'wait\' method found for event=\'{event}\'!'
+                        ' Using time.sleep ...',
+                        event=event,
+                )
+                do_wait = time.sleep
+            else:
+                do_wait = event.wait
+
+            logger.id(logger.info, self,
+                    'Rate limited! Waiting {time} (expires @ {strftime}) ...',
+                    time=delay,
+                    strftime='%H:%M:%S',
+                    strf_time=self.value,
+            )
+            do_wait(delay)
+
 class _RateLimit(ProcessMixin):
     """
     Rate-limit "timer" process
@@ -197,13 +231,7 @@ class _RateLimit(ProcessMixin):
                 continue
 
             # wait until the rate-limit is done
-            delay = self.rate_limited.remaining
-            if delay > 0:
-                logger.id(logger.info, self,
-                        'Rate limited! Sleeping {time} ...',
-                        time=delay,
-                )
-                self._killed.wait(delay)
+            self.rate_limited.wait_out_ratelimit(self._killed)
 
             # don't postpone shutdown to set some variables that are about to
             # be discarded
@@ -230,6 +258,7 @@ class RateLimitHandler(ProcessMixin, RedditInstanceMixin):
 
         self.__rate_limit_proc = _RateLimit(rate_limited)
 
+        self.rate_limited = rate_limited
         self.reply_history = database.ReplyDatabase()
         self.rate_limit_queue = database.RedditRateLimitQueueDatabase()
 
@@ -250,6 +279,11 @@ class RateLimitHandler(ProcessMixin, RedditInstanceMixin):
 
         while not self._killed.is_set():
             handled = False
+
+            self.rate_limited.wait_out_ratelimit(self._killed)
+            if self._killed.is_set():
+                break
+
             try:
                 # set a timeout so that kill() calls are registered in a
                 # somewhat timely manner
