@@ -43,7 +43,7 @@ class Instagram(object):
         # all instagram usernames are lowercase
         self.user = user.lower()
         self.cache = Cache(self.user)
-        self.fetcher = Fetcher(self.user)
+        self.fetcher = Fetcher(self.user, killed=killed)
 
         if not Instagram._cfg:
             logger.id(logger.critical, self,
