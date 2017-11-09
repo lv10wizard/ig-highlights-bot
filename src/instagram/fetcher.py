@@ -202,15 +202,6 @@ class Fetcher(object):
 
                 Fetcher._log_ratelimit()
 
-                # TODO: parse response & dynamically update ig ratelimit db
-                # threshold (assuming they include #requests / time)
-                # TODO: tmp -----
-                logger.id(logger.debug, Fetcher.ME,
-                        'response text:\n\n{text}\n',
-                        text=response.text,
-                )
-                # ---------------
-
             else:
                 try:
                     Fetcher._multi_429_count += 1
