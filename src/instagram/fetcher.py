@@ -38,7 +38,7 @@ class Fetcher(object):
     # 429-level response status code timing
     _429_timestamp = 0
     _429_delay = 0
-    _429_DEFAULT_DELAY = parse_time('1h')
+    _429_DEFAULT_DELAY = parse_time('5m')
 
     _EXPOSE_PROPS = [
             'exists',
@@ -654,8 +654,7 @@ class Fetcher(object):
 
             elif response.status_code == 429: # too many requests
                 Fetcher._handle_too_many_requests(response)
-                # TODO: break; need to handle non-valid return values for
-                # metadata properties (mostly in replies/formatter.py)
+                # TODO: just wait (break if killed.is_set / is True)
 
             elif response.status_code // 100 == 4:
                 response.raise_for_status()
