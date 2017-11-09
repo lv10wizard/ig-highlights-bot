@@ -9,6 +9,7 @@ from .constants import (
         RATELIMIT_THRESHOLD,
 )
 from .cache import Cache
+from src.config import parse_time
 from src.database import (
         InstagramRateLimitDatabase,
         UniqueConstraintFailed,
@@ -33,6 +34,11 @@ class Fetcher(object):
     # a 500-level status code indicates an error on instagram's side
     _500_timestamp = 0
     _500_delay = 0
+
+    # 429-level response status code timing
+    _429_timestamp = 0
+    _429_delay = 0
+    _429_DEFAULT_DELAY = parse_time('1h')
 
     _EXPOSE_PROPS = [
             'exists',
@@ -88,7 +94,7 @@ class Fetcher(object):
                 Fetcher.ratelimit.insert(response.url)
             except UniqueConstraintFailed:
                 # this shouldn't happen
-                logger.id(logger.critical, self,
+                logger.id(logger.critical, Fetcher.ME,
                         'Failed to count ratelimit hit (#{num} used): {url}',
                         num=Fetcher.ratelimit.num_used(),
                         url=response.url,
@@ -99,10 +105,36 @@ class Fetcher(object):
                 Fetcher.ratelimit.commit()
 
     @classproperty
+    def ratelimit_delay(cls):
+        time_left = -1
+
+        # try a 429-based ratelimit
+        expire = Fetcher._429_timestamp + Fetcher._429_delay
+        if expire > 0:
+            time_left = time.time() - expire
+
+        # try the self-imposed ratelimit
+        if time_left < 0:
+            num_remaining = RATELIMIT_THRESHOLD - Fetcher.ratelimit.num_used()
+            if num_remaining <= 0:
+                time_left = Fetcher.ratelimit.time_left()
+
+        return time_left
+
+    @classproperty
     def is_ratelimited(cls):
-        num_used = Fetcher.ratelimit.num_used()
-        num_remaining = RATELIMIT_THRESHOLD - num_used
-        return num_remaining <= 0
+        return Fetcher.ratelimit_delay > 0
+
+    @staticmethod
+    def _log_ratelimit():
+        time_left = Fetcher.ratelimit_delay
+        if time_left > 0:
+            logger.id(logger.info, Fetcher.ME,
+                    'Ratelimited! (~ {time} left; expires @ {strftime})',
+                    time=time_left,
+                    strftime='%H:%M:%S',
+                    strf_time=time.time() + time_left,
+            )
 
     @staticmethod
     def _handle_rate_limit():
@@ -129,24 +161,70 @@ class Fetcher(object):
                     threshold=RATELIMIT_THRESHOLD,
                     excess=abs(num_remaining),
             )
-        is_ratelimited = num_remaining <= 0
+
+        is_ratelimited = Fetcher.is_ratelimited
         Fetcher.__was_rate_limited = is_ratelimited
         if is_ratelimited and not was_ratelimited:
-            time_left = Fetcher.ratelimit.time_left()
-            logger.id(logger.info, Fetcher.ME,
-                    'Ratelimited! (~ {time} left; expires @ {strftime})',
-                    time=time_left,
-                    strftime='%H:%M:%S',
-                    strf_time=time.time() + time_left,
-            )
+            Fetcher._log_ratelimit()
 
         elif not is_ratelimited and was_ratelimited:
             logger.id(logger.info, Fetcher.ME,
                     'No longer ratelimited! ({num} requests left)',
                     num=num_remaining,
             )
+            # just reset the 429 variables even if the ratelimit was
+            # self-imposed
+            Fetcher._429_timestamp = Fetcher._429_delay = 0
+            try:
+                del Fetcher._multi_429_count
+            except AttributeError:
+                pass
 
         return is_ratelimited
+
+    @staticmethod
+    def _handle_too_many_requests(response):
+        """
+        Handles 429 Too Many Requests response
+        """
+        if response.status_code == 429:
+            logger.id(logger.info, Fetcher.ME,
+                    '429 Too Many Requests: ratelimited!',
+            )
+
+            if Fetcher._429_timestamp == Fetcher._429_delay == 0:
+                Fetcher._429_timestamp = time.time()
+                try:
+                    # https://tools.ietf.org/html/rfc6585#section-4
+                    Fetcher._429_delay = response.headers['retry-after']
+                except KeyError:
+                    Fetcher._429_delay = Fetcher._429_DEFAULT_DELAY
+
+                Fetcher._log_ratelimit()
+
+                # TODO: parse response & dynamically update ig ratelimit db
+                # threshold (assuming they include #requests / time)
+                # TODO: tmp -----
+                logger.id(logger.debug, Fetcher.ME,
+                        'response text:\n\n{text}\n',
+                        text=response.text,
+                )
+                # ---------------
+
+            else:
+                try:
+                    Fetcher._multi_429_count += 1
+                except AttributeError:
+                    Fetcher._multi_429_count = 1
+
+                # made another request past the first 429 response
+                # (this will probably be spammy)
+                # TODO? raise instead
+                logger.id(logger.warn, Fetcher.ME,
+                        'Multiple requests made while 429 ratelimited!'
+                        ' (#{num})',
+                        num=Fetcher._multi_429_count,
+                )
 
     @staticmethod
     def _is_bad_response(response):
@@ -411,7 +489,7 @@ class Fetcher(object):
             self._enqueue()
             raise
 
-    def _reset_bad_json(self):
+    def _reset_error_delay(self):
         """
         Resets the cached variables used to handle bad json
         """
@@ -577,16 +655,24 @@ class Fetcher(object):
                         self._handle_bad_json(e)
                     else:
                         # most likely a non-user page (eg. /about)
-                        return
+                        break
 
             elif response.status_code == 404:
                 self._set_does_not_exist()
+                break
+
+            elif response.status_code == 429: # too many requests
+                Fetcher._handle_too_many_requests(response)
+                # TODO: break; need to handle non-valid return values for
+                # metadata properties (mostly in replies/formatter.py)
 
             elif response.status_code // 100 == 4:
                 response.raise_for_status()
 
+        self._reset_error_delay()
+
         if data:
-            self._reset_bad_json()
+            self._reset_error_delay()
             self._parse_meta_data(data)
 
     def fetch_data(self):
@@ -642,7 +728,7 @@ class Fetcher(object):
                         self._handle_bad_json(e)
 
                     else:
-                        self._reset_bad_json()
+                        self._reset_error_delay()
                         self._parse_meta_data(data)
                         if self.has_enough_followers is False:
                             success = False
@@ -659,6 +745,11 @@ class Fetcher(object):
                 elif response.status_code == 404:
                     self._set_does_not_exist()
                     success = False
+                    break
+
+                elif response.status_code == 429: # too many requests
+                    self._enqueue()
+                    Fetcher._handle_too_many_requests(response)
                     break
 
                 elif response.status_code // 100 == 4:
