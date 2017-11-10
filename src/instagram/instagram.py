@@ -5,6 +5,7 @@ from .cache import Cache
 from .fetcher import Fetcher
 from constants import EMAIL
 from src.util import logger
+from src.util.decorators import classproperty
 from src.util.version import get_version
 
 
@@ -38,6 +39,10 @@ class Instagram(object):
 
     _cfg = None
     _useragent = None
+
+    @classproperty
+    def is_ratelimited(cls):
+        return Fetcher.is_ratelimited
 
     def __init__(self, user, killed=None):
         # all instagram usernames are lowercase

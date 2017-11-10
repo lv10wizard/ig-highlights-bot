@@ -36,6 +36,13 @@ class Replier(ProcessMixin, RedditInstanceMixin):
         self.reply_history = ReplyDatabase()
         self.reply_queue = ReplyQueueDatabase()
 
+        # cache to prevent the replier from refetching reddit information every
+        # run_forever pass
+        self._thing_cache = {}
+        # cache so that the replier can skip queued things if instagram is
+        # ratelimited
+        self._thing_requires_fetch = {}
+
     def _get_instagram_data(self, thing, ig_usernames):
         """
         Returns a list of instagram data for each user linked-to by the thing
@@ -216,6 +223,17 @@ class Replier(ProcessMixin, RedditInstanceMixin):
             self.reply_history.commit()
         return success
 
+    def _remove_from_caches(self, fullname):
+        try:
+            del self._thing_cache[fullname]
+        except KeyError:
+            pass
+
+        try:
+            del self._thing_requires_fetch[fullname]
+        except KeyError:
+            pass
+
     def _process_reply_queue(self):
         """
         Processes the reply-queue until all elements have been seen.
@@ -234,17 +252,36 @@ class Replier(ProcessMixin, RedditInstanceMixin):
                 break
 
             seen.add(fullname)
-            thing = self._reddit.get_thing_from_fullname(fullname)
-            if not thing:
-                logger.id(logger.warn, self,
-                        'Unrecognized fullname: \'{color_fullname}\'.'
-                        ' Removing from queue ...',
-                        color_fullname=fullname,
-                )
-                with self.reply_queue:
-                    self.reply_queue.delete(fullname)
 
+            if (
+                    fullname in self._thing_requires_fetch
+                    and Instagram.is_rate_limited
+            ):
+                # the reply-queued thing requires an instagram fetch but
+                # instagram is ratelimited: skip the thing
+                # XXX: this doesn't sleep in case a thing that does not need
+                # any fetching is reply-queued
                 continue
+
+            try:
+                thing = self._thing_cache[fullname]
+            except KeyError:
+                thing = self._reddit.get_thing_from_fullname(fullname)
+                if not thing:
+                    logger.id(logger.warn, self,
+                            'Unrecognized fullname: \'{color_fullname}\'.'
+                            ' Removing from queue ...',
+                            color_fullname=fullname,
+                    )
+                    with self.reply_queue:
+                        self.reply_queue.delete(fullname)
+                    self._remove_from_caches(fullname)
+
+                    continue
+
+                # cache the thing so that the replier process does not hit
+                # reddit every pass for re-parsed things
+                self._thing_cache[fullname] = thing
 
             mention = None
             if mention_id:
@@ -276,6 +313,7 @@ class Replier(ProcessMixin, RedditInstanceMixin):
                 )
                 with self.reply_queue:
                     self.reply_queue.delete(thing)
+                self._remove_from_caches(fullname)
 
             elif ig_list:
                 if None in ig_list:
@@ -284,6 +322,7 @@ class Replier(ProcessMixin, RedditInstanceMixin):
                     # can reply immediately to other things.
                     with self.reply_queue:
                         self.reply_queue.update(thing)
+                    self._thing_requires_fetch[fullname] = True
 
                 else:
                     # remove the thing from the reply-queue if we got data for
@@ -296,6 +335,7 @@ class Replier(ProcessMixin, RedditInstanceMixin):
                     # after replying but before reply-queue removal.
                     with self.reply_queue:
                         self.reply_queue.delete(thing)
+                    self._remove_from_caches(fullname)
 
                     ig_list = list(filter(None, ig_list))
                     ig_list_usernames = [ig.user for ig in ig_list]
