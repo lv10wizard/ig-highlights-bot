@@ -75,6 +75,8 @@ class SubredditsDatabase(Database):
         )
 
     def _initialize_tables(self, db):
+        from args import RM_SUBREDDIT
+
         if self.do_seed:
             logger.id(logger.debug, self,
                     'Seeding subreddits database from \'{path}\' ...',
@@ -143,23 +145,21 @@ class SubredditsDatabase(Database):
                                     color_names=added,
                             )
 
-                        # remove any subreddits in the database that are missing
-                        # from the file
+                        # XXX: do not remove missing subreddits to prevent
+                        # dynamically added (eg. potential) subreddits from
+                        # being removed on accident.
                         if to_remove:
                             logger.id(logger.info, self,
-                                    'Removing #{num} missing subreddit{plural}',
+                                    '#{num} missing subreddit{plural}:'
+                                    ' {color_names}',
                                     num=len(to_remove),
                                     plural=('' if len(to_remove) == 1 else 's'),
-                            )
-                            logger.id(logger.debug, self,
-                                    'Removed: {color_names}',
                                     color_names=to_remove,
                             )
-
-                            db.executemany(
-                                    'DELETE FROM subreddits'
-                                    ' WHERE subreddit_name = ?',
-                                    [(name,) for name in to_remove],
+                            logger.id(logger.info, self,
+                                    'Please use the --{rm_sub} option to'
+                                    ' remove them.',
+                                    rm_sub=RM_SUBREDDIT,
                             )
 
     def _insert(self, thing):
