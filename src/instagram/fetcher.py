@@ -428,6 +428,20 @@ class Fetcher(object):
         if self._fetch_started:
             self.cache.enqueue(self.last_id)
 
+    def _wait(self, delay):
+        if delay > 0:
+            if hasattr(self.killed, 'wait'):
+                do_wait = self.killed.wait
+            else:
+                do_wait = time.sleep
+
+            logger.id(logger.debug, self,
+                    'Waiting {time} ...',
+                    time=delay,
+            )
+
+            do_wait(delay)
+
     def _handle_bad_json(self, err):
         """
         Handles the case where the media endpoint returns invalid json
@@ -473,11 +487,7 @@ class Fetcher(object):
                             ],
                     )
 
-            if hasattr(self.killed, 'wait'):
-                do_wait = self.killed.wait
-            else:
-                do_wait = time.sleep
-            do_wait(delay)
+            self._wait(delay)
 
         else:
             # too many retries hitting bad json; maybe the endpoint changed?
@@ -664,7 +674,9 @@ class Fetcher(object):
 
             elif response.status_code == 429: # too many requests
                 Fetcher._handle_too_many_requests(response)
-                # TODO: just wait (break if killed.is_set / is True)
+                self._wait(Fetcher.ratelimit_delay)
+                if self._killed:
+                    break
 
             elif response.status_code // 100 == 4:
                 response.raise_for_status()
