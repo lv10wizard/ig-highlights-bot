@@ -103,7 +103,7 @@ class InstagramQueueDatabase(Database):
             with self._db:
                 for ig_user in stale:
                     self._db.execute(
-                            'UPDATE queue SET last_id = ? timestamp = ?'
+                            'UPDATE queue SET last_id = ?, timestamp = ?'
                             ' WHERE ig_user = ?',
                             (None, time.time(), ig_user),
                     )
