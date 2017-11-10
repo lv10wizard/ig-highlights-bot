@@ -1,11 +1,13 @@
 import re
 
+from six import MAXSIZE
+
 
 # the max number of requests that can be made before rate-limiting is
 # imposed (this is a rolling limit per max_age, eg. 3000 / hr)
 # XXX: I don't think this should be a config option since the user shouldn't
 # be allowed to change this to any number they wish
-RATELIMIT_THRESHOLD = 1000
+RATELIMIT_THRESHOLD = MAXSIZE # maxsize to turn off self-imposed ratelimiting
 
 BASE_URL_VARIATIONS = [
         'instagram.com',
