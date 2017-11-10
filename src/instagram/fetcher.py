@@ -196,9 +196,19 @@ class Fetcher(object):
                 Fetcher._429_timestamp = time.time()
                 try:
                     # https://tools.ietf.org/html/rfc6585#section-4
-                    Fetcher._429_delay = response.headers['retry-after']
-                except KeyError:
+                    Fetcher._429_delay = int(response.headers['retry-after'])
+                    # add some extra time because their header seems to be short
+                    Fetcher._429_delay += 90
+                    logger.id(logger.debug, Fetcher.ME,
+                            'Setting delay from Retry-After header: {time}',
+                            time=Fetcher._429_delay,
+                    )
+                except (KeyError, TypeError, ValueError):
                     Fetcher._429_delay = Fetcher._429_DEFAULT_DELAY
+                    logger.id(logger.debug, Fetcher.ME,
+                            'Setting to default delay: {time}',
+                            time=Fetcher._429_delay,
+                    )
 
                 Fetcher._log_ratelimit()
 
