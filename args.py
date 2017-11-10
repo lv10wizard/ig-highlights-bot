@@ -414,13 +414,14 @@ def print_instagram_database(cfg, order, *user_databases):
 def print_instagram_database_links(cfg, order, *user_databases):
     def do_print_links(path, order):
         import sqlite3
+        from src.instagram.constants import MEDIA_LINK_FMT
 
         if os.path.exists(path):
             db = sqlite3.connect(path)
             db.row_factory = sqlite3.Row
-            cursor = db.execute('SELECT link FROM cache {0}'.format(order))
+            cursor = db.execute('SELECT code FROM cache {0}'.format(order))
             for row in cursor:
-                print(row['link'])
+                print(MEDIA_LINK_FMT.format(row['code']))
 
     print_instagram_database_wrapper(do_print_links, order, *user_databases)
 
