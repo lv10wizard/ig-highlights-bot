@@ -54,7 +54,7 @@ class Filter(object):
             - the bot has not replied too many times to the submission (too many
               defined in config)
             - thing not archived (too old)
-            - thing not itself posted by the bot
+            - thing not itself posted by the bot if thing is a comment
             - the bot is not banned from thing's subreddit
             - thing not in a blacklisted subreddit or posted by a blacklisted
               user
@@ -114,7 +114,10 @@ class Filter(object):
             )
             return False
 
-        if author.lower() == self.username.lower():
+        if (
+                author.lower() == self.username.lower()
+                and isinstance(thing, Comment)
+        ):
             logger.id(logger.info, self,
                     'I posted {color_thing}: skipping.',
                     color_thing=reddit.display_id(thing),

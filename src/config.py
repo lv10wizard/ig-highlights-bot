@@ -40,6 +40,10 @@ ADD_SUBREDDIT_THRESHOLD         = 'add_subreddit_threshold'
 BLACKLIST_TEMP_BAN_TIME         = 'blacklist_temp_ban_time'
 BAD_ACTOR_EXPIRE_TIME           = 'bad_actor_expire_time'
 BAD_ACTOR_THRESHOLD             = 'bad_actor_threshold'
+SUBMIT_ENABLED                  = 'submit_enabled'
+SUBMIT_UNIQUE_LINKS_PER_USER    = 'submit_unique_links_per_user'
+SUBMIT_USER_REPOST_INTERVAL     = 'submit_user_repost_interval'
+SUBMIT_INTERVAL                 = 'submit_interval'
 
 SECTION_INSTAGRAM               = 'INSTAGRAM'
 INSTAGRAM_CACHE_EXPIRE_TIME     = 'instagram_cache_expire_time'
@@ -423,6 +427,24 @@ class Config(object):
     @property
     def bad_actor_threshold(self):
         return self.__get(SECTION_REDDIT, BAD_ACTOR_THRESHOLD, 'getint')
+
+    @property
+    def submit_enabled(self):
+        return self.__get(SECTION_REDDIT, SUBMIT_ENABLED, 'getboolean')
+
+    @property
+    def submit_unique_links_per_user(self):
+        return self.__get(
+                SECTION_REDDIT, SUBMIT_UNIQUE_LINKS_PER_USER, 'getint'
+        )
+
+    @property
+    def submit_user_repost_interval(self):
+        return self.__get_time(SECTION_REDDIT, SUBMIT_USER_REPOST_INTERVAL)
+
+    @property
+    def submit_interval(self):
+        return self.__get_time(SECTION_REDDIT, SUBMIT_INTERVAL)
 
     # ##################################################################
     # [INSTAGRAM]

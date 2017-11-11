@@ -408,14 +408,93 @@ O. post link to private profiles if:
 - use .executemany in InstagramDatabase._delete
 ? differentiate between non-existant IG user & too few followers
     both are just flagged as BAD right now
+O. post highlights of users to profile
+    O. choose from list (randomly(?))
+        O. text file list? database?
+            > maybe text file for user to write lines to
+                database updates from file based on mtime
+        O. need to ensure the same user is not posted too often
+            (ie don't post user back-to-back basically)
+        O. submit link to random(?) non-highlighted media
+    O. do not post if profile becomes private/non-existant
+    O. do not post too often
+        O. config-based post interval
+    O. handle reddit ratelimiting
 
-- test stale ig queue
-- test replies
-    - test comments are stored properly
-    - test submissions are stored properly
-- test ratelimit still works
-- test mentions
-- test messages
+    > to post: (should probably go in src/reddit.py)
+        # maybe read subreddit from config (default to 'u_{botusername}')
+        subreddit = self._reddit.subreddit('u_{0}'.format(self._reddit.username_raw))
+        try:
+            # http://praw.readthedocs.io/en/latest/code_overview/models/subreddit.html#praw.models.Subreddit.submit
+            # !!! this needs to be wrapped in _network_wrapper
+            subreddit.submit( ... )
+
+        except APIException as e:
+            # handle 'SUBREDDIT_NOEXIST' in case the subreddit doesn't exist
+            #   > kill subreddit.submit process if this happens
+            # handle RATELIMIT
+            ...
+
+- how to handle users with 10k+ posts?
+    - 5k+
+    - 3k+
+    - 1k+
+- determine why reply-queue was wiped 2017/11/09.121928.log
+    > was it corrupted somehow?
+
+? change SUBREDDITS, USER_POOL files to config files?
+    - copy repo version to config directory
+    - read config directory version > repo version
+    > how to handle extra from repo version?
+        - update with extra -- but what if user deleted those lines?
+
+? download user's media content & upload to imgur(?)
+    - keep database of downloaded urls per user
+        > should probably be separate from InstagramDatabase cache
+    - keep database of imgur image/album hashes so that albums can be updated
+    - imgur uploading process with imgur upload queue database
+        - upload non-uploaded user media if near reset time
+            - they do not explicitly respond with the ratelimit per-day reset
+                > is it at a constant time (eg. 00:00:00) or based on the first
+                    request (t + 24h)?
+            - leave a buffer of number of total requests per day
+                'X-RateLimit-ClientRemaining' > N => upload backlog
+        - set album once backlog for user is completed
+
+    https://apidocs.imgur.com
+    https://github.com/Imgur/imgurpython
+
+    - image upload with description:
+        [resized note if file was >10mb]
+        [caption]
+
+        [date] ([link])
+
+    * upload only 25 images/videos per user -- define in cfg?
+        (imgur has a ~1250 upload/day ratelimit)
+    - fallback to linking instagram codes if ratelimited
+        - leave a note in reply saying:
+            ^*imgur upload processing (may take a few days)*
+
+    - create album if user album doesn't exist
+        - title='full_name (@username)'
+        - description='biography (external_url)'
+        - privacy='hidden'
+        ? cover='profile_pic'
+    - update album if album metadata changed
+        (same as create but update with new values)
+    - set album with proper order if new media or expired
+
+    > how to handle files > 10mb?
+        - downsize if image
+        - truncate down to 10mb
+            > diff = os.path.getsize(name) - 1e7
+            > if diff > 0: fd.truncate(1e7)
+            (check if > because .truncate will increase the size if <)
+    > can videos be uploaded directly to imgur? (yes for web interface)
+    - fallback to linking behavior if no client_id, client_secret defined
+
+    ** adds dependency on imgurpython
 
 ? include version in FOOTER? (probably just the {major}.{minor} if yes)
 ? push to github

@@ -93,6 +93,10 @@ class Fetcher(object):
     def request_delay_expire(cls):
         return Fetcher._500_timestamp + Fetcher._500_delay
 
+    @classproperty
+    def request_delay(cls):
+        return Fetcher._500_delay
+
     @staticmethod
     def account_ratelimit(response):
         """

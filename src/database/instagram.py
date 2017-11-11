@@ -237,11 +237,17 @@ class InstagramDatabase(Database):
 
         return order
 
-    def get_top_media(self, num):
+    def get_top_media(self, num=-1, start=0):
         """
         Returns a list containing at-most {num} most popular media links
                 (may return a list with len < num if the database does not
                  contain enough links to populate the list)
+
+        num (int, optional) - the number of media to return
+                Default: -1 => return all media sorted .order_string
+        start (int, optional) - the start index of media to return (this can
+                    be used to exclude elements from the start of the set)
+                Default: 0 => return media starting from the first element
         """
         from src.instagram import MEDIA_LINK_FMT
 
@@ -249,9 +255,14 @@ class InstagramDatabase(Database):
                 'SELECT code FROM cache ORDER BY {0}'.format(self.order_string)
         )
         media = []
-        for row in cursor:
+        for i, row in enumerate(cursor):
             if len(media) == num:
+                # stop once enough items have been collected
                 break
+
+            elif i < start:
+                # skip elements before the start index
+                continue
 
             link = MEDIA_LINK_FMT.format(row['code'])
             if link not in media:

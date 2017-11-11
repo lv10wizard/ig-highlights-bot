@@ -20,10 +20,19 @@ class RedditRateLimitQueueDatabase(Database):
     @staticmethod
     def fullname(thing):
         try:
+            # try subreddit.display_name
+            return thing.display_name
+        except AttributeError:
+            pass
+
+        try:
+            # try .fullname
             return thing.fullname
         except AttributeError:
-            # probably fullname string
-            return thing
+            pass
+
+        # hopefully fullname string
+        return thing
 
     def __contains__(self, thing):
         cursor = self._db.execute(
@@ -39,47 +48,122 @@ class RedditRateLimitQueueDatabase(Database):
                 '   uid INTEGER PRIMARY KEY NOT NULL,'
                 '   fullname TEXT NOT NULL,'
                 '   submission_fullname TEXT,'
-                '   body TEXT NOT NULL,'
+                '   body TEXT,' # comment/submission reply
+                '   title TEXT,' # submit title
+                '   selftext TEXT,' # submit selftext
+                '   url TEXT,' # submit url
                 '   ratelimit_reset REAL NOT NULL,'
-                '   UNIQUE(fullname, body)'
+                '   UNIQUE(fullname, body, title, selftext, url)'
                 ')'
         )
 
-    def _insert(self, thing, body, ratelimit_delay, submission=None):
+    def _insert(
+            self, thing, ratelimit_delay, body=None, title=None,
+            selftext=None, url=None, submission=None
+    ):
+        """
+        Inserts a thing to reply/post-to to be handled once the bot is no
+        longer reddit ratelimited.
+
+        thing (praw.models.*) - the thing to reply or post to
+        ratelimit_delay (float) - the amount of time in seconds until the
+                ratelimit is over
+        body (str, optional) - the body to reply with
+        title (str, optional) - the title of the post to submit
+        selftext (str, optional) - the selftext of the post to submit
+        url (str, optional) - the url of the post to submit
+        submission (praw.models.Submission, optional) -
+                the submission which contains the thing (if any)
+
+        *Note: body & title/selftext/url are mutually exclusive
+        """
+
+        if bool(body) == bool(title or selftext or url):
+            # programmer error
+            logger.id(logger.warn, self,
+                    'Mutually exclusive parameters \'body\''
+                    ' & (\'title\' or \'selftext\' or \'url\') both specified!'
+                    ' NOT inserting \'{color_thing}\' ...',
+                    color_thing=RedditRateLimitQueueDatabase.fullname(thing),
+            )
+            if body:
+                logger.id(logger.debug, self,
+                        'body:\n\n{body}\n',
+                        body=body,
+                )
+            if title:
+                logger.id(logger.debug, self,
+                        'title:\n\n{title}\n',
+                        title=title,
+                )
+            if selftext:
+                logger.id(logger.debug, self,
+                        'selftext:\n\n{selftext}\n',
+                        selftext=selftext,
+                )
+            if url:
+                logger.id(logger.debug, self,
+                        'url:\n\n{url}\n',
+                        url=url,
+                )
+            # skip (and lose) data instead of raising an error
+            return
+
         self._db.execute(
                 'INSERT INTO'
-                ' queue(fullname, submission_fullname, body, ratelimit_reset)'
-                ' VALUES(?, ?, ?, ?)',
+                ' queue(fullname, submission_fullname, body, title,'
+                '       selftext, url, ratelimit_reset)'
+                ' VALUES({0})'.format(', '.join(['?'] * 7)),
                 (
                     RedditRateLimitQueueDatabase.fullname(thing),
                     RedditRateLimitQueueDatabase.fullname(submission),
                     body,
+                    title,
+                    selftext,
+                    url,
                     time.time() + ratelimit_delay,
                 ),
         )
         self.__update_has_elements()
 
-    def _delete(self, thing, body):
+    def _delete(self, thing, body=None, title=None, selftext=None, url=None):
         self._db.execute(
-                'DELETE FROM queue WHERE fullname = ? AND body = ?',
+                'DELETE FROM queue WHERE fullname = ?'
+                ' AND body = ?'
+                ' AND title = ?'
+                ' AND selftext = ?'
+                ' AND url = ?',
                 (
                     RedditRateLimitQueueDatabase.fullname(thing),
                     body,
+                    title,
+                    selftext,
+                    url,
                 ),
         )
         self.__update_has_elements()
 
-    def _update(self, thing, body, ratelimit_delay):
+    def _update(
+            self, thing, ratelimit_delay, body=None, title=None,
+            selftext=None, url=None,
+    ):
         """
         Updates the ratelimit-reset time for the thing
         """
         self._db.execute(
                 'UPDATE queue SET ratelimit_reset = ?'
-                ' WHERE fullname = ? AND body = ?',
+                ' WHERE fullname = ?'
+                ' AND body = ?'
+                ' AND title = ?'
+                ' AND selftext = ?'
+                ' AND url = ?',
                 (
                     time.time() + ratelimit_delay,
                     RedditRateLimitQueueDatabase.fullname(thing),
                     body,
+                    title,
+                    selftext,
+                    url,
                 ),
         )
 
@@ -153,9 +237,12 @@ class RedditRateLimitQueueDatabase(Database):
             queue.Empty is raised if either block == False or timeout is a
             positive number if no item was available.
 
-        Returns (fullname, body) of the first element where ratelimit_reset is
-                less than the current time.time(); ie, the first element that
-                is no longer rate-limited.
+        Returns tuple (fullname, body, title, selftext, url) of the first
+                element where ratelimit_reset is less than the current
+                time.time(); ie, the first element that is no longer
+                rate-limited. (Note that only body or title/selftext/url will
+                have values -- eg. if body has a value then title, selftext and
+                url will be None.)
 
                 or None if all elements are still rate-limited and the timeout
                 has expired.
@@ -224,7 +311,16 @@ class RedditRateLimitQueueDatabase(Database):
                     # still rate-limited but not blocking
                     row = None
 
-        return (row['fullname'], row['body']) if row else None
+        if row:
+            return (
+                    row['fullname'],
+                    row['body'],
+                    row['title'],
+                    row['selftext'],
+                    row['url'],
+            )
+
+        return None
 
 
 __all__ = [

@@ -82,7 +82,7 @@ class InstagramRateLimitDatabase(Database):
         """
         self.__prune()
         cursor = self._db.execute(
-                'SELECT timestamp FROM ratelimit ORDER BY timestamp ASC'
+                'SELECT timestamp FROM ratelimit ORDER BY timestamp ASC LIMIT 1'
         )
 
         remaining = -1

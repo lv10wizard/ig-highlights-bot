@@ -41,6 +41,14 @@ class Instagram(object):
     _useragent = None
 
     @classproperty
+    def request_delay_expire(cls):
+        return Fetcher.request_delay_expire
+
+    @classproperty
+    def request_delay(cls):
+        return Fetcher.request_delay
+
+    @classproperty
     def is_ratelimited(cls):
         return Fetcher.is_ratelimited
 
@@ -92,6 +100,28 @@ class Instagram(object):
         return self.cache.is_bad
 
     @property
+    def non_highlighted_media(self):
+        """
+        Returns a list containing the user's media that the bot does not post
+                (effectively, this is set(all_data) - set(top_media))
+
+                See: top_media for documentation on the rest of the possible
+                return values.
+
+        Note: this value is cached in memory.
+        """
+        try:
+            media = self.__cached_non_highlighted_media
+        except AttributeError:
+            media = self._fetch_or_lookup_media(
+                    num_highlights=-1,
+                    start=Instagram._cfg.num_highlights_per_ig_user,
+            )
+            self.__cached_non_highlighted_media = media
+
+        return media
+
+    @property
     def top_media(self):
         """
         Returns a list of the user's most popular media
@@ -106,38 +136,7 @@ class Instagram(object):
         try:
             media = self.__cached_top_media
         except AttributeError:
-            media = None
-
-            if self.fetcher.should_fetch:
-                media = self.fetcher.fetch_data()
-                if media:
-                    # fetch succeeded; reset the media value
-                    media = None
-
-            if self.fetcher.valid_response and media is None:
-                if self.cache.size() == 0:
-                    # re-fetch an outdated existing cache
-                    # (ie: an existing database file no longer reflects the
-                    #  way the database behaves in code)
-                    # XXX: this logging will be incorrect if the cache is
-                    # created before this point
-                    logger.id(logger.debug, self,
-                            'Fetching outdated cache ...',
-                    )
-                    media = self.fetcher.fetch_data()
-                    if media:
-                        # fetch succeeded; reset the media value
-                        media = None
-
-                # check again in case an outdated database fetch failed
-                if (
-                        # lookup only if all fetches succeeded (if any)
-                        (self.fetcher.valid_response and media is None)
-                        # or the user account is private
-                        or self.private
-                ):
-                    media = self._lookup_top_media()
-
+            media = self._fetch_or_lookup_media()
             # XXX: even the retry/resume value is cached so the expectation
             # is that Instagram instances are not long-lived
             # ie: retry/resume should happen through new instances
@@ -145,9 +144,59 @@ class Instagram(object):
 
         return media
 
-    def _lookup_top_media(self):
+    def _fetch_or_lookup_media(self, num_highlights=None, start=0):
+        """
+        Looks up the top media for the user. This method will fetch new data
+        if the user's database is expired.
+
+        See top_media for return value documentation.
+        """
+        media = None
+
+        if self.fetcher.should_fetch:
+            media = self.fetcher.fetch_data()
+            if media:
+                # fetch succeeded; reset the media value
+                media = None
+
+        if self.fetcher.valid_response and media is None:
+            if self.cache.size() == 0:
+                # re-fetch an outdated existing cache
+                # (ie: an existing database file no longer reflects the
+                #  way the database behaves in code)
+                # XXX: this logging will be incorrect if the cache is created
+                # before this point
+                logger.id(logger.debug, self,
+                        'Fetching outdated cache ...',
+                )
+                media = self.fetcher.fetch_data()
+                if media:
+                    # fetch succeeded; reset the media value
+                    media = None
+
+            # check again in case an outdated database fetch failed
+            if (
+                    # lookup only if all fetches succeeded (if any)
+                    (self.fetcher.valid_response and media is None)
+                    # or the user account is private
+                    or self.private
+            ):
+                media = self._lookup_top_media(num_highlights, start)
+
+        return media
+
+    def _lookup_top_media(self, num_highlights=None, start=0):
         """
         Retreives the top N media for the user from the cache
+
+        num_highlights (int, optional) - the number of highlights to get from
+                    the database. -1 will retreive all media sorted by
+                    most -> least popular.
+                Default: None => get config-defined number
+        start (int, optional) - the start index of items to get from the
+                    database. Specifying an integer > 0 will effectively
+                    skip that number of items.
+                Default: 0 => start at the first element
         """
         if self.cache.is_private:
             logger.id(logger.debug, self,
@@ -163,8 +212,9 @@ class Instagram(object):
             media = False
 
         else:
-            num_highlights = Instagram._cfg.num_highlights_per_ig_user
-            media = self.cache.get_top_media(num_highlights)
+            if not num_highlights:
+                num_highlights = Instagram._cfg.num_highlights_per_ig_user
+            media = self.cache.get_top_media(num=num_highlights, start=start)
 
             if num_highlights > 0 and not media:
                 # empty database

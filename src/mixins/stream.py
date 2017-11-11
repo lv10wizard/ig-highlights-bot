@@ -5,6 +5,7 @@ import time
 from six import add_metaclass
 from prawcore.exceptions import (
         BadJSON,
+        NotFound,
         Redirect,
         RequestException,
         ResponseException,
@@ -238,6 +239,15 @@ class _SubredditsStreamMixin(StreamMixin):
                                 type=self._stream_type,
                         )
 
+                    # add the bot's profile subreddit to the stream
+                    if self._reddit.profile_sub_name:
+                        if self._reddit.profile_sub_name not in subs_from_db:
+                            logger.id(logger.info, self,
+                                    'Adding profile sub: {color}',
+                                    color=self._reddit.profile_sub_name,
+                            )
+                        subs_from_db.add(self._reddit.profile_sub_name)
+
                     subreddits_str = reddit.pack_subreddits(subs_from_db)
                     logger.id(logger.debug, self,
                             'subreddit string:\n\t{subreddits_str}',
@@ -263,27 +273,33 @@ class _SubredditsStreamMixin(StreamMixin):
 
         return the_stream
 
+    def _handle_stream_err(self, e):
+        try:
+            subs = self.__current_subreddits
+        except AttributeError:
+            # this shouldn't happen
+            logger.id(logger.debug, self, 'No current subreddits ...?')
+            subs = set()
+
+        logger.id(logger.critical, self,
+                'One or more non-existant subreddits: {color}',
+                color=subs,
+        )
+        raise
+
     @property
     def stream(self):
         try:
             return StreamMixin.stream.fget(self)
 
+        except NotFound as e:
+            self._handle_stream_err(e)
+
         except Redirect as e:
             import re
 
-            if re.search(r'/subreddits/search', e.message):
-                try:
-                    subs = self.__current_subreddits
-                except AttributeError:
-                    # this shouldn't happen
-                    logger.id(logger.debug, self, 'No current subreddits ...?')
-                    subs = set()
-
-                logger.id(logger.critical, self,
-                        'One or more non-existant subreddits: {color}',
-                        color=subs,
-                )
-                raise
+            if re.search(r'/subreddits/search', e.args[0]):
+                self._handle_stream_err(e)
 
 class SubredditsCommentStreamMixin(_SubredditsStreamMixin):
     """

@@ -14,6 +14,7 @@ from src import (
         reddit,
         replies,
         submissions,
+        submitter,
 )
 from src.mixins import (
         RunForeverMixin,
@@ -55,6 +56,9 @@ class IgHighlightsBot(RunForeverMixin, SubredditsCommentStreamMixin):
         )
         self.replier = replies.Replier(
                 cfg, rate_limited, self.blacklist,
+        )
+        self.submitter = submitter.Submitter(
+                cfg, rate_limited,
         )
 
         # initialize stuff that requires correct credentials
@@ -106,6 +110,7 @@ class IgHighlightsBot(RunForeverMixin, SubredditsCommentStreamMixin):
         self.messages.kill()
         self.mentions.kill()
         self.replier.kill()
+        self.submitter.kill()
 
         self.ratelimit_handler.join()
         self.controversial.join()
@@ -113,6 +118,7 @@ class IgHighlightsBot(RunForeverMixin, SubredditsCommentStreamMixin):
         self.messages.join()
         self.mentions.join()
         self.replier.join()
+        self.submitter.join()
 
         # XXX: kill the main process last so that daemon processes aren't
         # killed at inconvenient times
@@ -133,6 +139,7 @@ class IgHighlightsBot(RunForeverMixin, SubredditsCommentStreamMixin):
         self.messages.start()
         self.mentions.start()
         self.replier.start()
+        self.submitter.start()
 
         # gracefully handle exit signals
         signal.signal(signal.SIGINT, self.graceful_exit)

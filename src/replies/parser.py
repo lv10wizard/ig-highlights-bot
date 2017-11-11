@@ -49,6 +49,7 @@ def load_jargon():
             path=JARGON_DEFAULTS_PATH,
     )
     try:
+        # TODO: refactor reading to util
         with open(JARGON_DEFAULTS_PATH, 'r') as fd:
             for i, line in enumerate(fd):
                 try:
@@ -226,7 +227,8 @@ class _ParserStrategy(object):
         Returns a list of parsed urls
         """
         logger.id(logger.debug, self,
-                'Testing for links in text: \'{color_text}\'',
+                'Testing for links in text:'
+                '\n\'{text}\'\n',
                 color_text=self._thing_text,
         )
 
@@ -305,8 +307,8 @@ class _ParserStrategy(object):
             # data if someone soft-links eg. a twitter user and a
             # different person owns the same username on instagram.
             logger.id(logger.debug, self,
-                    '\nLooking for soft-linked users in text:'
-                    ' \'{text}\'\n',
+                    'Testing for users in text:'
+                    '\n\'{text}\'\n',
                     text=self._thing_text,
             )
 

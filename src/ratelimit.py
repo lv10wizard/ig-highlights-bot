@@ -274,6 +274,142 @@ class RateLimitHandler(ProcessMixin, RedditInstanceMixin):
         self.__rate_limit_proc.start()
         ProcessMixin.start(self)
 
+    def _handle_reply(self, fullname, body):
+        """
+        Handles a reddit ratelimit queued reply
+
+        Returns True if a reply was attempted for the thing
+        """
+        handled = False
+        thing = self._reddit.get_thing_from_fullname(fullname)
+        if thing:
+            logger.id(logger.info, self,
+                    'Processing {color_thing} ...',
+                    color_thing=reddit.display_id(thing),
+            )
+            # only handle specific types of things
+            if isinstance(thing, RateLimitHandler.VALID_THINGS):
+                logger.id(logger.info, self,
+                        'Replying to {color_thing} ...',
+                        color_thing=reddit.display_id(thing),
+                )
+
+                # Note: we may be rate-limited again
+                success = self._reddit.do_reply(
+                        thing, body, self._killed,
+                )
+
+                if success or success is None:
+                    # reply either succeeded or a reply is not possible
+                    # (eg. 403 Forbidden)
+                    # remove the element from the queue database
+                    with self.rate_limit_queue:
+                        self.rate_limit_queue.delete(thing, body=body)
+
+                if success:
+                    # try to add the thing to the reply history
+                    # (but only if we can find instagram users
+                    #  in the body)
+                    ig_users = replies.Formatter.ig_users_in(
+                            body
+                    )
+                    if ig_users:
+                        try:
+                            with self.reply_history:
+                                self.reply_history.insert(
+                                        thing, ig_users,
+                                )
+
+                        except database.UniqueConstraintFailed:
+                            display = reddit.display_id(
+                                    thing
+                            )
+                            logger.id(logger.warn, self,
+                                    'Duplicate instagram user'
+                                    ' posted in'
+                                    ' {color_submission}!'
+                                    ' (users={color_users})',
+                                    color_submission=display,
+                                    color_users=ig_users,
+                                    exc_info=True,
+                            )
+                handled = True
+
+        return handled
+
+    def _handle_submit(self, display_name, title, selftext, url):
+        """
+        Handles a reddit ratelimit queued submit
+
+        Returns True if a submit was attempted
+        """
+        logger.id(logger.info, self,
+                'Posting \'{title}\' to {subname} ...',
+                title=title,
+                subname=display_name,
+        )
+        if selftext:
+            logger.id(logger.debug, self,
+                    'selftext:\n\n{selftext}\n',
+                    selftext=selftext,
+            )
+        if url:
+            logger.id(logger.debug, self,
+                    'url:\n\n{url}\n',
+                    url=url,
+            )
+
+        success = self._reddit.do_submit(
+                display_name=display_name,
+                title=title,
+                selftext=selftext,
+                url=url,
+                killed=self._killed,
+        )
+
+        if success or success is None:
+            # submit succeeded or could not be made
+            # remove the element from the queue database
+            with self.rate_limit_queue:
+                self.rate_limit_queue.delete(
+                        thing=display_name,
+                        title=title,
+                        selftext=selftext,
+                        url=url,
+                )
+
+        # XXX: there is currently no case where the queued item is not handled
+        return True
+
+    def _log_element(self, element, msg_prefix=''):
+        if logger.is_enabled_for(logger.DEBUG):
+            _, body, title, selftext, url = element
+
+            if body:
+                logger.id(logger.debug, self,
+                        '{prefix}body:\n\n{body}\n',
+                        prefix=msg_prefix,
+                        body=body,
+                )
+            if title:
+                logger.id(logger.debug, self,
+                        '{prefix}title:\n\n{title}\n',
+                        prefix=msg_prefix,
+                        title=title,
+                )
+            if selftext:
+                logger.id(logger.debug, self,
+                        '{prefix}selftext:\n\n{selftext}\n',
+                        prefix=msg_prefix,
+                        selftext=selftext,
+                )
+            if url:
+                logger.id(logger.debug, self,
+                        '{prefix}url:\n\n{url}\n',
+                        prefix=msg_prefix,
+                        url=url,
+                )
+
     def _run_forever(self):
         from src import reddit
 
@@ -292,67 +428,28 @@ class RateLimitHandler(ProcessMixin, RedditInstanceMixin):
                 continue
 
             if element:
-                fullname, body = element
+                fullname, body, title, selftext, url = element
 
-                thing = self._reddit.get_thing_from_fullname(fullname)
-                if thing:
-                    logger.id(logger.info, self,
-                            'Processing {color_thing} ...',
-                            color_thing=reddit.display_id(thing),
+                if bool(body) == bool(title or selftext or url):
+                    # too many content strings queued; cannot determine
+                    # proper reddit method to call
+                    logger.id(logger.warn, self,
+                            'Cannot handle \'{color_fullname}\':'
+                            ' too many content strings!',
+                            color_fullname=fullname,
                     )
-                    # only handle specific types of things
-                    if isinstance(thing, RateLimitHandler.VALID_THINGS):
-                        logger.id(logger.info, self,
-                                'Replying to {color_thing} ...',
-                                color_thing=reddit.display_id(thing),
-                        )
+                    self._log_element(element)
 
-                        # Note: we may be rate-limited again
-                        success = self._reddit.do_reply(
-                                thing, body, self._killed,
-                        )
+                elif body:
+                    handled = self._handle_reply(fullname, body)
 
-                        if success or success is None:
-                            # reply either succeeded or a reply is not possible
-                            # (eg. 403 Forbidden)
-                            # remove the element from the queue database
-                            with self.rate_limit_queue:
-                                self.rate_limit_queue.delete(thing, body)
-
-                        if success:
-                            # try to add the thing to the reply history
-                            # (but only if we can find instagram users
-                            #  in the body)
-                            ig_users = replies.Formatter.ig_users_in(
-                                    body
-                            )
-                            if ig_users:
-                                try:
-                                    with self.reply_history:
-                                        self.reply_history.insert(
-                                                thing, ig_users,
-                                        )
-
-                                except database.UniqueConstraintFailed:
-                                    display = reddit.display_id(
-                                            thing
-                                    )
-                                    logger.id(logger.warn, self,
-                                            'Duplicate instagram user'
-                                            ' posted in'
-                                            ' {color_submission}!'
-                                            ' (users={color_users})',
-                                            color_submission=display,
-                                            color_users=ig_users,
-                                            exc_info=True,
-                                    )
-                        handled = True
+                elif title:
+                    handled = self._handle_submit(
+                            fullname, title, selftext, url
+                    )
 
                 if not handled:
-                    logger.id(logger.debug, self,
-                            'Unhandled body:\n{body}\n\n',
-                            body=body,
-                    )
+                    self._log_element(element, msg_prefix='Unhandled ')
 
                     # remove the element so that it isn't immediately retried
                     logger.id(logger.warn, self,
@@ -360,7 +457,13 @@ class RateLimitHandler(ProcessMixin, RedditInstanceMixin):
                             color_thing=reddit.display_id(thing),
                     )
                     with self.rate_limit_queue:
-                        self.rate_limit_queue.delete(thing, body)
+                        self.rate_limit_queue.delete(
+                                thing=thing,
+                                body=body,
+                                title=title,
+                                selftext=selftext,
+                                url=url,
+                        )
 
             # else:
             #     # get() timed out, queue not empty
