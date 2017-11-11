@@ -1,3 +1,4 @@
+import os
 import re
 import time
 
@@ -9,8 +10,12 @@ from .constants import (
         RATELIMIT_THRESHOLD,
 )
 from .cache import Cache
-from src.config import parse_time
+from src.config import (
+        parse_time,
+        resolve_path,
+)
 from src.database import (
+        Database,
         InstagramRateLimitDatabase,
         UniqueConstraintFailed,
 )
@@ -39,6 +44,10 @@ class Fetcher(object):
     _429_timestamp = 0
     _429_delay = 0
     _429_DEFAULT_DELAY = parse_time('5m')
+
+    _RATELIMIT_RESET_PATH = resolve_path(
+            Database.PATH_FMT.format('instagram_ratelimit')
+    )
 
     _EXPOSE_PROPS = [
             'exists',
@@ -149,6 +158,49 @@ class Fetcher(object):
             was_ratelimited = False
             Fetcher.__was_ratelimited = was_ratelimited
 
+        # try loading a previously recorded ratelimit
+        if os.path.exists(Fetcher._RATELIMIT_RESET_PATH):
+            logger.id(logger.debug, Fetcher.ME,
+                    'Loading previous ratelimit from \'{path}\' ...',
+                    path=Fetcher._RATELIMIT_RESET_PATH,
+            )
+            try:
+                with open(Fetcher._RATELIMIT_RESET_PATH, 'r') as fd:
+                    data = fd.read()
+
+            except (IOError, OSError):
+                logger.id(logger.warn, Fetcher.ME,
+                        'Failed to read last ratelimit reset time from'
+                        ' \'{path}\'!',
+                        path=Fetcher._RATELIMIT_RESET_PATH,
+                        exc_info=True,
+                )
+
+            else:
+                try:
+                    split = data.strip().split('\n')
+                    Fetcher._429_timestamp = float(split[0])
+                    Fetcher._429_delay = float(split[1])
+
+                except (IndexError, TypeError, ValueError):
+                    # recorded data structure changed or corrupted
+                    logger.id(logger.warn, Fetcher.ME,
+                            'Invalid ratelimit reset time:'
+                            ' \'{data}\' in \'{path}\'',
+                            data=data,
+                            path=Fetcher._RATELIMIT_RESET_PATH,
+                            exc_info=True,
+                    )
+
+                else:
+                    logger.id(logger.debug, Fetcher.ME,
+                            'Loaded ratelimit reset from file:'
+                            '\n\ttimestamp: {t}'
+                            '\n\tdelay:     {time_delay}',
+                            t=Fetcher._429_timestamp,
+                            time_delay=Fetcher._429_delay,
+                    )
+
         num_used = Fetcher.ratelimit.num_used()
         num_remaining = RATELIMIT_THRESHOLD - num_used
         if num_remaining < 0:
@@ -164,8 +216,13 @@ class Fetcher(object):
 
         is_ratelimited = Fetcher.is_ratelimited
         Fetcher.__was_rate_limited = is_ratelimited
+
+        if not is_ratelimited:
+            Fetcher._remove_recorded_ratelimit()
+
         if is_ratelimited and not was_ratelimited:
             Fetcher._log_ratelimit()
+            Fetcher._record_ratelimit_reset()
 
         elif not is_ratelimited and was_ratelimited:
             logger.id(logger.info, Fetcher.ME,
@@ -181,6 +238,54 @@ class Fetcher(object):
                 pass
 
         return is_ratelimited
+
+    @staticmethod
+    def _record_ratelimit_reset():
+        if Fetcher.ratelimit_delay > 0:
+            if not os.path.exists(Fetcher._RATELIMIT_RESET_PATH):
+                logger.id(logger.debug, Fetcher.ME,
+                        'Writing ratelimit time: {strftime} ...',
+                        strftime='%H:%M:%S',
+                        strf_time=reset_time,
+                )
+
+                try:
+                    with open(Fetcher._RATELIMIT_RESET_PATH, 'w') as fd:
+                        fd.write('{0}\n{1}'.format(
+                            time.time(),
+                            Fetcher.ratelimit_delay,
+                        ))
+
+                except (IOError, OSError):
+                    logger.id(logger.exception, Fetcher.ME,
+                            'Failed to record ratelimit time: {strftime}',
+                            strftime='%H:%M:%S',
+                            strf_time=reset_time,
+                    )
+
+            else:
+                logger.id(logger.debug, FETCHER.ME,
+                        'Skipping ratelimit write: \'{path}\' exists!',
+                        path=Fetcher._RATELIMIT_RESET_PATH,
+                )
+
+    @staticmethod
+    def _remove_recorded_ratelimit():
+        if os.path.exists(Fetcher._RATELIMIT_RESET_PATH):
+            logger.id(logger.debug, Fetcher.ME,
+                    'Removing ratelimit reset time file \'{path}\' ...',
+                    path=Fetcher._RATELIMIT_RESET_PATH,
+            )
+
+            try:
+                os.remove(Fetcher._RATELIMIT_RESET_PATH)
+
+            except (IOError, OSError):
+                logger.id(logger.warn, Fetcher.ME,
+                        'Failed to remove \'{path}\'!',
+                        path=Fetcher._RATELIMIT_RESET_PATH,
+                        exc_info=True,
+                )
 
     @staticmethod
     def _handle_too_many_requests(response):
