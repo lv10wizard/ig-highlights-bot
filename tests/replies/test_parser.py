@@ -232,6 +232,11 @@ def test_parser_does_not_match_invalid_username(alica_davis):
     assert not A.ig_links
     assert not A.ig_usernames
 
+def test_parser_guesses_quoted_user_string(karmabirdfly_quote):
+    K = Parser(karmabirdfly_quote)
+    assert not K.ig_links
+    assert K.ig_usernames == ['karmabirdfly']
+
 def test_parser_matches_multiline_user_string(capbarista_multiline_prefix):
     C = Parser(capbarista_multiline_prefix)
     assert not C.ig_links

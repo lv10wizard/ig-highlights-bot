@@ -219,10 +219,11 @@ IG_USER_STRING_REGEX = [
         ),
 
         # match a possible instagram username if it is the only word
-        r'^(?P<guess>{0})$'.format(USERNAME_PTN),
-        # |\____________/ \
-        # |      |       only match entire word
-        # \    capture possible username string
+        r'^(?:\s*>+\s*)?(?P<guess>{0})$'.format(USERNAME_PTN),
+        # |\___________/\____________/ \
+        # |      |            |       only match entire word
+        # |      |          capture possible username string
+        # \   optionally match markdown quote characters
         # only match entire word
 ]
 IG_USER_STRING_REGEX = re.compile(

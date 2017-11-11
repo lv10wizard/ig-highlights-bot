@@ -383,8 +383,8 @@ class _ParserStrategy(object):
         matches = []
         for text in body_split:
             if (
-                    # single word in thing
-                    len(text.strip().split()) == 1
+                    # single word (potentially quoted) in thing
+                    len(text.strip('> ').split()) == 1
                     # thing looks like it could contain an instagram user
                     or instagram.HAS_IG_KEYWORD_REGEX.search(text.strip())
             ):

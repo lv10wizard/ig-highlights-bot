@@ -120,6 +120,9 @@ def test_instagram_matches_has_ig_keyword_question_strings(string):
     ('[Fullmetalifrit on IG](https://instagram.com/p/BWoPSy7A7Ig/) ', 'Fullmetalifrit'),
     ('Meow', 'Meow'),
     ('Possibly nikinikiii on insta?', 'nikinikiii'),
+    ('> Karmabirdfly', 'Karmabirdfly'),
+    ('   >>>>Karmabirdfly', 'Karmabirdfly'),
+    ('  >>>>   Karmabirdfly', 'Karmabirdfly'),
 ])
 def test_instagram_matches_potential_ig_user_strings(string, expected):
     match = instagram.IG_USER_STRING_REGEX.search(string)

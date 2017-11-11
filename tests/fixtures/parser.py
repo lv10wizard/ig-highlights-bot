@@ -176,6 +176,15 @@ def fullmetalifrit_markdownlink():
     return load_pickle('fullmetalifrit_markdownlink')
 
 @pytest.fixture(scope='session')
+def karmabirdfly_quote():
+    """
+    praw.models.Comment containing the markdown quoted text:
+
+    > Karmabirdfly
+    """
+    return load_pickle('karmabirdfly_quote')
+
+@pytest.fixture(scope='session')
 def capbarista_multiline_prefix():
     """
     praw.models.Comment containing a soft-linked user without '@'
