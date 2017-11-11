@@ -215,7 +215,7 @@ class Fetcher(object):
             )
 
         is_ratelimited = Fetcher.is_ratelimited
-        Fetcher.__was_rate_limited = is_ratelimited
+        Fetcher.__was_ratelimited = is_ratelimited
 
         if not is_ratelimited:
             Fetcher._remove_recorded_ratelimit()
