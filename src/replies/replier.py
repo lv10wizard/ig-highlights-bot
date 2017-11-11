@@ -255,7 +255,7 @@ class Replier(ProcessMixin, RedditInstanceMixin):
 
             if (
                     fullname in self._thing_requires_fetch
-                    and Instagram.is_rate_limited
+                    and Instagram.is_ratelimited
             ):
                 # the reply-queued thing requires an instagram fetch but
                 # instagram is ratelimited: skip the thing
