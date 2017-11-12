@@ -42,7 +42,7 @@ class Submitter(ProcessMixin, RedditInstanceMixin):
         pool = None
         try:
             # limit the pool to the top N% of the non-highlighted media
-            cut_off = int( 0.2 * len(ig.non_highlighted_media) )
+            cut_off = int( 0.1 * len(ig.non_highlighted_media) )
         except (AttributeError, TypeError):
             pool = []
         else:
