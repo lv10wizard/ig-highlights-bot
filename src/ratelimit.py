@@ -300,6 +300,11 @@ class RateLimitHandler(ProcessMixin, RedditInstanceMixin):
                 )
 
                 if success or success is None:
+                    logger.id(logger.debug, self,
+                            'Removing \'{color_thing}\' from'
+                            ' reddit ratelimit queue ...',
+                            color_thing=thing,
+                    )
                     # reply either succeeded or a reply is not possible
                     # (eg. 403 Forbidden)
                     # remove the element from the queue database
@@ -368,6 +373,12 @@ class RateLimitHandler(ProcessMixin, RedditInstanceMixin):
         )
 
         if success or success is None:
+            logger.id(logger.debug, self,
+                    'Removing \'{color_thing}\': \'{title}\' from'
+                    ' reddit ratelimit queue ...',
+                    color_thing=display_name,
+                    title=title,
+            )
             # submit succeeded or could not be made
             # remove the element from the queue database
             with self.rate_limit_queue:

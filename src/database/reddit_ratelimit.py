@@ -15,6 +15,10 @@ class RedditRateLimitQueueDatabase(Database):
 
     PATH = 'reddit-queue.db'
 
+    # XXX: a non-NULL value to insert into the database since SQLite treats
+    # NULL as a distinct value; ie, UNIQUE constraints and WHERE clauses
+    _NO_VALUE = 'NONE'
+
     __has_elements = multiprocessing.Event()
 
     @staticmethod
@@ -34,6 +38,12 @@ class RedditRateLimitQueueDatabase(Database):
         # hopefully fullname string
         return thing
 
+    @staticmethod
+    def _replace_null(value):
+        if value is None:
+            return RedditRateLimitQueueDatabase._NO_VALUE
+        return value
+
     def __contains__(self, thing):
         cursor = self._db.execute(
                 'SELECT fullname FROM queue WHERE fullname = ?',
@@ -48,10 +58,10 @@ class RedditRateLimitQueueDatabase(Database):
                 '   uid INTEGER PRIMARY KEY NOT NULL,'
                 '   fullname TEXT NOT NULL,'
                 '   submission_fullname TEXT,'
-                '   body TEXT,' # comment/submission reply
-                '   title TEXT,' # submit title
-                '   selftext TEXT,' # submit selftext
-                '   url TEXT,' # submit url
+                '   body TEXT NOT NULL,' # comment/submission reply
+                '   title TEXT NOT NULL,' # submit title
+                '   selftext TEXT NOT NULL,' # submit selftext
+                '   url TEXT NOT NULL,' # submit url
                 '   ratelimit_reset REAL NOT NULL,'
                 '   UNIQUE(fullname, body, title, selftext, url)'
                 ')'
@@ -117,10 +127,10 @@ class RedditRateLimitQueueDatabase(Database):
                 (
                     RedditRateLimitQueueDatabase.fullname(thing),
                     RedditRateLimitQueueDatabase.fullname(submission),
-                    body,
-                    title,
-                    selftext,
-                    url,
+                    RedditRateLimitQueueDatabase._replace_null(body),
+                    RedditRateLimitQueueDatabase._replace_null(title),
+                    RedditRateLimitQueueDatabase._replace_null(selftext),
+                    RedditRateLimitQueueDatabase._replace_null(url),
                     time.time() + ratelimit_delay,
                 ),
         )
@@ -135,10 +145,10 @@ class RedditRateLimitQueueDatabase(Database):
                 ' AND url = ?',
                 (
                     RedditRateLimitQueueDatabase.fullname(thing),
-                    body,
-                    title,
-                    selftext,
-                    url,
+                    RedditRateLimitQueueDatabase._replace_null(body),
+                    RedditRateLimitQueueDatabase._replace_null(title),
+                    RedditRateLimitQueueDatabase._replace_null(selftext),
+                    RedditRateLimitQueueDatabase._replace_null(url),
                 ),
         )
         self.__update_has_elements()
@@ -160,10 +170,10 @@ class RedditRateLimitQueueDatabase(Database):
                 (
                     time.time() + ratelimit_delay,
                     RedditRateLimitQueueDatabase.fullname(thing),
-                    body,
-                    title,
-                    selftext,
-                    url,
+                    RedditRateLimitQueueDatabase._replace_null(body),
+                    RedditRateLimitQueueDatabase._replace_null(title),
+                    RedditRateLimitQueueDatabase._replace_null(selftext),
+                    RedditRateLimitQueueDatabase._replace_null(url),
                 ),
         )
 
@@ -312,12 +322,17 @@ class RedditRateLimitQueueDatabase(Database):
                     row = None
 
         if row:
+            def replace_with_none(value):
+                if value == RedditRateLimitQueueDatabase._NO_VALUE:
+                    return None
+                return value
+
             return (
-                    row['fullname'],
-                    row['body'],
-                    row['title'],
-                    row['selftext'],
-                    row['url'],
+                    replace_with_none(row['fullname']),
+                    replace_with_none(row['body']),
+                    replace_with_none(row['title']),
+                    replace_with_none(row['selftext']),
+                    replace_with_none(row['url']),
             )
 
         return None

@@ -142,7 +142,7 @@ class Submitter(ProcessMixin, RedditInstanceMixin):
                                 '\n\ttotal:           #{total}'
                                 '\n\tnon-highlighted: #{non_highlighted}'
                                 '\n\tpostable-links:  #{postable_links}'
-                                ' Choosing another user ...',
+                                '\nChoosing another user ...',
                                 color_user=user,
                                 unique_count=unique_count,
                                 total=(
