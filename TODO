@@ -457,8 +457,11 @@ O. post highlights of users to profile
             - they do not explicitly respond with the ratelimit per-day reset
                 > is it at a constant time (eg. 00:00:00) or based on the first
                     request (t + 24h)?
+                >> appears to be relative to first request
             - leave a buffer of number of total requests per day
                 'X-RateLimit-ClientRemaining' > N => upload backlog
+            * -*Remaining headers seem to be off-by-one (too many)
+                (they return the value before processing the request)
         - set album once backlog for user is completed
 
     https://apidocs.imgur.com
@@ -493,8 +496,6 @@ O. post highlights of users to profile
             (check if > because .truncate will increase the size if <)
     > can videos be uploaded directly to imgur? (yes for web interface)
     - fallback to linking behavior if no client_id, client_secret defined
-
-    ** adds dependency on imgurpython
 
 ? include version in FOOTER? (probably just the {major}.{minor} if yes)
 ? push to github
