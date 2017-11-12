@@ -586,6 +586,18 @@ class Reddit(praw.Reddit):
         def was_killed(killed):
             return hasattr(killed, 'is_set') and killed.is_set()
 
+        msg = ['Enqueueing with \'{callback}\'']
+        if queue_args:
+            msg.append('args: {pprint_args}')
+        if queue_kwargs:
+            msg.append('kwargs: {pprint_kwargs}')
+        logger.id(logger.debug, self,
+                '\n\t'.join(msg),
+                callback=queue_callback.__name__,
+                pprint_args=queue_args,
+                pprint_kwargs=queue_kwargs,
+        )
+
         num_attempts = 0
         queued = None
         # XXX: try to queue in a loop in case the rate-limit ends while
@@ -600,11 +612,10 @@ class Reddit(praw.Reddit):
             if num_attempts > 1:
                 # very spammy if this somehow gets stuck looping
                 logger.id(logger.debug, self,
-                        '[#{num}] Attempting to queue {color_thing}'
+                        '[#{num}] Attempting to enqueue'
                         ' (rate-limited? {yesno_ratelimit};'
                         ' time left: {time} = {strftime})',
                         num=num_attempts,
-                        color_thing=display_id(thing),
                         yesno_ratelimit=self.is_rate_limited,
                         time=self.__rate_limited.remaining,
                         strftime='%H:%M:%S',
