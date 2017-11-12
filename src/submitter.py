@@ -76,7 +76,7 @@ class Submitter(ProcessMixin, RedditInstanceMixin):
             user = self.userpool.choose_username(exclude)
             # verify that the user's profile is still public
             while not (ig or self._killed.is_set()):
-                ig = Instagram(user)
+                ig = Instagram(user, self._killed)
                 if ig.non_highlighted_media is None:
                     # fetch interrupted; retry when the delay is over
                     logger.id(logger.debug, self,
