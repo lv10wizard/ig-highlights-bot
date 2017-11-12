@@ -23,6 +23,7 @@ from src.database import (
 )
 from src.util import (
         logger,
+        readline,
         requestor,
 )
 from src.util.decorators import classproperty
@@ -175,47 +176,7 @@ class Fetcher(object):
             Fetcher.__was_ratelimited = was_ratelimited
 
         # try loading a previously recorded ratelimit
-        if os.path.exists(Fetcher._RATELIMIT_RESET_PATH):
-            logger.id(logger.debug, Fetcher.ME,
-                    'Loading previous ratelimit from \'{path}\' ...',
-                    path=Fetcher._RATELIMIT_RESET_PATH,
-            )
-            try:
-                with open(Fetcher._RATELIMIT_RESET_PATH, 'r') as fd:
-                    data = fd.read()
-
-            except (IOError, OSError):
-                logger.id(logger.warn, Fetcher.ME,
-                        'Failed to read last ratelimit reset time from'
-                        ' \'{path}\'!',
-                        path=Fetcher._RATELIMIT_RESET_PATH,
-                        exc_info=True,
-                )
-
-            else:
-                try:
-                    split = data.strip().split('\n')
-                    Fetcher._429_timestamp.value = float(split[0])
-                    Fetcher._429_delay.value = float(split[1])
-
-                except (IndexError, TypeError, ValueError):
-                    # recorded data structure changed or corrupted
-                    logger.id(logger.warn, Fetcher.ME,
-                            'Invalid ratelimit reset time:'
-                            ' \'{data}\' in \'{path}\'',
-                            data=data,
-                            path=Fetcher._RATELIMIT_RESET_PATH,
-                            exc_info=True,
-                    )
-
-                else:
-                    logger.id(logger.debug, Fetcher.ME,
-                            'Loaded ratelimit reset from file:'
-                            '\n\ttimestamp: {t}'
-                            '\n\tdelay:     {time_delay}',
-                            t=Fetcher._429_timestamp.value,
-                            time_delay=Fetcher._429_delay.value,
-                    )
+        Fetcher._load_ratelimit_reset()
 
         num_used = Fetcher.ratelimit.num_used()
         num_remaining = RATELIMIT_THRESHOLD - num_used
@@ -247,26 +208,89 @@ class Fetcher(object):
             )
             # just reset the 429 variables even if the ratelimit was
             # self-imposed
-            Fetcher._429_timestamp.value = Fetcher._429_delay.value = 0
-            try:
-                del Fetcher._multi_429_count
-            except AttributeError:
-                pass
+            Fetcher._reset_ratelimit()
 
         return is_ratelimited
 
     @staticmethod
+    def _reset_ratelimit():
+        Fetcher._429_timestamp.value = Fetcher._429_delay.value = 0
+        try:
+            del Fetcher._multi_429_count
+        except AttributeError:
+            pass
+
+    @staticmethod
+    def _load_ratelimit_reset():
+        """
+        Loads the ratelimit reset time from file (this assumes the ratelimit
+        is a 429 ratelimit, not a self-imposed ratelimit)
+
+        Returns True if the ratelimit reset time was successfully loaded
+        """
+        timestamp_set = False
+        delay_set = False
+        if os.path.exists(Fetcher._RATELIMIT_RESET_PATH):
+            logger.id(logger.debug, Fetcher.ME,
+                    'Loading previous ratelimit from \'{path}\' ...',
+                    path=Fetcher._RATELIMIT_RESET_PATH,
+            )
+
+            for i, line in readline(Fetcher._RATELIMIT_RESET_PATH):
+                try:
+                    if not timestamp_set:
+                        Fetcher._429_timestamp.value = float(line)
+                        timestamp_set = True
+                    elif not delay_set:
+                        Fetcher._429_delay.value = float(line)
+                        delay_set = True
+
+                except (TypeError, ValueError):
+                    # recorded data structure changed or corrupted
+                    logger.id(logger.warn, Fetcher.ME,
+                            'Invalid ratelimit reset time:'
+                            ' \'{data}\' in \'{path}\'',
+                            data=line,
+                            path=Fetcher._RATELIMIT_RESET_PATH,
+                            exc_info=True,
+                    )
+                    Fetcher._reset_ratelimit()
+                    break
+
+                else:
+                    if timestamp_set and delay_set:
+                        logger.id(logger.debug, Fetcher.ME,
+                                'Loaded ratelimit reset from file:'
+                                '\n\ttimestamp: {strftime}'
+                                '\n\tdelay:     {time_delay}',
+                                strftime='%m/%d, %H:%M:%S',
+                                strf_time=Fetcher._429_timestamp.value,
+                                time_delay=Fetcher._429_delay.value,
+                        )
+                        # break in case there are too many lines in the file
+                        # (which could indicate that the file structure changed
+                        #  but the loading code did not)
+                        break
+
+        return timestamp_set and delay_set
+
+    @staticmethod
     def _record_ratelimit_reset():
+        """
+        Records the ratelimit reset time to file
+        """
         if Fetcher.ratelimit_delay > 0:
             if not os.path.exists(Fetcher._RATELIMIT_RESET_PATH):
                 logger.id(logger.debug, Fetcher.ME,
                         'Writing ratelimit time: {strftime} ...',
                         strftime='%H:%M:%S',
-                        strf_time=reset_time,
+                        strf_time=Fetcher.ratelimit_delay_expire,
                 )
 
                 try:
                     with open(Fetcher._RATELIMIT_RESET_PATH, 'w') as fd:
+                        # XXX: write the delay relative to the current time
+                        # in case the ratelimit is self-imposed
                         fd.write('{0}\n{1}'.format(
                             time.time(),
                             Fetcher.ratelimit_delay,
@@ -276,12 +300,12 @@ class Fetcher(object):
                     logger.id(logger.exception, Fetcher.ME,
                             'Failed to record ratelimit time: {strftime}',
                             strftime='%H:%M:%S',
-                            strf_time=reset_time,
+                            strf_time=Fetcher.ratelimit_delay_expire,
                     )
 
             else:
                 logger.id(logger.debug, FETCHER.ME,
-                        'Skipping ratelimit write: \'{path}\' exists!',
+                        'NOT writing ratelimit time: \'{path}\' exists!',
                         path=Fetcher._RATELIMIT_RESET_PATH,
                 )
 

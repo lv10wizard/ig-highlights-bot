@@ -16,7 +16,10 @@ from src.mixins import (
         ProcessMixin,
         RedditInstanceMixin,
 )
-from src.util import logger
+from src.util import (
+        logger,
+        readline,
+)
 
 
 class Flag(object):
@@ -38,19 +41,9 @@ class Flag(object):
             )
 
             last_reset_time = None
-            try:
-                with open(Flag._PATH, 'r') as fd:
-                    last_reset_time = fd.read()
-
-            except (IOError, OSError):
-                logger.id(logger.warn, self,
-                        'Failed to read the last ratelimit reset time',
-                        exc_info=True,
-                )
-
-            else:
+            for i, line in readline(Flag._PATH):
                 try:
-                    last_reset_time = float(last_reset_time)
+                    last_reset_time = float(line)
 
                 except (TypeError, ValueError):
                     logger.id(logger.warn, self,
@@ -73,6 +66,9 @@ class Flag(object):
                                 strf_time=last_reset_time,
                         )
                         last_reset_time = None
+
+                finally:
+                    break
 
             if last_reset_time is None:
                 self._remove_last_reset()

@@ -1,8 +1,13 @@
+import os
 import random
+import time
 
 import constants
 from src import reddit
-from src.database import UserPoolDatabase
+from src.database import (
+        Database,
+        UserPoolDatabase,
+)
 from src.instagram import (
         Fetcher,
         Instagram,
@@ -11,7 +16,10 @@ from src.mixins import (
         ProcessMixin,
         RedditInstanceMixin,
 )
-from src.util import logger
+from src.util import (
+        logger,
+        readline,
+)
 
 
 class Submitter(ProcessMixin, RedditInstanceMixin):
@@ -19,7 +27,95 @@ class Submitter(ProcessMixin, RedditInstanceMixin):
     The bot's submitter process that posts submissions to its profile
     """
 
+    _LAST_POST_TIME_FILE = Database.resolve_path(
+            Database.format_path('submitter_last_post_time')
+    )
+
     _NOT_SET = '__:!NOT!SET!:__'
+
+    @staticmethod
+    def _load_last_post_time():
+        """
+        Loads the last post time from file
+
+        Returns the timestamp of the last post time
+                or -1 if the _LAST_POST_TIME_FILE could not be read
+        """
+        last_post_time = -1
+        if os.path.exists(Submitter._LAST_POST_TIME_FILE):
+            logger.id(logger.debug, __name__,
+                    'Loading last post time from \'{path}\' ...',
+                    path=Submitter._LAST_POST_TIME_FILE,
+            )
+
+            for i, line in readline(Submitter._LAST_POST_TIME_FILE):
+                try:
+                    last_post_time = float(line)
+
+                except (TypeError, ValueError):
+                    # file structure changed or corrupted
+                    logger.id(logger.warn, Submitter._LAST_POST_TIME_FILE,
+                            'Invalid last post time data: \'{data}\'',
+                            data=line,
+                            exc_info=True,
+                    )
+
+                finally:
+                    # break in case there are too many lines
+                    break
+
+            if last_post_time > 0:
+                logger.id(logger.debug, __name__,
+                        'Loaded last post time from file: {strftime}',
+                        strftime='%m/%d, %H:%M:%S',
+                        strf_time=last_post_time,
+                )
+
+            else:
+                Submitter._remove_last_post_time_file()
+
+        return last_post_time
+
+    @staticmethod
+    def _record_last_post_time():
+        """
+        Writes the current time to the _LAST_POST_TIME_FILE
+        """
+        logger.id(logger.debug, __name__,
+                'Writing last post time: {strftime} ...',
+                strftime='%m/%d, %H:%M:%S',
+        )
+
+        try:
+            with open(Submitter._LAST_POST_TIME_FILE, 'w') as fd:
+                fd.write(str(time.time()))
+
+        except (IOError, OSError):
+            logger.id(logger.exception, __name__,
+                    'Failed to record last post time: {strftime}',
+                    strftime='%m/%d, %H:%M:%S',
+            )
+
+    @staticmethod
+    def _remove_last_post_time_file():
+        """
+        Removes the _LAST_POST_TIME_FILE if it exists
+        """
+        if os.path.exists(Submitter._LAST_POST_TIME_FILE):
+            logger.id(logger.debug, __name__,
+                    'Removing last post time file \'{path}\' ...',
+                    path=Submitter._LAST_POST_TIME_FILE,
+            )
+
+            try:
+                os.remove(Submitter._LAST_POST_TIME_FILE)
+
+            except (IOError, OSError):
+                logger.id(logger.warn, __name__,
+                        'Failed to remove \'{path}\'!',
+                        path=Submitter._LAST_POST_TIME_FILE,
+                        exc_info=True,
+                )
 
     def __init__(self, cfg, rate_limited):
         ProcessMixin.__init__(self)
@@ -248,6 +344,64 @@ class Submitter(ProcessMixin, RedditInstanceMixin):
         else:
             return '@{0}'.format(ig.user)
 
+    def _submit_post(self, display_name):
+        """
+        Submits a post to the bot's profile
+
+        Returns the return value of do_submit if a post is attempted
+                or _NOT_SET otherwise
+        """
+        posted = Submitter._NOT_SET
+        ig = self._choose_ig_user()
+        if not ig:
+            logger.id(logger.info, self,
+                    'Failed to choose an instagram user!',
+            )
+            # XXX: return False so that the run_forever loop does not exit
+            # -- failing to choose an instagram user is not necessarily fatal,
+            # it means that no username in the pool is currently valid to post
+            # but may become valid in the future.
+            return False
+
+        if (
+                not self._killed.is_set()
+                and ig
+                and hasattr(ig.non_highlighted_media, '__iter__')
+        ):
+            # choose a non-highlighted link to post
+            link = self._choose_post_link(ig)
+            if link:
+                # commit the post before posting just in case
+                # something goes wrong (to prevent the bot from
+                # re-posting a duplicate)
+                logger.id(logger.debug, self,
+                        'Committing {color_user}:'
+                        ' \'{color_link}\' to userpool to'
+                        ' prevent reposting duplicates too'
+                        ' quickly',
+                        color_user=ig.user,
+                        color_link=link,
+                )
+                with self.userpool:
+                    self.userpool.commit_post(ig.user, link)
+
+                title = self._format_title(ig)
+                logger.id(logger.info, self,
+                        'Posting to {color_subreddit}:'
+                        ' \'{title}\' -> \'{link}\'',
+                        color_subreddit=reddit.prefix_subreddit(display_name),
+                        title=title,
+                        link=link,
+                )
+
+                posted = self._reddit.do_submit(
+                        display_name=display_name,
+                        title=title,
+                        url=link,
+                )
+
+        return posted
+
     def _run_forever(self):
         # XXX: this is not a config option because the bot should not post
         # to any random subreddit
@@ -269,56 +423,27 @@ class Submitter(ProcessMixin, RedditInstanceMixin):
                     color_subreddit=reddit.prefix_subreddit(subreddit),
             )
 
+        # check if the bot needs to wait before posting initially
+        # (in case eg. it was restarted)
+        last_post_time = Submitter._load_last_post_time()
+        elapsed = time.time() - last_post_time
+        delay = self.cfg.submit_interval - elapsed
+        if delay > 0:
+            logger.id(logger.info, self,
+                    'Waiting {time} before posting ...',
+                    time=delay,
+            )
+            self._killed.wait(delay)
+
         while not self._killed.is_set():
             posted = Submitter._NOT_SET
 
             if self.cfg.submit_enabled:
-                while posted is Submitter._NOT_SET:
-                    ig = self._choose_ig_user()
-                    if not ig:
-                        logger.id(logger.info, self,
-                                'Failed to choose an instagram user!',
-                        )
-                        break
-
-                    if (
-                            not self._killed.is_set()
-                            and ig
-                            and hasattr(ig.non_highlighted_media, '__iter__')
-                    ):
-                        # choose a non-highlighted link to post
-                        link = self._choose_post_link(ig)
-                        if link:
-                            # commit the post before posting just in case
-                            # something goes wrong (to prevent the bot from
-                            # re-posting a duplicate)
-                            logger.id(logger.debug, self,
-                                    'Committing {color_user}:'
-                                    ' \'{color_link}\' to userpool to'
-                                    ' prevent reposting duplicates too'
-                                    ' quickly',
-                                    color_user=ig.user,
-                                    color_link=link,
-                            )
-                            with self.userpool:
-                                self.userpool.commit_post(ig.user, link)
-
-                            title = self._format_title(ig)
-                            logger.id(logger.info, self,
-                                    'Posting to {color_subreddit}:'
-                                    ' \'{title}\' -> \'{link}\'',
-                                    color_subreddit=reddit.prefix_subreddit(
-                                        subreddit
-                                    ),
-                                    title=title,
-                                    link=link,
-                            )
-
-                            posted = self._reddit.do_submit(
-                                    display_name=subreddit,
-                                    title=title,
-                                    url=link,
-                            )
+                while (
+                        not self._killed.is_set()
+                        and posted is Submitter._NOT_SET
+                ):
+                    posted = self._submit_post(subreddit)
 
             if posted is None:
                 logger.id(logger.info, self,
@@ -326,11 +451,16 @@ class Submitter(ProcessMixin, RedditInstanceMixin):
                         color_subreddit=reddit.prefix_subreddit(subreddit),
                 )
 
+                Submitter._remove_last_post_time_file()
+
                 if not constants.dry_run:
                     break
 
                 else:
                     logger.id(logger.info, self, 'Dry run: not halting ...')
+
+            else:
+                Submitter._record_last_post_time()
 
             logger.id(logger.info, self,
                     'Waiting {time} before posting again ...',
