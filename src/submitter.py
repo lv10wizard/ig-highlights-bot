@@ -223,7 +223,7 @@ class Submitter(ProcessMixin, RedditInstanceMixin):
                             # something goes wrong (to prevent the bot from
                             # re-posting a duplicate)
                             with self.userpool:
-                                self.userpool.commit_post(ig.username, link)
+                                self.userpool.commit_post(ig.user, link)
 
                             logger.id(logger.info, self,
                                     'Posting to {color_subreddit}:'
