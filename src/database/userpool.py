@@ -8,6 +8,7 @@ from ._database import (
         UniqueConstraintFailed,
 )
 from constants import USER_POOL_PATH
+from src.util import logger
 
 
 class UserPoolDatabase(Database):
@@ -71,10 +72,7 @@ class UserPoolDatabase(Database):
         """
         Reads and updates the database with changes from the USER_POOL file
         """
-        from src.util import (
-                logger,
-                readline
-        )
+        from src.util import readline
 
         try:
             cached_mtime = self.__pool_file_mtime
@@ -200,24 +198,29 @@ class UserPoolDatabase(Database):
         # delete the oldest tracked post(s) if the count exceeds the unique
         # links count. this effectively recycles links so that they can be
         # posted again.
-        self._db.execute(
-                'CASE WHEN ('
-                '   SELECT count(link) WHERE username = ?'
-                ') > {unique_count}'
-                ' THEN'
-                '   DELETE FROM last_posts'
-                '   WHERE username = ?'
-                '   AND timestamp = ('
-                '       SELECT timestamp FROM last_posts'
-                '       WHERE username = ?'
-                '       ORDER BY timestamp LIMIT 1'
-                '   )'
-                ' END'.format(
-                    unique_count=self.cfg.submit_unique_links_per_user,
-                ),
+        num_links = self._db.execute(
+                'SELECT count(link) FROM last_posts WHERE username = ?',
+                (username,),
+        ).fetchone()[0]
+        if num_links > self.cfg.submit_unique_links_per_user:
+            cursor = self._db.execute(
+                    'DELETE FROM last_posts'
+                    ' WHERE username = ?'
+                    ' AND timestamp <= ('
+                    '   SELECT timestamp FROM last_posts'
+                    '   WHERE username = ?'
+                    '   ORDER BY timestamp ASC LIMIT 1'
+                    ')',
 
-                (username, username, username),
-        )
+                    (username, username),
+            )
+
+            if cursor.rowcount > 0:
+                logger.id(logger.debug, self,
+                        'Removed #{num} oldest entr{plural}',
+                        num=cursor.rowcount,
+                        plural=('y' if cursor.rowcount == 1 else 'ies'),
+                )
 
 
 __all__ = [
