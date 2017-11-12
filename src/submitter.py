@@ -1,5 +1,6 @@
 import random
 
+import constants
 from src import reddit
 from src.database import UserPoolDatabase
 from src.instagram import Instagram
@@ -264,7 +265,12 @@ class Submitter(ProcessMixin, RedditInstanceMixin):
                         'Halting: could not post to {color_subreddit} ...',
                         color_subreddit=reddit.prefix_subreddit(subreddit),
                 )
-                break
+
+                if not constants.dry_run:
+                    break
+
+                else:
+                    logger.id(logger.info, self, 'Dry run: not halting ...')
 
             logger.id(logger.info, self,
                     'Waiting {time} before posting again ...',
