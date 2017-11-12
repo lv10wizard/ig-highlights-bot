@@ -133,7 +133,6 @@ class UserPoolDatabase(Database):
             if added or removed:
                 self._db.commit()
 
-    @property
     def last_posts(self, username):
         """
         Returns a list of the most recently posted links for the given user
@@ -142,7 +141,8 @@ class UserPoolDatabase(Database):
         self.__update_from_user_pool_file()
         cursor = self._db.execute(
                 'SELECT link FROM last_posts WHERE username = ?'
-                ' ORDER BY timestamp DESC'
+                ' ORDER BY timestamp DESC',
+                (username,)
         )
         return [row['link'] for row in cursor.fetchall()]
 
