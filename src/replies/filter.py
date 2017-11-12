@@ -4,6 +4,7 @@ from praw.models import Comment
 
 from .parser import Parser
 from constants import (
+        HELP_URL,
         PREFIX_SUBREDDIT,
         SUBREDDITS_DEFAULTS_PATH,
 )
@@ -20,10 +21,16 @@ class Filter(object):
     """
 
     # authors that should not be replied to
-    IGNORED = list(map(lambda author: author.lower(), [
+    IGNORED_AUTHORS = list(map(lambda author: author.lower(), [
         'automoderator',
         'poster_bot2',
     ]))
+
+    # thing ids that should not be replied to
+    IGNORED_IDS = [
+            # XXX: assumes the help url is of the form '/SUBMISSION_ID'
+            HELP_URL.strip('/ '),
+    ]
 
     def __init__(self, cfg, username, blacklist):
         self.cfg = cfg
@@ -47,7 +54,8 @@ class Filter(object):
         will want to reply to.
 
         Returns True if the following are all True
-            - thing's author not in hard-coded IGNORED list
+            - thing's author not in hard-coded IGNORED_AUTHORS list
+            - thing's id is not in hard-coded IGNORED_IDS list
             - thing not already replied to by the bot
             - thing already queued for a reply
             - thing is not in the rate-limit queue
@@ -64,10 +72,17 @@ class Filter(object):
         # be made
 
         author = reddit.author(thing)
-        if author.lower() in Filter.IGNORED:
+        if author.lower() in Filter.IGNORED_AUTHORS:
             logger.id(logger.info, self,
                     '{color_author} ({color_thing}) is ignored: skipping.',
                     color_author=reddit.prefix_user(author),
+                    color_thing=reddit.display_id(thing),
+            )
+            return False
+
+        if hasattr(thing, 'id') and thing.id in Filter.IGNORED_IDS:
+            logger.id(logger.info, self,
+                    '{color_thing} is ignored: skipping.',
                     color_thing=reddit.display_id(thing),
             )
             return False
