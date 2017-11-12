@@ -225,6 +225,7 @@ class Submitter(ProcessMixin, RedditInstanceMixin):
                             with self.userpool:
                                 self.userpool.commit_post(ig.user, link)
 
+                            title = self._format_title(ig)
                             logger.id(logger.info, self,
                                     'Posting to {color_subreddit}:'
                                     ' \'{title}\' -> \'{link}\'',
@@ -237,7 +238,7 @@ class Submitter(ProcessMixin, RedditInstanceMixin):
 
                             posted = self._reddit.do_submit(
                                     display_name=subreddit,
-                                    title=self._format_title(ig),
+                                    title=title,
                                     url=link,
                             )
                             if posted is not None:

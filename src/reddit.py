@@ -932,7 +932,7 @@ class Reddit(praw.Reddit):
                 self._queue_submit, killed,
                 display_name=display_name,
                 title=title,
-                sefltext=selftext,
+                selftext=selftext,
                 url=url,
         )
 
@@ -993,7 +993,7 @@ class Reddit(praw.Reddit):
                 logger.id(logger.warn, self,
                         'Failed to post \'{title}\' to {color_subreddit}!',
                         title=title,
-                        color_subreddit=color_subreddit,
+                        color_subreddit=prefix_subreddit(display_name),
                         exc_info=True,
                 )
                 success = None
