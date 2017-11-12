@@ -41,69 +41,35 @@ def load_jargon():
             JARGON_DEFAULTS_PATH,
             POKEMON_PATH,
     )
-    from src.util import format_repeat_each_character_pattern
+    from src.util import (
+            format_repeat_each_character_pattern,
+            readline,
+    )
 
     jargon = []
+
     logger.id(logger.debug, __name__,
             'Loading jargon from \'{path}\' ...',
             path=JARGON_DEFAULTS_PATH,
     )
-    try:
-        # TODO: refactor reading to util
-        with open(JARGON_DEFAULTS_PATH, 'r') as fd:
-            for i, line in enumerate(fd):
-                try:
-                    comment_idx = line.index('#')
-                except ValueError:
-                    # no comment in line
-                    comment_idx = len(line)
-
-                # too spammy
-                # comment = line[comment_idx:].strip()
-                # if comment:
-                #     logger.id(logger.debug, __name__,
-                #             'Skipping comment: \'{comment}\'',
-                #             comment=comment,
-                #     )
-
-                regex = line[:comment_idx].strip()
-                if regex:
-                    # too spammy
-                    # logger.id(logger.debug, __name__,
-                    #         'Adding jargon: \'{regex}\'',
-                    #         regex=regex,
-                    # )
-                    if regex.endswith(','):
-                        logger.id(logger.warn, __name__,
-                                'line #{i} ends with \',\'!',
-                                i=i+1,
-                        )
-                    jargon.append(regex)
-
-    except (IOError, OSError):
-        logger.id(logger.exception, __name__,
-                'Failed to load jargon file: \'{path}\'!',
-                path=JARGON_DEFAULTS_PATH,
-        )
+    for i, line in readline(JARGON_DEFAULTS_PATH):
+        if line.endswith(','):
+            logger.id(logger.warn, __name__,
+                    'line #{i} ends with \',\'!',
+                    i=i+1,
+            )
+        jargon.append(line)
 
     logger.id(logger.debug, __name__,
             'Loading pokemon from \'{path}\' ...',
             path=POKEMON_PATH,
     )
-    try:
-        with open(POKEMON_PATH, 'r') as fd:
-            for i, line in enumerate(fd):
-                pokemon = map(
-                        format_repeat_each_character_pattern,
-                        line.strip().lower()
-                )
-                jargon.append(''.join(pokemon))
-
-    except (IOError, OSError):
-        logger.id(logger.exception, __name__,
-                'Failed to load pokemon file: \'{path}\'!',
-                path=POKEMON_PATH,
+    for i, line in readline(POKEMON_PATH):
+        pokemon = map(
+                format_repeat_each_character_pattern,
+                line.lower()
         )
+        jargon.append(''.join(pokemon))
 
     return jargon
 

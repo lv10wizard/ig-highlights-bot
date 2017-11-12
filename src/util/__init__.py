@@ -73,3 +73,66 @@ def choose_filename(dirname, name, ext):
         i += 1
     return path
 
+def readline(path, comment_chars='#', debug=False):
+    """
+    Reads the text file at the specified path ignoring any character
+    in comment_chars and empty lines. This assumes the path is a text
+    file.
+
+    path (str) - the path to the file
+    comment_chars (iterable, optional) - set of characters which denote a
+            comment; Default: '#'
+    debug (bool, optional) - whether to log debug statements
+
+    Yields tuples(line_nr, line) where
+            line_nr (int) - the line number of the line
+            line (str) - the line that was read, stripping comments and
+                    excluding empty lines
+    """
+    from src.config import resolve_path
+
+    path = resolve_path(path)
+
+    def debug_log(msg, *args, **kwargs):
+        if debug:
+            from src.util import logger
+            logger.id(logger.debug, path, msg, *args, **kwargs)
+
+    try:
+        with open(path, 'r') as fd:
+            for i, line in enumerate(fd):
+                # determine the start of the comment on the line, if any
+                comment_idx = -1
+                for c in comment_chars:
+                    try:
+                        comment_idx = line.index(c)
+                    except ValueError:
+                        pass
+                if comment_idx < 0:
+                    comment_idx = len(line)
+
+                whole_line = line
+                comment = line[comment_idx:].strip()
+                line = line[:comment_idx].strip()
+
+                if whole_line.strip():
+                    debug_log('[#{i}] {line}', i=i+1, line=whole_line)
+                else:
+                    debug_log('[#{i}] Skipping empty line', i=i+1)
+
+                if comment:
+                    debug_log('\tSkipping comment: \'{comment}\'',
+                            comment=comment,
+                    )
+
+                if line:
+                    yield i, line
+
+    except (IOError, OSError):
+        from src.util import logger
+        logger.id(logger.exception, path,
+                'Failed to read \'{path}\'!',
+                path=path,
+        )
+
+

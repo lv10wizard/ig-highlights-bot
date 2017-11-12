@@ -71,6 +71,11 @@ class UserPoolDatabase(Database):
         """
         Reads and updates the database with changes from the USER_POOL file
         """
+        from src.util import (
+                logger,
+                readline
+        )
+
         try:
             cached_mtime = self.__pool_file_mtime
         except AttributeError:
@@ -86,28 +91,12 @@ class UserPoolDatabase(Database):
             seen = set()
             added = set()
 
-            # TODO: refactor reading to util
-            with open(USER_POOL_PATH, 'r') as fd:
-                for i, line in enumerate(fd):
-                    try:
-                        comment_idx = line.index('#')
-                    except ValueError:
-                        # no comment
-                        comment_idx = int(line)
-
-                    comment = line[comment_idx:].strip()
-                    if comment:
-                        logger.id(logger.debug, __name__,
-                                'Skipping comment: \'{comment}\'',
-                                comment=comment,
-                        )
-
-                    username = line[:comment_idx].strip()
-                    if username:
-                        seen.add(username)
-                        if username not in self:
-                            self.insert(username)
-                            added.add(username)
+            for i, line in readline(USER_POOL_PATH):
+                line = line.lower()
+                seen.add(line)
+                if line not in self:
+                    self.insert(line)
+                    added.add(line)
 
             if added:
                 logger.id(logger.info, self,

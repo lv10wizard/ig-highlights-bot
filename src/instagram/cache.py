@@ -76,6 +76,10 @@ class Cache(object):
         return Database.resolve_path(os.path.join(path, basename))
 
     @property
+    def exists(self):
+        return os.path.exists(self.dbpath)
+
+    @property
     def dbpath(self):
         """
         Returns the resolved path to the user's database file
