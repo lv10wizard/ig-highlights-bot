@@ -16,6 +16,8 @@ class Submitter(ProcessMixin, RedditInstanceMixin):
     The bot's submitter process that posts submissions to its profile
     """
 
+    _NOT_SET = '__:!NOT!SET!:__'
+
     def __init__(self, cfg, rate_limited):
         ProcessMixin.__init__(self)
         RedditInstanceMixin.__init__(self, cfg, rate_limited)
@@ -201,10 +203,10 @@ class Submitter(ProcessMixin, RedditInstanceMixin):
             )
 
         while not self._killed.is_set():
-            posted = False
+            posted = Submitter._NOT_SET
 
             if self.cfg.submit_enabled:
-                while posted is False:
+                while posted is Submitter._NOT_SET:
                     ig = self._choose_ig_user()
                     if not ig:
                         logger.id(logger.info, self,
