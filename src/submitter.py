@@ -22,9 +22,6 @@ class Submitter(ProcessMixin, RedditInstanceMixin):
         ProcessMixin.__init__(self)
         RedditInstanceMixin.__init__(self, cfg, rate_limited)
 
-    def __str__(self):
-        return self.__class__.__name__
-
     @property
     def userpool(self):
         try:
@@ -225,6 +222,14 @@ class Submitter(ProcessMixin, RedditInstanceMixin):
                             # commit the post before posting just in case
                             # something goes wrong (to prevent the bot from
                             # re-posting a duplicate)
+                            logger.id(logger.debug, self,
+                                    'Committing {color_user}:'
+                                    ' \'{color_link}\' to userpool to'
+                                    ' prevent reposting duplicates too'
+                                    ' quickly',
+                                    color_user=ig.user,
+                                    color_link=link,
+                            )
                             with self.userpool:
                                 self.userpool.commit_post(ig.user, link)
 
@@ -244,23 +249,6 @@ class Submitter(ProcessMixin, RedditInstanceMixin):
                                     title=title,
                                     url=link,
                             )
-                            if posted is not None:
-                                # submit either succeeded or was
-                                # ratelimit-queued. commit it to the userpool
-                                # so that the next post is not a duplicate.
-                                # (this assumes that the ratelimit handler will
-                                #  ultimately succeed in submitting the post.)
-                                logger.id(logger.debug, self,
-                                        'Committing {color_user}:'
-                                        ' \'{color_link}\' to userpool to'
-                                        ' prevent reposting duplicates too'
-                                        ' quickly',
-                                        color_user=ig.user,
-                                        color_link=link,
-                                )
-
-                                with self.userpool:
-                                    self.userpool.commit_post(ig.user, link)
 
             if posted is None:
                 logger.id(logger.info, self,
