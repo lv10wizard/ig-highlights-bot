@@ -111,20 +111,22 @@ class UserPoolDatabase(Database):
             cursor = self._db.execute(
                     'SELECT username FROM pool'
                     ' WHERE username NOT IN ({seen})'.format(
-                        seen=', '.join(seen),
+                        seen=', '.join(
+                            '\'{0}\''.format(name) for name in seen
+                        ),
                     )
             )
-            removed = set(cursor.fetchall())
+            removed = set(row['username'] for row in cursor.fetchall())
             if removed:
                 self._db.executemany(
                         'DELETE FROM pool WHERE username = ?',
-                        removed,
+                        [(username,) for username in removed],
                 )
                 logger.id(logger.info, self,
                         'Removed #{num} username{plural} from pool: {color}',
                         num=len(removed),
                         plural=('' if len(removed) == 1 else 's'),
-                        color=[row['username'] for row in removed],
+                        color=removed,
                 )
 
             if added or removed:
@@ -164,7 +166,9 @@ class UserPoolDatabase(Database):
                 ')'.format(
                     now=time.time(),
                     interval=self.cfg.submit_user_repost_interval,
-                    exclude=', '.join(exclude),
+                    exclude=', '.join(
+                        '\'{0}\''.format(name) for name in exclude
+                    ),
                 )
         )
         return random.choice(cursor.fetchall())['username']
