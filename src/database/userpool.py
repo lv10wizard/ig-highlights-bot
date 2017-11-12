@@ -87,6 +87,7 @@ class UserPoolDatabase(Database):
                     'Updating username pool from \'{path}\' ...',
                     path=USER_POOL_PATH,
             )
+            self.__pool_file_mtime = current_mtime
 
             seen = set()
             added = set()
