@@ -3,7 +3,10 @@ import random
 import constants
 from src import reddit
 from src.database import UserPoolDatabase
-from src.instagram import Instagram
+from src.instagram import (
+        Fetcher,
+        Instagram,
+)
 from src.mixins import (
         ProcessMixin,
         RedditInstanceMixin,
@@ -53,6 +56,36 @@ class Submitter(ProcessMixin, RedditInstanceMixin):
 
         return pool
 
+    def _wait_for_fetch_delay(self):
+        """
+        Attempts to wait out the remaining instagram fetch delay
+
+        Returns True if a wait occurred
+        """
+        did_wait = False
+
+        delay = Instagram.request_delay or Instagram.ratelimit_delay
+        if delay > 0:
+            expire = (
+                    Instagram.request_delay_expire
+                    or Instagram.ratelimit_delay_expire
+            )
+
+            msg = ['Fetch interrupted: waiting {time}']
+            if expire > 0:
+                msg.append('({strftime})')
+
+            logger.id(logger.debug, self,
+                    ' '.join(msg),
+                    time=delay,
+                    strftime='%H:%M:%S',
+                    strf_time=expire,
+            )
+            self._killed.wait(delay)
+            did_wait = True
+
+        return did_wait
+
     def _choose_ig_user(self):
         """
         Chooses a public instagram username from the user pool to post
@@ -76,17 +109,12 @@ class Submitter(ProcessMixin, RedditInstanceMixin):
             # verify that the user's profile is still public
             while not (ig or self._killed.is_set()):
                 ig = Instagram(user, self._killed)
+                    logger.id(logger.debug, self,
+                    )
                 if ig.non_highlighted_media is None:
                     # fetch interrupted; retry when the delay is over
-                    logger.id(logger.debug, self,
-                            'Fetch interrupted:'
-                            ' waiting {time} ({strftime}) ...',
-                            time=Instagram.request_delay,
-                            strftime='%H:%M:%S',
-                            strf_time=Instagram.request_delay_expire,
-                    )
+                    self._wait_for_fetch_delay()
                     ig = None
-                    self._killed.wait(Instagram.request_delay)
 
                 elif (
                         ig.non_highlighted_media is True
@@ -157,17 +185,59 @@ class Submitter(ProcessMixin, RedditInstanceMixin):
 
         link = None
         link_pool = self._get_link_pool(ig, self.userpool.last_posts(ig.user))
-        if link_pool:
-            link = random.choice(link_pool)
-        else:
-            logger.id(logger.debug, self,
-                    'Cannot choose link: no postable links to choose from!',
-            )
+        while not link:
+            if link_pool:
+                link = random.choice(link_pool)
+            else:
+                logger.id(logger.debug, self,
+                        'Cannot choose link: no postable links to choose from!',
+                )
+
+            if link:
+                # test the link to ensure it still exists
+                response = None
+                # XXX: don't test 'not response' because "bad" status codes
+                # evaluate to False (eg. 404)
+                while response is None or response is False:
+                    response = Fetcher.request(link, method='head')
+                    if response is False:
+                        self._wait_for_fetch_delay()
+
+                if (
+                        hasattr(response, 'status_code')
+                        and response.status_code == 404
+                ):
+                    logger.id(logger.debug, self,
+                            '\'{url}\' no longer exists!'
+                            ' Choosing another link ...',
+                            url=link,
+                    )
+
+                    try:
+                        link_pool.remove(link)
+                    except ValueError:
+                        # this should not happen
+                        logger.id(logger.warn, self,
+                                'Failed to remove 404\'d link \'{url}\''
+                                ' from {color_user}\'s link_pool!',
+                                url=link,
+                                color_user=ig.user,
+                                exc_info=True,
+                        )
+                    finally:
+                        # choose another link
+                        link = None
 
         if link:
             logger.id(logger.debug, self,
                     'Selected \'{link}\' to post',
                     link=link,
+            )
+
+        else:
+            logger.id(logger.debug, self,
+                    'Failed to select a link for {color_user}!',
+                    color_user=ig.user,
             )
 
         return link

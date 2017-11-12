@@ -49,6 +49,14 @@ class Instagram(object):
         return Fetcher.request_delay
 
     @classproperty
+    def ratelimit_delay_expire(cls):
+        return Fetcher.ratelimit_delay_expire
+
+    @classproperty
+    def ratelimit_delay(cls):
+        return Fetcher.ratelimit_delay
+
+    @classproperty
     def is_ratelimited(cls):
         return Fetcher.is_ratelimited
 

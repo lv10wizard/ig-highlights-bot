@@ -54,7 +54,7 @@ class Requestor(object):
         self.__last_delay = delay
         return delay
 
-    def request(self, url, method='get', *args, **kwargs):
+    def request(self, url, method='get', allow_redirects=True, *args, **kwargs):
         response = None
 
         try:
@@ -83,7 +83,11 @@ class Requestor(object):
 
             while response is None:
                 try:
-                    response = request_func(url, *args, **kwargs)
+                    response = request_func(
+                            url,
+                            allow_redirects=allow_redirects,
+                            *args, **kwargs
+                    )
 
                 except (
                         requests.ConnectionError,

@@ -1,3 +1,5 @@
+import ctypes
+import multiprocessing
 import os
 import re
 import time
@@ -37,12 +39,12 @@ class Fetcher(object):
 
     # 500-level response status code timing
     # a 500-level status code indicates an error on instagram's side
-    _500_timestamp = 0
-    _500_delay = 0
+    _500_timestamp = multiprocessing.Value(ctypes.c_double, 0.0)
+    _500_delay = multiprocessing.Value(ctypes.c_double, 0.0)
 
     # 429-level response status code timing
-    _429_timestamp = 0
-    _429_delay = 0
+    _429_timestamp = multiprocessing.Value(ctypes.c_double, 0.0)
+    _429_delay = multiprocessing.Value(ctypes.c_double, 0.0)
     _429_DEFAULT_DELAY = parse_time('5m')
 
     _RATELIMIT_RESET_PATH = resolve_path(
@@ -91,11 +93,11 @@ class Fetcher(object):
 
     @classproperty
     def request_delay_expire(cls):
-        return Fetcher._500_timestamp + Fetcher._500_delay
+        return Fetcher._500_timestamp.value + Fetcher._500_delay.value
 
     @classproperty
     def request_delay(cls):
-        return Fetcher._500_delay
+        return Fetcher._500_delay.value
 
     @staticmethod
     def account_ratelimit(response):
@@ -118,11 +120,21 @@ class Fetcher(object):
                 Fetcher.ratelimit.commit()
 
     @classproperty
+    def ratelimit_delay_expire(cls):
+        expire = 0
+
+        time_left = Fetcher.ratelimit_delay
+        if time_left > 0:
+            expire = time.time() + time_left
+
+        return expire
+
+    @classproperty
     def ratelimit_delay(cls):
         time_left = -1
 
         # try a 429-based ratelimit
-        expire = Fetcher._429_timestamp + Fetcher._429_delay
+        expire = Fetcher._429_timestamp.value + Fetcher._429_delay.value
         if expire > 0:
             time_left = expire - time.time()
 
@@ -183,8 +195,8 @@ class Fetcher(object):
             else:
                 try:
                     split = data.strip().split('\n')
-                    Fetcher._429_timestamp = float(split[0])
-                    Fetcher._429_delay = float(split[1])
+                    Fetcher._429_timestamp.value = float(split[0])
+                    Fetcher._429_delay.value = float(split[1])
 
                 except (IndexError, TypeError, ValueError):
                     # recorded data structure changed or corrupted
@@ -201,8 +213,8 @@ class Fetcher(object):
                             'Loaded ratelimit reset from file:'
                             '\n\ttimestamp: {t}'
                             '\n\tdelay:     {time_delay}',
-                            t=Fetcher._429_timestamp,
-                            time_delay=Fetcher._429_delay,
+                            t=Fetcher._429_timestamp.value,
+                            time_delay=Fetcher._429_delay.value,
                     )
 
         num_used = Fetcher.ratelimit.num_used()
@@ -235,7 +247,7 @@ class Fetcher(object):
             )
             # just reset the 429 variables even if the ratelimit was
             # self-imposed
-            Fetcher._429_timestamp = Fetcher._429_delay = 0
+            Fetcher._429_timestamp.value = Fetcher._429_delay.value = 0
             try:
                 del Fetcher._multi_429_count
             except AttributeError:
@@ -301,22 +313,24 @@ class Fetcher(object):
                     '429 Too Many Requests: ratelimited!',
             )
 
-            if Fetcher._429_timestamp == Fetcher._429_delay == 0:
-                Fetcher._429_timestamp = time.time()
+            if Fetcher._429_timestamp.value == Fetcher._429_delay.value == 0:
+                Fetcher._429_timestamp.value = time.time()
                 try:
-                    # https://tools.ietf.org/html/rfc6585#section-4
-                    Fetcher._429_delay = int(response.headers['retry-after'])
-                    # add some extra time because their header seems to be short
-                    Fetcher._429_delay += 90
+                    Fetcher._429_delay.value = float(
+                            # https://tools.ietf.org/html/rfc6585#section-4
+                            response.headers['retry-after']
+                    # add some extra time because instagram's header seems
+                    # to be short
+                    ) + 90.0
                     logger.id(logger.debug, Fetcher.ME,
                             'Setting delay from Retry-After header: {time}',
-                            time=Fetcher._429_delay,
+                            time=Fetcher._429_delay.value,
                     )
                 except (KeyError, TypeError, ValueError):
-                    Fetcher._429_delay = Fetcher._429_DEFAULT_DELAY
+                    Fetcher._429_delay.value = Fetcher._429_DEFAULT_DELAY
                     logger.id(logger.debug, Fetcher.ME,
                             'Setting to default delay: {time}',
-                            time=Fetcher._429_delay,
+                            time=Fetcher._429_delay.value,
                     )
 
                 Fetcher._log_ratelimit()
@@ -384,13 +398,13 @@ class Fetcher(object):
                             status_code=response.status_code,
                     )
 
-                Fetcher._500_timestamp = time.time()
-                Fetcher._500_delay = requestor.choose_delay(
-                        Fetcher._500_delay or 1
+                Fetcher._500_timestamp.value = time.time()
+                Fetcher._500_delay.value = requestor.choose_delay(
+                        Fetcher._500_delay.value or 1
                 )
                 logger.id(logger.debug, Fetcher.ME,
                         'Setting delay={time_delay} (expires @ {strftime})',
-                        time_delay=Fetcher._500_delay,
+                        time_delay=Fetcher._500_delay.value,
                         strftime='%m/%d, %H:%M:%S',
                         strf_time=Fetcher.request_delay_expire,
                 )
@@ -403,10 +417,10 @@ class Fetcher(object):
                 )
                 logger.id(logger.debug, Fetcher.ME,
                         'Resetting delay ({time_delay})',
-                        time_delay=Fetcher._500_delay,
+                        time_delay=Fetcher._500_delay.value,
                 )
-                Fetcher._500_timestamp = 0
-                Fetcher._500_delay = 0
+                Fetcher._500_timestamp.value = 0
+                Fetcher._500_delay.value = 0
 
         return response
 
