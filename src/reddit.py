@@ -586,17 +586,18 @@ class Reddit(praw.Reddit):
         def was_killed(killed):
             return hasattr(killed, 'is_set') and killed.is_set()
 
-        msg = ['Enqueueing with \'{callback}\'']
-        if queue_args:
-            msg.append('args: {pprint_args}')
-        if queue_kwargs:
-            msg.append('kwargs: {pprint_kwargs}')
-        logger.id(logger.debug, self,
-                '\n\t'.join(msg),
-                callback=queue_callback.__name__,
-                pprint_args=queue_args,
-                pprint_kwargs=queue_kwargs,
-        )
+        if self.is_rate_limited:
+            msg = ['Enqueueing with \'{callback}\'']
+            if queue_args:
+                msg.append('args: {pprint_args}')
+            if queue_kwargs:
+                msg.append('kwargs: {pprint_kwargs}')
+            logger.id(logger.debug, self,
+                    '\n\t'.join(msg),
+                    callback=queue_callback.__name__,
+                    pprint_args=queue_args,
+                    pprint_kwargs=queue_kwargs,
+            )
 
         num_attempts = 0
         queued = None
