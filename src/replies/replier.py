@@ -92,14 +92,6 @@ class Replier(ProcessMixin, RedditInstanceMixin):
                 submission.subreddit.display_name
         )
         if to_add_count <= threshold:
-            # not enough to-add points; add to/increment potential subreddits
-            logger.id(logger.debug, self,
-                    'Adding {color_subreddit} as potential subreddit'
-                    ' (#{count})',
-                    color_subreddit=prefixed_subreddit,
-                    count=to_add_count,
-            )
-
             try:
                 with self.potential_subreddits:
                     self.potential_subreddits.insert(submission)
@@ -114,12 +106,20 @@ class Replier(ProcessMixin, RedditInstanceMixin):
                 )
             else:
                 to_add_count = self.potential_subreddits.count(submission)
+                # not enough to-add points; add to/increment potential subreddits
+                logger.id(logger.debug, self,
+                        'Adding {color_subreddit} as potential subreddit'
+                        ' ({count}/{threshold} needed)',
+                        color_subreddit=prefixed_subreddit,
+                        count=to_add_count,
+                        threshold=threshold,
+                )
 
         # check if the count has passed the threshold in case it just changed
-        if to_add_count > threshold:
-            # add the subreddit as a permanent subreddit that the bot crawls
-            logger.id(logger.debug, self,
-                    'Adding {color_subreddit} to permanent subreddits',
+        if to_add_count >= threshold:
+            # add the subreddit to the set of subreddits the bot crawls
+            logger.id(logger.info, self,
+                    'Adding {color_subreddit} to subreddits stream ...',
                     color_subreddit=prefixed_subreddit,
             )
 
@@ -128,8 +128,8 @@ class Replier(ProcessMixin, RedditInstanceMixin):
                 with self.subreddits:
                     self.subreddits.insert(submission)
             except UniqueConstraintFailed:
-                # this should only happen if this method is called
-                # inappropriately
+                # this may happen if the subreddit was added manually but the
+                # bot was summoned there because it missed a post/comment
                 logger.id(logger.warn, self,
                         'Attmepted to add duplicate subreddit to permanent'
                         ' set of subreddits ({color_subreddit})!',
