@@ -152,6 +152,9 @@ class UserPoolDatabase(Database):
     def choose_username(self, exclude=[]):
         """
         Chooses a username from the pool that has not been posted recently
+
+        Returns the chosen username
+                or None if there are no valid usernames in the pool
         """
         self.__update_from_user_pool_file()
         cursor = self._db.execute(
@@ -170,7 +173,13 @@ class UserPoolDatabase(Database):
                     ),
                 )
         )
-        return random.choice(cursor.fetchall())['username']
+
+        username = None
+        username_pool = cursor.fetchall()
+        if username_pool:
+            username = random.choice(username_pool)['username']
+
+        return username
 
     def commit_post(self, username, link):
         """

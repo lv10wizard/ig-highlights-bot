@@ -198,6 +198,11 @@ class Submitter(ProcessMixin, RedditInstanceMixin):
                 or len(exclude) >= self.userpool.size()
         ):
             user = self.userpool.choose_username(exclude)
+
+            if not user:
+                logger.id(logger.debug, self, 'No valid users to post!')
+                break
+
             # verify that the user's profile is still public
             while not (ig or self._killed.is_set()):
                 ig = Instagram(user, self._killed)
@@ -254,6 +259,11 @@ class Submitter(ProcessMixin, RedditInstanceMixin):
                     color_user=ig.user,
             )
 
+        else:
+            logger.id(logger.info, self,
+                    'Failed to choose an instagram user to post!',
+            )
+
         if len(exclude) >= self.userpool.size():
             # either the pool is too small or the config settings are too strict
             logger.id(logger.debug, self,
@@ -277,6 +287,15 @@ class Submitter(ProcessMixin, RedditInstanceMixin):
 
         link = None
         link_pool = self._get_link_pool(ig, self.userpool.last_posts(ig.user))
+
+        if link_pool:
+            logger.id(logger.debug, self,
+                    'Choosing link for {color_user} from'
+                    ' link pool (#{num}) ...',
+                    color_user=ig.user,
+                    num=len(link_pool),
+            )
+
         while link_pool and not link:
             link = random.choice(link_pool)
 
@@ -362,9 +381,6 @@ class Submitter(ProcessMixin, RedditInstanceMixin):
         posted = Submitter._NOT_SET
         ig = self._choose_ig_user(exclude)
         if not ig:
-            logger.id(logger.info, self,
-                    'Failed to choose an instagram user!',
-            )
             # XXX: return False so that the run_forever loop does not exit
             # -- failing to choose an instagram user is not necessarily fatal,
             # it means that no username in the pool is currently valid to post
