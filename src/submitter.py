@@ -216,6 +216,8 @@ class Submitter(ProcessMixin, RedditInstanceMixin):
                 elif (
                         ig.non_highlighted_media is True
                         or ig.non_highlighted_media is False
+                        or ig.private
+                        or not ig.exists
                 ):
                     # private user or bad username
                     logger.id(logger.debug, self,
