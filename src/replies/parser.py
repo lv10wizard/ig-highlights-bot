@@ -195,7 +195,7 @@ class _ParserStrategy(object):
         logger.id(logger.debug, self,
                 'Testing for links in text:'
                 '\n\'{text}\'\n',
-                color_text=self._thing_text,
+                text=self._thing_text,
         )
 
         links = [
