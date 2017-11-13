@@ -969,7 +969,9 @@ class Reddit(praw.Reddit):
                 if not constants.dry_run:
                     def _submit(subreddit, *args, **kwargs):
                         return subreddit.submit(*args, **kwargs)
-                    submission = _network_wrapper(_submit,
+                    submission = _network_wrapper(
+                            callback=_submit,
+                            thing=subreddit,
                             title=title,
                             selftext=selftext,
                             url=url,
