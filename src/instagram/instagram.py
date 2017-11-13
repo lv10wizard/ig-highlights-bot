@@ -167,7 +167,10 @@ class Instagram(object):
                 # fetch succeeded; reset the media value
                 media = None
 
-        if self.fetcher.valid_response and media is None:
+        if (
+                (self.fetcher.valid_response and media is None)
+                or self.cache.is_private
+        ):
             if self.cache.size() == 0:
                 # re-fetch an outdated existing cache
                 # (ie: an existing database file no longer reflects the
@@ -187,7 +190,7 @@ class Instagram(object):
                     # lookup only if all fetches succeeded (if any)
                     (self.fetcher.valid_response and media is None)
                     # or the user account is private
-                    or self.private
+                    or self.cache.is_private
             ):
                 media = self._lookup_top_media(num_highlights, start)
 
