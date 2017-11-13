@@ -182,16 +182,12 @@ class Submitter(ProcessMixin, RedditInstanceMixin):
 
         return did_wait
 
-    def _choose_ig_user(self):
+    def _choose_ig_user(self, exclude=set()):
         """
         Chooses a public instagram username from the user pool to post
 
         Returns the user's Instagram instance
         """
-        # XXX: re-initialize the exclude set every pass in case any
-        # previously excluded users changed eg. from private -> public
-        # (this is very unlikely to ever happen)
-        exclude = set()
         ig = None
         while (
                 not (ig or self._killed.is_set())
@@ -281,13 +277,8 @@ class Submitter(ProcessMixin, RedditInstanceMixin):
 
         link = None
         link_pool = self._get_link_pool(ig, self.userpool.last_posts(ig.user))
-        while not link:
-            if link_pool:
-                link = random.choice(link_pool)
-            else:
-                logger.id(logger.debug, self,
-                        'Cannot choose link: no postable links to choose from!',
-                )
+        while link_pool and not link:
+            link = random.choice(link_pool)
 
             if link:
                 # test the link to ensure it still exists
@@ -324,6 +315,23 @@ class Submitter(ProcessMixin, RedditInstanceMixin):
                         # choose another link
                         link = None
 
+            else:
+                # this shouldn't happen
+                logger.id(logger.debug, self,
+                        'Failed to choose a link from: {pprint_pool}',
+                        pprint_pool=link_pool,
+                )
+                break
+
+        if not link_pool:
+            # user either deleted all/most of their posts or went private
+            # or deleted their account/account shutdown
+            logger.id(logger.debug, self,
+                    'Cannot choose link:'
+                    ' {color_user} has no postable links to choose from!',
+                    color_user=ig.user,
+            )
+
         if link:
             logger.id(logger.debug, self,
                     'Selected \'{link}\' to post',
@@ -344,7 +352,7 @@ class Submitter(ProcessMixin, RedditInstanceMixin):
         else:
             return '@{0}'.format(ig.user)
 
-    def _submit_post(self, display_name):
+    def _submit_post(self, display_name, exclude=set()):
         """
         Submits a post to the bot's profile
 
@@ -352,7 +360,7 @@ class Submitter(ProcessMixin, RedditInstanceMixin):
                 or _NOT_SET otherwise
         """
         posted = Submitter._NOT_SET
-        ig = self._choose_ig_user()
+        ig = self._choose_ig_user(exclude)
         if not ig:
             logger.id(logger.info, self,
                     'Failed to choose an instagram user!',
@@ -400,6 +408,15 @@ class Submitter(ProcessMixin, RedditInstanceMixin):
                         url=link,
                 )
 
+            else:
+                # don't re-select this user to post since it is unlikely
+                # that they will gain any postable links
+                logger.id(logger.debug, self,
+                        'Excluding {color_user}: no postable links!',
+                        color_user=ig.user,
+                )
+                exclude.add(ig.user)
+
         return posted
 
     def _run_forever(self):
@@ -439,11 +456,16 @@ class Submitter(ProcessMixin, RedditInstanceMixin):
             posted = Submitter._NOT_SET
 
             if self.cfg.submit_enabled:
+                # XXX: re-initialize the exclude set every pass in the unlikely
+                # case where a previously excluded user changed
+                # eg. from private -> public
+                exclude = set()
+
                 while (
                         not self._killed.is_set()
                         and posted is Submitter._NOT_SET
                 ):
-                    posted = self._submit_post(subreddit)
+                    posted = self._submit_post(subreddit, exclude)
 
             if posted is None:
                 logger.id(logger.info, self,
