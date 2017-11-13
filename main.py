@@ -91,6 +91,7 @@ def init_logger(cfg=None, options=None, off=False):
         if not off:
             logger.add_handler(handler)
 
+
 if __name__ == '__main__':
     options = args.parse()
     # turn off logging if we're just dumping links
@@ -105,6 +106,10 @@ if __name__ == '__main__':
         sys.exit(0)
 
     init_logger(cfg, options)
+    # XXX: log the options again in case the logging path changed (eg. from
+    # stdout -> a file) -- this may look strange if the logging path did not
+    # change.
+    logger.debug('args:\n{pprint}', pprint=options)
 
     from src.bot import IgHighlightsBot
     ig_highlights_bot = IgHighlightsBot(cfg)
