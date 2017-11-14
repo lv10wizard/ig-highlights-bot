@@ -100,6 +100,7 @@ class _ParserStrategy(object):
 
     def __init__(self, thing):
         self.thing = thing
+        self._thing_logged = False
         # track whether the usernames were parsed from links or guesses
         # XXX: this assumes that usernames are exclusively parsed from links
         # and other ('@username', suffix, prefix, guesses). that is, if a
@@ -114,6 +115,15 @@ class _ParserStrategy(object):
             self.__class__.__name__,
             reddit.display_id(self.thing)
         ])
+
+    def _log_thing_text(self):
+        if not self._thing_logged:
+            logger.id(logger.debug, self,
+                    'Text:'
+                    '\n\'{text}\'\n',
+                    text=self._thing_text,
+            )
+            self._thing_logged = True
 
     def _parse_links(self):
         """ Strategy-specific link parsing """
@@ -138,10 +148,11 @@ class _ParserStrategy(object):
         url = _ParserStrategy.sanitize_link(link)
 
         logger.id(logger.debug, self,
-                'Testing link'
-                ' \'{color_actual}\' => \'{color_sanitized}\'',
-                color_actual=link,
-                color_sanitized=url,
+                'Testing link:'
+                '\nactual:    \'{actual}\''
+                '\nsanitized: \'{sanitized}\'',
+                actual=link,
+                sanitized=url,
         )
 
         match = instagram.IG_LINK_REGEX.search(url)
@@ -192,11 +203,8 @@ class _ParserStrategy(object):
 
         Returns a list of parsed urls
         """
-        logger.id(logger.debug, self,
-                'Testing for links in text:'
-                '\n\'{text}\'\n',
-                text=self._thing_text,
-        )
+        self._log_thing_text()
+        logger.id(logger.debug, self, 'Testing for links in text ...')
 
         links = [
                 match[0] for match in
@@ -272,11 +280,8 @@ class _ParserStrategy(object):
             # bad matches and may cause the bot to link incorrect user
             # data if someone soft-links eg. a twitter user and a
             # different person owns the same username on instagram.
-            logger.id(logger.debug, self,
-                    'Testing for users in text:'
-                    '\n\'{text}\'\n',
-                    text=self._thing_text,
-            )
+            self._log_thing_text()
+            logger.id(logger.debug, self, 'Testing for users in text ...')
 
             # try '@username'
             usernames = instagram.IG_AT_USER_REGEX.findall(self._thing_text)
