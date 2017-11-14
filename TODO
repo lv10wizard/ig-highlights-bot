@@ -440,6 +440,7 @@ O. post highlights of users to profile
     - 3k+
     - 1k+
 - determine why reply-queue was wiped 2017/11/09.121928.log
+    (2017/11/07.162045.log -> 09.121928.log wiped)
     > was it corrupted somehow?
 
 - determine why Fetcher._handle_rate_limit does not always properly reset

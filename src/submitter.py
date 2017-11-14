@@ -463,8 +463,10 @@ class Submitter(ProcessMixin, RedditInstanceMixin):
         delay = self.cfg.submit_interval - elapsed
         if delay > 0:
             logger.id(logger.info, self,
-                    'Waiting {time} before posting ...',
+                    'Waiting {time} before posting (posting @ {strftime}) ...',
                     time=delay,
+                    strftime='%H:%M:%S',
+                    strf_time=time.time() + delay,
             )
             self._killed.wait(delay)
 
@@ -501,8 +503,11 @@ class Submitter(ProcessMixin, RedditInstanceMixin):
                 Submitter._record_last_post_time()
 
             logger.id(logger.info, self,
-                    'Waiting {time} before posting again ...',
+                    'Waiting {time} before posting again'
+                    ' (posting @ {strftime}) ...',
                     time=self.cfg.submit_interval,
+                    strftime='%H:%M:%S',
+                    strf_time=time.time() + self.cfg.submit_interval,
             )
 
             self._killed.wait(self.cfg.submit_interval)
