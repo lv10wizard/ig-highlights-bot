@@ -27,7 +27,7 @@ class Submissions(ProcessMixin, SubredditsSubmissionsStreamMixin):
                 self.cfg, self._reddit.username_raw, self.blacklist
         )
 
-        delay = 60
+        delay = 1
 
         while not self._killed.is_set():
             for submission in self.stream:
