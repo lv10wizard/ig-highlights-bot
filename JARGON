@@ -82,6 +82,7 @@ gf?g # good (fucking) game
 gf[uy] # go fuck yourself
 gj
 gl(?:hf)?
+g+o+d+(?:[ie]+|e*y)(?:b+a+g+)? # 'goodieeee', 'goodiebag'
 g+o+t+e+m+ # 'gottem', 'gotem', 'goooottem', etc
 g+o+t+c+h+[au]+(?:f+a+m+)? # 'gotchufam', etc
 gracias
