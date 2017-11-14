@@ -442,6 +442,11 @@ O. post highlights of users to profile
 - determine why reply-queue was wiped 2017/11/09.121928.log
     > was it corrupted somehow?
 
+- determine why Fetcher._handle_rate_limit does not always properly reset
+  the ratelimit timing
+    > has something to do with how the state change
+        (was_ratelimited -> not is_ratelimited) is detected
+
 ? change SUBREDDITS, USER_POOL files to config files?
     - copy repo version to config directory
     - read config directory version > repo version

@@ -48,6 +48,8 @@ class Fetcher(object):
     _429_delay = multiprocessing.Value(ctypes.c_double, 0.0)
     _429_DEFAULT_DELAY = parse_time('5m')
 
+    _was_ratelimited = multiprocessing.Value(ctypes.c_bool, False)
+
     _RATELIMIT_RESET_PATH = resolve_path(
             Database.PATH_FMT.format('instagram_ratelimit')
     )
@@ -169,11 +171,8 @@ class Fetcher(object):
 
         Returns True if the ratelimit has been exceeded
         """
-        try:
-            was_ratelimited = Fetcher.__was_ratelimited
-        except AttributeError:
-            was_ratelimited = False
-            Fetcher.__was_ratelimited = was_ratelimited
+
+        was_ratelimited = Fetcher._was_ratelimited.value
 
         # try loading a previously recorded ratelimit
         Fetcher._load_ratelimit_reset()
@@ -192,7 +191,7 @@ class Fetcher(object):
             )
 
         is_ratelimited = Fetcher.is_ratelimited
-        Fetcher.__was_ratelimited = is_ratelimited
+        Fetcher._was_ratelimited.value = is_ratelimited
 
         if not is_ratelimited:
             Fetcher._remove_recorded_ratelimit()
@@ -202,10 +201,11 @@ class Fetcher(object):
             Fetcher._record_ratelimit_reset()
 
         elif not is_ratelimited and was_ratelimited:
-            logger.id(logger.info, Fetcher.ME,
-                    'No longer ratelimited! ({num} requests left)',
-                    num=num_remaining,
-            )
+
+            # TODO: determine why this not always called when the ratelimit
+            # state changes from True -> False.
+
+            logger.id(logger.info, Fetcher.ME, 'No longer ratelimited!')
             # just reset the 429 variables even if the ratelimit was
             # self-imposed
             Fetcher._reset_ratelimit()
@@ -337,7 +337,22 @@ class Fetcher(object):
                     '429 Too Many Requests: ratelimited!',
             )
 
-            if Fetcher._429_timestamp.value == Fetcher._429_delay.value == 0:
+            if not Fetcher.is_ratelimited:
+                if (
+                        Fetcher._429_timestamp.value > 0
+                        or Fetcher._429_delay.value > 0
+                ):
+                    # this should not happen. it indicates a bug in how the
+                    # ratelimit is reset.
+                    logger.id(logger.debug, Fetcher.ME,
+                            'Previous 429 timing not reset!'
+                            '\ntimestamp:  {strftime}'
+                            '\norig delay: {time}',
+                            strftime='%m/%d, %H:%M:%S',
+                            strf_time=Fetcher.request_delay_expire,
+                            time=Fetcher._429_delay.value,
+                    )
+
                 Fetcher._429_timestamp.value = time.time()
                 try:
                     Fetcher._429_delay.value = float(
@@ -432,6 +447,9 @@ class Fetcher(object):
                         strftime='%m/%d, %H:%M:%S',
                         strf_time=Fetcher.request_delay_expire,
                 )
+
+            if response.status_code == 429: # too many requests
+                Fetcher._handle_too_many_requests(response)
 
             elif Fetcher.request_delay_expire > 0:
                 # instagram's server issues cleared up
@@ -820,7 +838,6 @@ class Fetcher(object):
                 break
 
             elif response.status_code == 429: # too many requests
-                Fetcher._handle_too_many_requests(response)
                 self._wait(Fetcher.ratelimit_delay)
                 if self._killed:
                     break
@@ -908,7 +925,6 @@ class Fetcher(object):
 
                 elif response.status_code == 429: # too many requests
                     self._enqueue()
-                    Fetcher._handle_too_many_requests(response)
                     break
 
                 elif response.status_code // 100 == 4:
