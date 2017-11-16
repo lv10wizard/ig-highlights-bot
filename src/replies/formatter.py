@@ -219,9 +219,18 @@ class Formatter(object):
 
             user_reply.append(header)
             user_reply.append(' - '.join(highlights))
-            user_reply.append(Formatter.METADATA_FMT.format(
-                data=' | '.join(metadata).replace(' ', Formatter.SPACE)
-            ))
+            if metadata:
+                # only format in metadata if we were able to fetch it
+                # (this shouldn't happen)
+                user_reply.append(Formatter.METADATA_FMT.format(
+                    data=' | '.join(metadata).replace(' ', Formatter.SPACE)
+                ))
+            else:
+                logger.id(logger.warn, self,
+                        'Failed to get metadata for {color_user}!',
+                        color_user=ig.user,
+                )
+
             user_reply = list(filter(None, user_reply))
             current_reply.append(Formatter.LINE_DELIM.join(user_reply))
             ig_users.append(ig)

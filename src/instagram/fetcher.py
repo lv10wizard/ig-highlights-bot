@@ -100,7 +100,17 @@ class Fetcher(object):
 
     @classproperty
     def request_delay(cls):
-        return Fetcher._500_delay.value
+        """
+        Returns the time remaining until requests can be made again due to
+                encountering a 500-level status code
+        """
+        time_left = -1
+
+        expire = Fetcher.request_delay_expire
+        if expire > 0:
+            time_left = expire - time.time()
+
+        return time_left
 
     @staticmethod
     def account_ratelimit(response):
@@ -196,11 +206,7 @@ class Fetcher(object):
         if not is_ratelimited:
             Fetcher._remove_recorded_ratelimit()
 
-        if is_ratelimited and not was_ratelimited:
-            Fetcher._log_ratelimit()
-            Fetcher._record_ratelimit_reset()
-
-        elif not is_ratelimited and was_ratelimited:
+        if not is_ratelimited and was_ratelimited:
 
             # TODO: determine why this not always called when the ratelimit
             # state changes from True -> False.
@@ -208,6 +214,8 @@ class Fetcher(object):
             logger.id(logger.info, Fetcher.ME, 'No longer ratelimited!')
             # just reset the 429 variables even if the ratelimit was
             # self-imposed
+            # TODO? call this if not is_ratelimited so that the timing
+            # variables always reflect the current state
             Fetcher._reset_ratelimit()
 
         return is_ratelimited
@@ -230,47 +238,51 @@ class Fetcher(object):
         """
         timestamp_set = False
         delay_set = False
-        if os.path.exists(Fetcher._RATELIMIT_RESET_PATH):
-            logger.id(logger.debug, Fetcher.ME,
-                    'Loading previous ratelimit from \'{path}\' ...',
-                    path=Fetcher._RATELIMIT_RESET_PATH,
-            )
+        if Fetcher.is_ratelimited:
+            if os.path.exists(Fetcher._RATELIMIT_RESET_PATH):
+                logger.id(logger.debug, Fetcher.ME,
+                        'Loading previous ratelimit from \'{path}\' ...',
+                        path=Fetcher._RATELIMIT_RESET_PATH,
+                )
 
-            for i, line in readline(Fetcher._RATELIMIT_RESET_PATH):
-                try:
-                    if not timestamp_set:
-                        Fetcher._429_timestamp.value = float(line)
-                        timestamp_set = True
-                    elif not delay_set:
-                        Fetcher._429_delay.value = float(line)
-                        delay_set = True
+                for i, line in readline(Fetcher._RATELIMIT_RESET_PATH):
+                    try:
+                        if not timestamp_set:
+                            Fetcher._429_timestamp.value = float(line)
+                            timestamp_set = True
+                        elif not delay_set:
+                            Fetcher._429_delay.value = float(line)
+                            delay_set = True
 
-                except (TypeError, ValueError):
-                    # recorded data structure changed or corrupted
-                    logger.id(logger.warn, Fetcher.ME,
-                            'Invalid ratelimit reset time:'
-                            ' \'{data}\' in \'{path}\'',
-                            data=line,
-                            path=Fetcher._RATELIMIT_RESET_PATH,
-                            exc_info=True,
-                    )
-                    Fetcher._reset_ratelimit()
-                    break
-
-                else:
-                    if timestamp_set and delay_set:
-                        logger.id(logger.debug, Fetcher.ME,
-                                'Loaded ratelimit reset from file:'
-                                '\n\ttimestamp: {strftime}'
-                                '\n\tdelay:     {time_delay}',
-                                strftime='%m/%d, %H:%M:%S',
-                                strf_time=Fetcher._429_timestamp.value,
-                                time_delay=Fetcher._429_delay.value,
+                    except (TypeError, ValueError):
+                        # recorded data structure changed or corrupted
+                        logger.id(logger.warn, Fetcher.ME,
+                                'Invalid ratelimit reset time:'
+                                ' \'{data}\' in \'{path}\'',
+                                data=line,
+                                path=Fetcher._RATELIMIT_RESET_PATH,
+                                exc_info=True,
                         )
-                        # break in case there are too many lines in the file
-                        # (which could indicate that the file structure changed
-                        #  but the loading code did not)
+                        Fetcher._reset_ratelimit()
                         break
+
+                    else:
+                        if timestamp_set and delay_set:
+                            logger.id(logger.debug, Fetcher.ME,
+                                    'Loaded ratelimit reset from file:'
+                                    '\n\ttimestamp: {strftime}'
+                                    '\n\tdelay:     {time_delay}',
+                                    strftime='%m/%d, %H:%M:%S',
+                                    strf_time=Fetcher._429_timestamp.value,
+                                    time_delay=Fetcher._429_delay.value,
+                            )
+                            # break in case there are too many lines in the
+                            # file (which could indicate that the file
+                            # structure changed but the loading code did not)
+                            break
+
+            else:
+                Fetcher._remove_recorded_ratelimit()
 
         return timestamp_set and delay_set
 
@@ -280,33 +292,42 @@ class Fetcher(object):
         Records the ratelimit reset time to file
         """
         if Fetcher.ratelimit_delay > 0:
-            if not os.path.exists(Fetcher._RATELIMIT_RESET_PATH):
-                logger.id(logger.debug, Fetcher.ME,
-                        'Writing ratelimit time: {strftime} ...',
-                        strftime='%H:%M:%S',
-                        strf_time=Fetcher.ratelimit_delay_expire,
+            if os.path.exists(Fetcher._RATELIMIT_RESET_PATH):
+                logger.id(logger.debug, FETCHER.ME,
+                        'Overwriting previous ratelimit time @ \'{path}\'!',
+                        path=Fetcher._RATELIMIT_RESET_PATH,
                 )
-
-                try:
-                    with open(Fetcher._RATELIMIT_RESET_PATH, 'w') as fd:
-                        # XXX: write the delay relative to the current time
-                        # in case the ratelimit is self-imposed
-                        fd.write('{0}\n{1}'.format(
-                            time.time(),
-                            Fetcher.ratelimit_delay,
-                        ))
-
-                except (IOError, OSError):
-                    logger.id(logger.exception, Fetcher.ME,
-                            'Failed to record ratelimit time: {strftime}',
-                            strftime='%H:%M:%S',
-                            strf_time=Fetcher.ratelimit_delay_expire,
+                data = [
+                        line for _, line in
+                        readline(Fetcher._RATELIMIT_RESET_PATH)
+                ]
+                if data:
+                    logger.id(logger.debug,
+                            os.path.basename(Fetcher._RATELIMIT_RESET_PATH),
+                            'data:\n{data}\n',
+                            data='\n'.join(data),
                     )
 
-            else:
-                logger.id(logger.debug, FETCHER.ME,
-                        'NOT writing ratelimit time: \'{path}\' exists!',
-                        path=Fetcher._RATELIMIT_RESET_PATH,
+            logger.id(logger.debug, Fetcher.ME,
+                    'Writing ratelimit time: {strftime} ...',
+                    strftime='%H:%M:%S',
+                    strf_time=Fetcher.ratelimit_delay_expire,
+            )
+
+            try:
+                with open(Fetcher._RATELIMIT_RESET_PATH, 'w') as fd:
+                    # XXX: write the delay relative to the current time
+                    # in case the ratelimit is self-imposed
+                    fd.write('{0}\n{1}'.format(
+                        time.time(),
+                        Fetcher.ratelimit_delay,
+                    ))
+
+            except (IOError, OSError):
+                logger.id(logger.exception, Fetcher.ME,
+                        'Failed to record ratelimit time: {strftime}',
+                        strftime='%H:%M:%S',
+                        strf_time=Fetcher.ratelimit_delay_expire,
                 )
 
     @staticmethod
@@ -349,7 +370,10 @@ class Fetcher(object):
                             '\ntimestamp:  {strftime}'
                             '\norig delay: {time}',
                             strftime='%m/%d, %H:%M:%S',
-                            strf_time=Fetcher.request_delay_expire,
+                            strf_time=(
+                                Fetcher._429_timestamp.value
+                                + Fetcher._429_delay.value
+                            ),
                             time=Fetcher._429_delay.value,
                     )
 
@@ -373,6 +397,7 @@ class Fetcher(object):
                     )
 
                 Fetcher._log_ratelimit()
+                Fetcher._record_ratelimit_reset()
 
             else:
                 try:
@@ -816,34 +841,50 @@ class Fetcher(object):
         while not data:
             response = Fetcher.request(META_ENDPOINT.format(self.user))
             if Fetcher._is_bad_response(response):
-                self._valid_response = False
-                return
+                # wait out the delay
+                request_delay = Fetcher.request_delay
+                ratelimit_delay = Fetcher.ratelimit_delay
+                delay = max(request_delay, ratelimit_delay)
+                if delay <= 0:
+                    # non-ratelimit, non-server issue related delay;
+                    # just choose a default delay
+                    delay = 60
 
-            if response.status_code == 200:
-                self._exists = True
+                logger.id(logger.debug, self,
+                        'Bad response! Waiting {time} (expires @ {strftime})',
+                        time=delay,
+                        strftime='%H:%M:%S',
+                        strf_time=time.time() + delay,
+                )
 
-                try:
-                    data = response.json()
-                except ValueError as e:
-                    # either bad json or a non-user page
-                    if response.text.strip().startswith('{'):
-                        # most likely bad json
-                        self._handle_bad_json(e)
-                    else:
-                        # most likely a non-user page (eg. /about)
-                        break
+                self._killed.wait(delay)
 
-            elif response.status_code == 404:
-                self._set_does_not_exist()
-                break
+            elif response is not None:
+                if response.status_code == 200:
+                    self._exists = True
 
-            elif response.status_code == 429: # too many requests
-                self._wait(Fetcher.ratelimit_delay)
-                if self._killed:
+                    try:
+                        data = response.json()
+                    except ValueError as e:
+                        # either bad json or a non-user page
+                        if response.text.strip().startswith('{'):
+                            # most likely bad json
+                            self._handle_bad_json(e)
+                        else:
+                            # most likely a non-user page (eg. /about)
+                            break
+
+                elif response.status_code == 404:
+                    self._set_does_not_exist()
                     break
 
-            elif response.status_code // 100 == 4:
-                response.raise_for_status()
+                elif response.status_code == 429: # too many requests
+                    self._wait(Fetcher.ratelimit_delay)
+                    if self._killed:
+                        break
+
+                elif response.status_code // 100 == 4:
+                    response.raise_for_status()
 
         self._reset_error_delay()
 
