@@ -185,6 +185,15 @@ def karmabirdfly_quote():
     return load_pickle('karmabirdfly_quote')
 
 @pytest.fixture(scope='session')
+def inezfulitko_markdown():
+    """
+    praw.models.Comment containing the markdown line:
+
+    **@inezfulitko**
+    """
+    return load_pickle('inezfulitko')
+
+@pytest.fixture(scope='session')
 def capbarista_multiline_prefix():
     """
     praw.models.Comment containing a soft-linked user without '@'

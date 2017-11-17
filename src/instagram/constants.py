@@ -109,22 +109,26 @@ IG_LINK_QUERY_REGEX = re.compile(
         ),
 )
 
+_IG_AT_USER_VALID_LEADING = r'\^\*\~\(\['
+_IG_AT_USER_VALID_TRAILING = r'\*\~\)\]'
 IG_AT_USER_REGEX = re.compile(
-        r'(?:^|\s*(?<!\w)|[(\[])@(?P<user>{0})(?:[)\]]|\s+|$)'.format(
-        #    | \________/ \___/ |\___________/\_____________/
-        #    |     |        /   |      |             /
-        #    |     |        \   |      |    match whitespace or end of string
-        #    |     |        /   |      |    or set of acceptable ending
-        #    |     |        \   |      |    delimiters
-        #    |     |        /   |  capture username
-        #    |     |        \   |  capture username
-        #    |     |        /  only match if username is preceded by '@'
+        r'(?:^|\s*(?<!\w)|[{1}])@(?P<user>{0})(?:[{2}]|\s+|$)'.format(
+        #    | \________/ \___/ |\___________/\____________/
+        #    |     |        |   |      |            /
+        #    |     |        |   |      |    match whitespace or end of string
+        #    |     |        |   |      |    or set of acceptable ending
+        #    |     |        |   |      |    delimiters
+        #    |     |        |   |  capture username
+        #    |     |        |   |  capture username
+        #    |     |        |  only match if username is preceded by '@'
         #    |     |     allow valid set of leading characters
         #    |   allow 0+ leading whitespace so long as it is not preceded by
         #    |   a word-character
         #  match start of string
 
             USERNAME_PTN,
+            _IG_AT_USER_VALID_LEADING,
+            _IG_AT_USER_VALID_TRAILING,
         ),
         flags=re.IGNORECASE,
 )

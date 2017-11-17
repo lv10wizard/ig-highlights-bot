@@ -240,6 +240,11 @@ def test_parser_guesses_quoted_user_string(karmabirdfly_quote):
     assert not K.ig_links
     assert K.ig_usernames == ['karmabirdfly']
 
+def test_parser_matches_bolded_at_ig_user(inezfulitko_markdown):
+    I = Parser(inezfulitko_markdown)
+    assert not I.ig_links
+    assert I.ig_usernames == ['inezfulitko']
+
 def test_parser_matches_multiline_user_string(capbarista_multiline_prefix):
     C = Parser(capbarista_multiline_prefix)
     assert not C.ig_links

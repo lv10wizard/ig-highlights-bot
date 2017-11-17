@@ -68,6 +68,16 @@ def test_instagram_matches_ig_links_query_strings(link, expected):
     ('@k.01.bulgakova ', 'k.01.bulgakova'),
     ('(@k.01.bulgakova) ', 'k.01.bulgakova'),
     (' [@k.01.bulgakova] ', 'k.01.bulgakova'),
+    ('**@inezfulitko**', 'inezfulitko'),
+    ('*@inezfulitko*', 'inezfulitko'),
+    (' *@inezfulitko* ', 'inezfulitko'),
+    (' **@inezfulitko** ', 'inezfulitko'),
+    (' ** @inezfulitko ** ', 'inezfulitko'),
+    (' ** @inezfulitko ** ', 'inezfulitko'),
+    ('^@inezfulitko', 'inezfulitko'),
+    ('^^^^^@inezfulitko', 'inezfulitko'),
+    ('~~@inezfulitko~~', 'inezfulitko'),
+    ('~@inezfulitko~', 'inezfulitko'),
 ])
 def test_instagram_matches_at_ig_user_strings(string, expected):
     match = instagram.IG_AT_USER_REGEX.search(string)
