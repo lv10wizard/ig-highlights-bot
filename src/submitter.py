@@ -160,12 +160,14 @@ class Submitter(ProcessMixin, RedditInstanceMixin):
         """
         did_wait = False
 
-        delay = Instagram.request_delay or Instagram.ratelimit_delay
+        delay = Instagram.request_delay
+        if delay < 0:
+            delay = Instagram.ratelimit_delay
+
         if delay > 0:
-            expire = (
-                    Instagram.request_delay_expire
-                    or Instagram.ratelimit_delay_expire
-            )
+            expire = Instagram.request_delay_expire
+            if expire <= 0:
+                expire = Instagram.ratelimit_delay_expire
 
             msg = ['Fetch interrupted: waiting {time}']
             if expire > 0:
