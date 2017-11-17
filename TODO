@@ -453,6 +453,9 @@ O. post highlights of users to profile
     - read config directory version > repo version
     > how to handle extra from repo version?
         - update with extra -- but what if user deleted those lines?
+O. fix secondary process issuing instagram request when already ratelimited
+
+- lower memory footprint
 
 ? download user's media content & upload to imgur(?)
     - keep database of downloaded urls per user

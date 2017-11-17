@@ -38,6 +38,10 @@ class Fetcher(object):
     _requestor = None
     _cfg = None
 
+    # the lock that prevents multiple processes accidentally issuing requests
+    # when the bot is already ratelimited
+    _request_lock = multiprocessing.RLock()
+
     # 500-level response status code timing
     # a 500-level status code indicates an error on instagram's side
     _500_timestamp = multiprocessing.Value(ctypes.c_double, 0.0)
@@ -435,7 +439,19 @@ class Fetcher(object):
     @staticmethod
     def request(url, *args, **kwargs):
         """
+        Inter-process request handling. See _request() documentation.
+        * This method should be used to issue requests, NOT _request().
+        """
+        # serialize instagram requests so that multiple processes do not
+        # issue requests after the bot has been ratelimited
+        with Fetcher._request_lock:
+            return Fetcher._request(url, *args, **kwargs)
+
+    @staticmethod
+    def _request(url, *args, **kwargs):
+        """
         request call wrapper
+        *Note: this method should only be called by the request() method.
 
         *args, **kwargs are passed to the request call
 
