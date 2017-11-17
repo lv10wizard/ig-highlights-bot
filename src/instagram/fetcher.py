@@ -867,7 +867,7 @@ class Fetcher(object):
                         strf_time=time.time() + delay,
                 )
 
-                self._killed.wait(delay)
+                self._wait(delay)
 
             elif response is not None:
                 if response.status_code == 200:
