@@ -19,6 +19,7 @@ a+w+h*
 awol
 b+a+e+
 badass
+b+a+n+g+i+n+g*
 (?:b+a+)?z+i+n+g+a*
 b+e+c+a+u+s+e+
 b+e+(?:a+u+|y+[ou]+)t+[aei]+f+u+l+ # 'beautifullll', 'beeeeyoouteeaafulllll'
@@ -211,6 +212,7 @@ w*o+p+s*(?:i+e+|e*y+)?s* # 'woops', 'wooooops', 'oooops', 'oop', etc
 w+r+o+n+g+
 wtc # where to cop
 w+t+[fh]+(?:o+m+f*g+)? # 'wtf', 'wwwtf', wtttttf', 'wtfomfg', etc
+x+d+
 (?:x+o+)+x*
 y+[ae]+e*[hsy]+ # 'yaaaas', 'yeeeeesssss', 'yeahhhh', etc
 y+[aeu]+[hp]+ # 'yuuuhh', 'yeeeppp', yaaaahhh', etc
