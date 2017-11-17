@@ -239,8 +239,8 @@ class Fetcher(object):
         """
         timestamp_set = False
         delay_set = False
-        if Fetcher.is_ratelimited:
-            if os.path.exists(Fetcher._RATELIMIT_RESET_PATH):
+        if os.path.exists(Fetcher._RATELIMIT_RESET_PATH):
+            if not Fetcher.is_ratelimited:
                 logger.id(logger.debug, Fetcher.ME,
                         'Loading previous ratelimit from \'{path}\' ...',
                         path=Fetcher._RATELIMIT_RESET_PATH,
@@ -282,8 +282,13 @@ class Fetcher(object):
                             # structure changed but the loading code did not)
                             break
 
-            else:
-                Fetcher._remove_recorded_ratelimit()
+                if not Fetcher.is_ratelimited:
+                    # load failed or ratelimit expired
+                    if timestamp_set and delay_set:
+                        logger.id(logger.debug, Fetcher.ME,
+                                'Ratelimit expired!',
+                        )
+                    Fetcher._remove_recorded_ratelimit()
 
         return timestamp_set and delay_set
 
