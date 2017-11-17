@@ -62,6 +62,7 @@ class Fetcher(object):
             'external_url',
             'biography',
             'num_followers',
+            'has_enough_followers',
             'num_follows',
             'num_posts',
     ]
@@ -569,7 +570,10 @@ class Fetcher(object):
     @property
     def num_followers(self):
         """ Returns the account's number of followers """
-        return self._get_meta_property('_num_followers') or -1
+        result = self._get_meta_property('_num_followers')
+        if result is None:
+            result = -1
+        return result
 
     @property
     def has_enough_followers(self):
@@ -585,12 +589,18 @@ class Fetcher(object):
     @property
     def num_follows(self):
         """ Returns the number of users the account follows """
-        return self._get_meta_property('_num_follows') or -1
+        result = self._get_meta_property('_num_follows')
+        if result is None:
+            result = -1
+        return result
 
     @property
     def num_posts(self):
         """ Returns the account's number of public posts """
-        return self._get_meta_property('_num_posts') or -1
+        result = self._get_meta_property('_num_posts')
+        if result is None:
+            result = -1
+        return result
 
     @property
     def valid_response(self):
@@ -889,7 +899,6 @@ class Fetcher(object):
         self._reset_error_delay()
 
         if data:
-            self._reset_error_delay()
             self._parse_meta_data(data)
 
     def fetch_data(self):

@@ -201,12 +201,12 @@ class Formatter(object):
                     ))
 
             metadata = []
-            if ig.num_posts and ig.num_posts >= 0:
+            if ig.num_posts is not None and ig.num_posts >= 0:
                 posts = '{0} posts'.format(
                         Formatter.format_large_number(ig.num_posts)
                 )
                 metadata.append(posts)
-            if ig.num_followers and ig.num_followers >= 0:
+            if ig.num_followers is not None and ig.num_followers >= 0:
                 followers = '~{0} followers'.format(
                         Formatter.format_large_number(ig.num_followers)
                 )
