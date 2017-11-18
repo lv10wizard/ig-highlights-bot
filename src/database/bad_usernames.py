@@ -13,7 +13,7 @@ class BadUsernamesDatabase(Database):
         from src import reddit
 
         try:
-            submission = thing.submission
+            submission = reddit.get_submission_for(thing)
         except AttributeError:
             submission = thing
 

@@ -22,11 +22,12 @@ class MentionsDatabase(Database):
     def _insert(self, mention):
         from src import reddit
 
+        fullname = reddit.fullname(reddit.get_submission_for(mention))
         self._db.execute(
                 'INSERT INTO mentions(submission_fullname, comment_author)'
                 ' VALUES(?, ?)',
                 # assumption: mention cannot itself be a submission
-                (reddit.fullname(mention.submission), mention.author.name),
+                (fullname, mention.author.name),
         )
 
     def has_seen(self, mention):
@@ -36,10 +37,11 @@ class MentionsDatabase(Database):
         """
         from src import reddit
 
+        fullname = reddit.fullname(reddit.get_submission_for(mention))
         cursor = self._db.execute(
                 'SELECT submission_fullname FROM mentions'
                 ' WHERE submission_fullname = ? AND comment_author = ?',
-                (reddit.fullname(mention.submission), mention.author.name),
+                (fullname, mention.author.name),
         )
         return bool(cursor.fetchone())
 
