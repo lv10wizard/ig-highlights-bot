@@ -131,9 +131,13 @@ class StreamMixin(RedditInstanceMixin):
     def stream(self):
         while self.__is_alive:
             try:
-                for thing in self._stream:
-                    self.__reset_delay()
-                    yield thing
+                if self._stream:
+                    for thing in self._stream:
+                        self.__reset_delay()
+                        yield thing
+
+                else:
+                    yield None
 
             except (RequestException, ResponseException, ServerError) as e:
                 # retry all RequestExceptions
