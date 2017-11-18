@@ -38,6 +38,9 @@ class Formatter(object):
     HEADER_HIGHLIGHTS = 'highlights:'
     HEADER_PRIVATE = '(private account)'
     HEADER_FMT = '{0}[@{{user}}]({{link}}) {{suffix}}'.format(USER_TAG)
+    MENTIONER_FMT = 'Thanks for summoning me, {0}!'.format(
+            reddit.prefix_user('{author}')
+    )
     FOOTER_FMT = (
             '---\n^I am a bot.'
             ' Did I get something wrong?'
@@ -130,7 +133,7 @@ class Formatter(object):
     def __str__(self):
         return self.__class__.__name__
 
-    def format(self, ig_list, thing, from_link, is_guess):
+    def format(self, ig_list, thing, from_link, is_guess, mention=None):
         """
         Formats the data into one or more reddit comment reply strings
 
@@ -144,6 +147,7 @@ class Formatter(object):
         replies = []
         current_reply = []
         ig_users = []
+        mention_author = reddit.author(mention, replace_none=False)
         FOOTER = Formatter.FOOTER_FMT.format(
                 contact_url=CONTACT_URL.replace(
                     THING_ID_PLACEHOLDER, reddit.display_id(thing)
@@ -238,18 +242,20 @@ class Formatter(object):
             # try to add the current reply if its character length exceeds
             # the limit
             current_reply, ig_users = self.__try_add_reply(
-                    replies,
-                    current_reply,
-                    ig_users,
-                    FOOTER,
+                    replies=replies,
+                    current_reply=current_reply,
+                    ig_users=ig_users,
+                    footer=FOOTER,
+                    mention_author=mention_author,
             )
 
         # add the final reply to the replies list
         current_reply, ig_users = self.__try_add_reply(
-                replies,
-                current_reply,
-                ig_users,
-                FOOTER,
+                replies=replies,
+                current_reply=current_reply,
+                ig_users=ig_users,
+                footer=FOOTER,
+                mention_author=mention_author,
                 force=bool(current_reply and ig_users),
         )
         if current_reply or ig_users:
@@ -264,7 +270,8 @@ class Formatter(object):
         return replies
 
     def __try_add_reply(
-            self, replies, current_reply, ig_users, footer, force=False
+            self, replies, current_reply, ig_users, footer,
+            mention_author, force=False,
     ):
         """
         "Commits" the constructed reply text if the current_reply exceeds the
@@ -281,9 +288,20 @@ class Formatter(object):
         # the number of elements in current_reply that constitutes a reply
         # for a single user
         step = 1
+        mention_tag = ''
+        if mention_author:
+            mention_tag = (
+                    Formatter.LINE_DELIM
+                    + Formatter.MENTIONER_FMT.format(author=mention_author)
+            )
+
+        logger.debug(mention_tag)
+
         full_reply = (
                 Formatter.USER_SEPARATOR.join(filter(None, current_reply))
-                + Formatter.LINE_DELIM + footer
+                + mention_tag
+                + Formatter.LINE_DELIM
+                + footer
         )
         while len(full_reply) >= Formatter.COMMENT_CHARACTER_LIMIT:
             # the total size of the current reply exceeds the maximum allowed
@@ -295,7 +313,9 @@ class Formatter(object):
             full_reply = (
                     Formatter.USER_SEPARATOR.join(
                         filter(None, current_reply[:idx])
-                    ) + Formatter.LINE_DELIM + footer
+                    ) + mention_tag
+                    + Formatter.LINE_DELIM
+                    + footer
             )
 
         # don't de-sync the reply & ig_users list in case an overflow happens

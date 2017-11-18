@@ -228,17 +228,20 @@ def is_banned_from(thing):
 
     return _network_wrapper(_is_banned, thing)
 
-def author(thing):
+def author(thing, replace_none=True):
     """
     Returns the thing's author name if it exists; "[deleted/removed]" otherwise
+
+    replace_none (bool, optional) - whether None should be replaced with
+            "[deleted/removed]" (False -> Returns None instead)
     """
-    def _author(thing):
-        author = '[deleted/removed]'
+    def _author(thing, replace_none):
+        author = '[deleted/removed]' if replace_none else None
         if hasattr(thing, 'author') and thing.author:
             author = thing.author.name
         return author
 
-    return _network_wrapper(_author, thing)
+    return _network_wrapper(_author, thing, replace_none)
 
 def score(thing):
     def _score(thing):

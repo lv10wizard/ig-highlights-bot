@@ -141,7 +141,10 @@ class Replier(ProcessMixin, RedditInstanceMixin):
             with self.potential_subreddits:
                 self.potential_subreddits.delete(submission)
 
-    def _reply(self, thing, ig_list, ig_list_usernames, from_link, is_guess):
+    def _reply(
+            self, thing, ig_list, ig_list_usernames,
+            from_link, is_guess, mention
+    ):
         """
         Replies to a single thing with (potentially) multiple instagram user
         highlights
@@ -162,7 +165,13 @@ class Replier(ProcessMixin, RedditInstanceMixin):
                 yesno_isguess=is_guess,
         )
 
-        reply_list = self.formatter.format(ig_list, thing, from_link, is_guess)
+        reply_list = self.formatter.format(
+                ig_list=ig_list,
+                thing=thing,
+                from_link=from_link,
+                is_guess=is_guess,
+                mention=mention,
+        )
         if not reply_list:
             # nothing to reply
             # most likely a linked/guessed private profile
@@ -378,6 +387,7 @@ class Replier(ProcessMixin, RedditInstanceMixin):
                             ig_list_usernames,
                             from_link,
                             is_guess,
+                            mention,
                     )
 
     def _run_forever(self):
