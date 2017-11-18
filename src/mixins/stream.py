@@ -203,10 +203,19 @@ class _SubredditsStreamMixin(StreamMixin):
         except AttributeError:
             the_stream = None
 
+        # cache the value of the submit_enabled setting so that changes to it
+        # can be detected
+        try:
+            submit_enabled = self.__cached_submit_enabled
+        except AttributeError:
+            submit_enabled = self.cfg.submit_enabled
+            self.__cached_submit_enabled = submit_enabled
+        self.__cached_submit_enabled = self.cfg.submit_enabled
+
         if (
                 the_stream is None
                 or self.subreddits.is_dirty
-                or self.cfg.submit_enabled
+                or submit_enabled != self.cfg.submit_enabled
         ):
             with self.subreddits.updating():
                 logger.id(logger.info, self, 'Updating subreddits ...')
@@ -224,7 +233,11 @@ class _SubredditsStreamMixin(StreamMixin):
                 # force an update regardless of the diff if there is no cached
                 # stream (this may happen if the previously cached stream was
                 # discarded due to a praw GET error)
-                if bool(diff) or the_stream is None or self.cfg.submit_enabled:
+                if (
+                        bool(diff)
+                        or the_stream is None
+                        or submit_enabled != self.cfg.submit_enabled
+                ):
                     new = subs_from_db - current_subreddits
                     if new:
                         logger.id(logger.info, self,
