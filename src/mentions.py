@@ -133,6 +133,11 @@ class Mentions(ProcessMixin, StreamMixin):
             replyable_thing = True
             self.filter.enqueue(submission, ig_usernames, mention)
 
+        # resolve all MoreComments instances so that all comments can be
+        # properly parsed
+        # XXX: this may cause the bot to hang more often due to praw ratelimit
+        # sleeping
+        submission.comments.replace_more(limit=0)
         for comment in submission.comments.list():
             ig_usernames, _, _ = self.filter.replyable_usernames(comment)
             if ig_usernames:
