@@ -270,6 +270,37 @@ class RateLimitHandler(ProcessMixin, RedditInstanceMixin):
         self.__rate_limit_proc.start()
         ProcessMixin.start(self)
 
+    def _handle_pm(self, to, subject, body):
+        """
+        Handles a reddit ratelimit queued private massage
+
+        Returns True if the pm was attempted
+        """
+        logger.id(logger.info, self,
+                'Sending pm \'{subject}\' to {color_to} ...',
+                subject=subject,
+                color_to=to,
+        )
+
+        success = self._reddit.do_send_pm(to, subject, body, self._killed)
+        if success or success is None:
+            logger.id(logger.debug, self,
+                    'Removing \'{color_to}\': \'{subject}\' from'
+                    ' reddit ratelimit queue ...',
+                    color_to=to,
+                    subject=subject,
+            )
+            # pm succeeded or could not be sent
+            # remove the element from the queue database
+            with self.rate_limit_queue:
+                self.rate_limit_queue.delete(
+                        thing=to,
+                        body=body,
+                        title=subject,
+                )
+
+        return True # XXX: always handled at the moment
+
     def _handle_reply(self, fullname, body):
         """
         Handles a reddit ratelimit queued reply
@@ -437,15 +468,11 @@ class RateLimitHandler(ProcessMixin, RedditInstanceMixin):
             if element:
                 fullname, body, title, selftext, url = element
 
-                if bool(body) == bool(title or selftext or url):
-                    # too many content strings queued; cannot determine
-                    # proper reddit method to call
-                    logger.id(logger.warn, self,
-                            'Cannot handle \'{color_fullname}\':'
-                            ' too many content strings!',
-                            color_fullname=fullname,
-                    )
-                    self._log_element(element)
+                # XXX: a bit hacky - determine what we're doing with the
+                # ratelimited thing based on the columns that were queued
+                if body and title:
+                    # pm to redditor
+                    handled = self._handle_pm(fullname, title, body)
 
                 elif body:
                     handled = self._handle_reply(fullname, body)

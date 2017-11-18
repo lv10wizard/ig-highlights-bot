@@ -179,14 +179,21 @@ def display_id(thing):
 
 def display_fullname(thing):
     if hasattr(thing, 'fullname'):
-        split = split_fullname(thing.fullname)
+        split = split_fullname(fullname(thing))
         try:
             thing_type = Reddit._kinds[split[0]]
         except KeyError:
             thing_type = '???'
 
-        return '{0} ({1})'.format(thing.fullname, thing_type)
+        return '{0} ({1})'.format(fullname(thing), thing_type)
     return thing
+
+def fullname(thing):
+    # some .fullname properties can hit the network (eg. Redditor.fullname)
+    def _fullname(thing):
+        return thing.fullname
+
+    return _network_wrapper(_fullname, thing)
 
 def subreddit_display_name(thing):
     """
@@ -214,7 +221,9 @@ def is_banned_from(thing):
     def _is_banned(thing):
         banned = None
         if hasattr(thing, 'subreddit'):
-            banned = thing.subreddit.user_is_banned
+            thing = thing.subreddit
+        if hasattr(thing, 'user_is_banned'):
+            banned = thing.user_is_banned
         return banned
 
     return _network_wrapper(_is_banned, thing)
@@ -568,16 +577,19 @@ class Reddit(praw.Reddit):
                 )
 
     def _enqueue(
-            self, queue_callback, killed=None, *queue_args, **queue_kwargs
+            self, queue_callback, killed=None, force=False,
+            *queue_args, **queue_kwargs
     ):
         """
         Enqueues the thing if the bot is reddit ratelimited
 
-        queue_callback - either _queue_reply or _queue_submit
+        queue_callback - one of: _queue_reply, _queue_submit, or _queue_pm
         killed (multiprocessing.Event, optional) - the killed event to
                 prevent the enqueue call from looping infinitely in the
                 rare case where the reddit ratelimit ends but becomes
                 active from a separate process
+        force (bool, optional) - whether the thing should be enqueued
+                regardless of ratelimit status
         *queue_args, **queue_kwargs - the queue_callback arguments
 
         Returns True if the thing was successfully queued or killed
@@ -603,7 +615,7 @@ class Reddit(praw.Reddit):
         queued = None
         # XXX: try to queue in a loop in case the rate-limit ends while
         # attempting to enqueue but starts again from a different process
-        while self.is_rate_limited and not was_killed(killed):
+        while (self.is_rate_limited or force) and not was_killed(killed):
             # num_attempts should not grow > 2
             # 1  = rate-limited do_* entry
             # 2  = was not rate-limited during queue_callback but became
@@ -623,72 +635,47 @@ class Reddit(praw.Reddit):
                         strf_time=self.__rate_limited.value,
                 )
 
+            delay = self.__rate_limited.remaining
+            if delay <= 0 and not force:
+                # no longer ratelimited and the enqueue was not forced
+                break
+
             queued = queue_callback(*queue_args, **queue_kwargs)
             if queued is not None:
                 break
 
         return queued is not None or was_killed(killed)
 
-    def _queue_reply(self, thing, body, force=False):
+    def _queue_reply(self, thing, body):
         """
         Enqueues the reply to {thing} (see: RateLimitHandler)
 
         thing (praw.models.*) - the {thing} to queue (should be Replyable)
         body (str) - the text to reply to {thing} with
-        force (bool, optional) - whether the {thing} should be enqueued,
-                ignoring current rate-limit status
 
         Returns True if queued successfully
-                False if enqueue failed
-                None if rate-limit is over
+                or False if enqueue failed
         """
-        success = False
-        delay = self.__rate_limited.remaining
-        if delay > 0 or force:
-            submission = get_submission_for(thing)
-            logger.id(logger.info, self,
-                    'Rate-limited! Queueing {color_thing}'
-                    ' (expires in {time} @ {strftime}) ...',
-                    color_thing=display_id(thing),
-                    time=self.__rate_limited.remaining,
-                    strftime='%H:%M:%S',
-                    strf_time=self.__rate_limited.value,
+        logger.id(logger.info, self,
+                'Rate-limited! Queueing reply to {color_thing}'
+                ' (expires in {time} @ {strftime}) ...',
+                color_thing=display_id(thing),
+                time=self.__rate_limited.remaining,
+                strftime='%H:%M:%S',
+                strf_time=self.__rate_limited.value,
+        )
+
+        with self.__rate_limit_queue:
+            self.__rate_limit_queue.insert(
+                    thing=thing,
+                    ratelimit_delay=self.__rate_limited.remaining,
+                    body=body,
+                    submission=get_submission_for(thing),
             )
 
-            try:
-                with self.__rate_limit_queue:
-                    self.__rate_limit_queue.insert(
-                            thing=thing,
-                            ratelimit_delay=delay,
-                            body=body,
-                            submission=submission,
-                    )
+        return True # XXX: cannot fail at the moment
 
-            except database.UniqueConstraintFailed:
-                # this may mean that the ratelimit handling is not timed
-                # correctly or simply that the bot was ratelimited again
-                logger.id(logger.debug, self,
-                        'Updating {color_thing} in ratelimit queue ...',
-                        color_thing=display_id(thing),
-                )
-                with self.__rate_limit_queue:
-                    self.__rate_limit_queue.update(
-                            thing=thing,
-                            ratelimit_delay=delay,
-                            body=body,
-                    )
-            else:
-                success = True
-
-        else:
-            # rate limit reset
-            success = None
-
-        return success
-
-    def _queue_submit(
-            self, display_name, title, selftext=None, url=None, force=False,
-    ):
+    def _queue_submit(self, display_name, title, selftext=None, url=None):
         """
         Enqueues a post to be submitted to the display_name subreddit
 
@@ -696,86 +683,88 @@ class Reddit(praw.Reddit):
         title (str) - the title of the post
         selftext (None or str, optional) - the selftext of the post
         url (None or str, optional) - the url of the post
-        force (bool, optional) - whether the post should be enqueued,
-                ignoring current ratelimit status
 
         *Note: either selftext or url must be provided
 
         Returns True if successfully queued
                 or False if enqueue failed
-                or None if rate-limit is over
         """
         success = False
-        delay = self.__rate_limited.remaining
-        if delay > 0 or force:
-
-            if (bool(selftext) or selftext == '') == bool(url):
-                logger.id(logger.warn, self,
-                        'Cannot enqueue post \'{title}\' to {subname}:'
-                        ' either \'selftext\' or \'url\' must be specified.'
-                        '\n\tselftext: \'{selftext}\''
-                        '\n\turl:      \'{url}\'',
-                        title=title,
-                        subname=prefix_subreddit(display_name),
-                        selftext=selftext,
-                        url=url,
-                )
-                return success
-
-            logger.id(logger.info, self,
-                    'Rate-limited! Queueing \'{title}\' for {color_subreddit}'
-                    ' (expires in {time} @ {strftime}) ...',
+        if (bool(selftext) or selftext == '') == bool(url):
+            logger.id(logger.warn, self,
+                    'Cannot enqueue post \'{title}\' to {subname}:'
+                    ' either \'selftext\' or \'url\' must be specified.'
+                    '\n\tselftext: \'{selftext}\''
+                    '\n\turl:      \'{url}\'',
                     title=title,
-                    color_subreddit=prefix_subreddit(display_name),
-                    time=self.__rate_limited.remaining,
-                    strftime='%H:%M:%S',
-                    strf_time=self.__rate_limited.value,
+                    subname=prefix_subreddit(display_name),
+                    selftext=selftext,
+                    url=url,
             )
-            if selftext:
-                logger.id(logger.debug, self,
-                        'selftext:\n\n{selftext}\n',
-                        selftext=selftext,
-                )
-            if url:
-                logger.id(logger.debug, self,
-                        'url:\n\n{url}\n',
-                        url=url,
-                )
+            return success
 
-            try:
-                with self.__rate_limit_queue:
-                    self.__rate_limit_queue.insert(
-                            thing=display_name,
-                            ratelimit_delay=delay,
-                            title=title,
-                            selftext=selftext,
-                            url=url,
-                    )
+        logger.id(logger.info, self,
+                'Rate-limited! Queueing post \'{title}\' for {color_subreddit}'
+                ' (expires in {time} @ {strftime}) ...',
+                title=title,
+                color_subreddit=prefix_subreddit(display_name),
+                time=self.__rate_limited.remaining,
+                strftime='%H:%M:%S',
+                strf_time=self.__rate_limited.value,
+        )
+        if selftext:
+            logger.id(logger.debug, self,
+                    'selftext:\n\n{selftext}\n',
+                    selftext=selftext,
+            )
+        if url:
+            logger.id(logger.debug, self,
+                    'url:\n\n{url}\n',
+                    url=url,
+            )
 
-            except database.UniqueConstraintFailed:
-                logger.id(logger.debug, self,
-                        'Updating {color_subreddit}: \'{color_title}\''
-                        ' in ratelimit queue ...',
-                        color_subreddit=prefix_subreddit(display_name),
-                        color_title=title,
-                )
-                with self.__rate_limit_queue:
-                    self.__rate_limit_queue.update(
-                            thing=display_name,
-                            ratelimit_delay=delay,
-                            title=title,
-                            selftext=selftext,
-                            url=url,
-                    )
-
-            else:
-                success = True
-
-        else:
-            # ratelimit reset
-            success = None
+        with self.__rate_limit_queue:
+            self.__rate_limit_queue.insert(
+                    thing=display_name,
+                    ratelimit_delay=self.__rate_limited.remaining,
+                    title=title,
+                    selftext=selftext,
+                    url=url,
+            )
+        success = True
 
         return success
+
+    def _queue_pm(self, to, subject, body):
+        """
+        Enqueues a pm to be sent to the "to" redditor
+
+        to (str) - the redditor to send the message to
+        subject (str) - the pm subject
+        body (str) - the pm body
+
+        Returns True if successfully queued
+                or False if enqueue failed
+        """
+        logger.id(logger.info, self,
+                'Rate-limited! Queueing pm \'{subject}\' to {color_to}'
+                ' (expires in {time} @ {strftime}) ...',
+                subject=subject,
+                color_to=to,
+                time=self.__rate_limited.remaining,
+                strftime='%H:%M:%S',
+                strf_time=self.__rate_limited.value,
+        )
+
+        with self.__rate_limit_queue:
+            self.__rate_limit_queue.insert(
+                    thing=to,
+                    ratelimit_delay=self.__rate_limited.remaining,
+                    body=body,
+                    title=subject,
+            )
+
+        return True # XXX: cannot fail at the moment
 
     def __dry_run_test(self):
         """
@@ -913,6 +902,121 @@ class Reddit(praw.Reddit):
                 else:
                     self.__handle_api_exception(e)
 
+    def do_send_pm(self, to, subject, body, killed=None):
+        """
+        redditor(to).message(subject, body) wrapper
+
+        killed (multiprocessing.Event, optional) - process loop condition used
+                to gracefully exit from this method in case it gets stuck
+                attempting to queue the reply from a rogue ratelimit.
+
+        Returns True if the pm is successfully sent
+                or False if the pm should be retried
+                or None if it is not possible to send the pm
+        """
+        if (
+                (not (isinstance(to, string_types) and to))
+                or (not isinstance(subject, string_types) and subject)
+                or (not isinstance(body, string_types) and body)
+        ):
+            logger.id(logger.warn, self,
+                    'Cannot send pm to \'{to}\' with:'
+                    '\nsubject: \'{subject}\''
+                    '\nbody: \'{body}\'',
+                    to=to,
+                    subject=subject,
+                    body=body,
+            )
+            return None
+
+        self._enqueue(
+                self._queue_pm,
+                killed=killed,
+                to=to,
+                subject=subject,
+                body=body,
+        )
+
+        success = False
+        if not self.is_rate_limited:
+            logger.id(logger.debug, self,
+                    'Sending message to {color_to}:'
+                    '\n{sep}'
+                    '\n{subject}\n\n{body}'
+                    '\n{sep}',
+                    sep=Reddit.LINE_SEP,
+                    color_to=to,
+                    subject=subject,
+                    body=body,
+            )
+
+            redditor = self.redditor(to)
+            try:
+                if not constants.dry_run:
+                    def _message(redditor, subject, body):
+                        return redditor.message(subject, body)
+                    _network_wrapper(_message, redditor, subject, body)
+                    logger.id(logger.info, self,
+                            'Successfully sent pm to {color_to}: \'{subject}\'',
+                            color_to=to,
+                            subject=subject,
+                    )
+
+                else:
+                    if not self.__dry_run_test():
+                        logger.id(logger.info, self,
+                                'Dry run: skipping pm to {color_to}:'
+                                ' \'{subject}\'',
+                                color_to=to,
+                                subject=subject,
+                        )
+
+            except (AttributeError, TypeError):
+                logger.id(logger.exception, self,
+                        'Could not send pm \'{subject}\' to {color_to}',
+                        subject=subject,
+                        color_to=to,
+                )
+                success = None
+
+            except Forbidden:
+                logger.id(logger.warn, self,
+                        'Failed to send pm to \'{to}\'!',
+                        to=to,
+                        exc_info=True,
+                )
+                success = None
+
+            except praw.exceptions.APIException as e:
+                self.__handle_api_exception(e)
+
+                err_type = e.error_type.upper()
+                if err_type in Reddit.RATELIMIT_ERR:
+                    self._enqueue(
+                            self._queue_pm,
+                            killed=killed,
+                            force=True,
+                            to=to,
+                            subject=subject,
+                            body=body,
+                    )
+
+                elif err_type in Reddit.NOUSER_ERR:
+                    # deleted or banned
+                    logger.id(logger.info, self,
+                            'Could not send pm \'{subject}\' to {color_to}:'
+                            ' \'{to}\' does not exist.',
+                            subject=subject,
+                            color_to=to,
+                            to=to,
+                    )
+                    success = None
+
+            else:
+                success = True
+
+        return success
+
     def do_submit(
             self, display_name, title, selftext=None, url=None, killed=None,
             *args, **kwargs
@@ -920,7 +1024,9 @@ class Reddit(praw.Reddit):
         """
         subreddit(display_name).submit wrapper
 
-        killed (multiprocessing.Event, optional) -
+        killed (multiprocessing.Event, optional) - process loop condition used
+                to gracefully exit from this method in case it gets stuck
+                attempting to queue the reply from a rogue ratelimit.
         *args, **kwargs - extra arguments sent to .submit
 
         Returns True if a successful post is made
@@ -941,7 +1047,8 @@ class Reddit(praw.Reddit):
             return None
 
         self._enqueue(
-                self._queue_submit, killed,
+                self._queue_submit,
+                killed=killed,
                 display_name=display_name,
                 title=title,
                 selftext=selftext,
@@ -1017,11 +1124,14 @@ class Reddit(praw.Reddit):
 
                 err_type = e.error_type.upper()
                 if err_type in Reddit.RATELIMIT_ERR:
-                    self._queue_submit(
-                            display_name, title,
+                    self._enqueue(
+                            self._queue_submit,
+                            killed=killed,
+                            force=True,
+                            display_name=display_name,
+                            title=title,
                             selftext=selftext,
                             url=url,
-                            force=True,
                     )
 
                 elif err_type in Reddit.SUBREDDIT_NOEXIST_ERR:
@@ -1063,7 +1173,12 @@ class Reddit(praw.Reddit):
             )
             return None
 
-        self._enqueue(self._queue_reply, killed, thing, body)
+        self._enqueue(
+                self._queue_reply,
+                killed=killed,
+                thing=thing,
+                body=body,
+        )
         success = False
         if not self.is_rate_limited:
             logger.id(logger.debug, self,
@@ -1129,7 +1244,13 @@ class Reddit(praw.Reddit):
                 err_type = e.error_type.upper()
                 if err_type in Reddit.RATELIMIT_ERR:
                     # force in case the rate-limit flag is unset somehow
-                    self._queue_reply(thing, body, force=True)
+                    self._enqueue(
+                            self._queue_reply,
+                            killed=killed,
+                            force=True,
+                            thing=thing,
+                            body=body,
+                    )
 
                 elif err_type in Reddit.DELETED_ERR:
                     logger.id(logger.info, self,
@@ -1221,6 +1342,7 @@ __all__ = [
         'unpack_subreddits',
         'display_id',
         'display_fullname',
+        'fullname',
         'subreddit_display_name',
         'author',
         'score',

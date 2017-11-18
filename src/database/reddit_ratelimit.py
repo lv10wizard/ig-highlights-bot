@@ -1,9 +1,19 @@
 import multiprocessing
 import time
 
+from praw.models import (
+        Comment,
+        Message,
+        Redditor,
+        Submission,
+        Subreddit,
+)
 from six.moves import queue
 
-from ._database import Database
+from ._database import (
+        Database,
+        UniqueConstraintFailed,
+)
 from src.util import logger
 
 
@@ -23,20 +33,20 @@ class RedditRateLimitQueueDatabase(Database):
 
     @staticmethod
     def fullname(thing):
-        try:
-            # try subreddit.display_name
+        from src import reddit
+
+        if isinstance(thing, Subreddit):
             return thing.display_name
-        except AttributeError:
-            pass
 
-        try:
-            # try .fullname
-            return thing.fullname
-        except AttributeError:
-            pass
+        elif isinstance(thing, (Comment, Message, Submission)):
+            return reddit.fullname(thing)
 
-        # hopefully fullname string
-        return thing
+        elif isinstance(thing, Redditor):
+            return thing.name
+
+        else:
+            # hopefully a fullname string
+            return thing
 
     @staticmethod
     def _replace_null(value):
@@ -75,66 +85,46 @@ class RedditRateLimitQueueDatabase(Database):
         Inserts a thing to reply/post-to to be handled once the bot is no
         longer reddit ratelimited.
 
-        thing (praw.models.*) - the thing to reply or post to
+        thing (praw.models.*) - the thing to reply to, post to, or message
         ratelimit_delay (float) - the amount of time in seconds until the
                 ratelimit is over
-        body (str, optional) - the body to reply with
-        title (str, optional) - the title of the post to submit
+        body (str, optional) - the body of the thing (reply, submit, or message)
+        title (str, optional) - either
+                1) the title of the post to submit or
+                2) the subject of the pm to send
         selftext (str, optional) - the selftext of the post to submit
         url (str, optional) - the url of the post to submit
         submission (praw.models.Submission, optional) -
-                the submission which contains the thing (if any)
-
-        *Note: body & title/selftext/url are mutually exclusive
+                the submission which contains the thing, if any
+                (used for replies)
         """
-
-        if bool(body) == bool(title or selftext or url):
-            # programmer error
-            logger.id(logger.warn, self,
-                    'Mutually exclusive parameters \'body\''
-                    ' & (\'title\' or \'selftext\' or \'url\') both specified!'
-                    ' NOT inserting \'{color_thing}\' ...',
-                    color_thing=RedditRateLimitQueueDatabase.fullname(thing),
+        try:
+            self._db.execute(
+                    'INSERT INTO'
+                    ' queue(fullname, submission_fullname, body, title,'
+                    '       selftext, url, ratelimit_reset)'
+                    ' VALUES({0})'.format(', '.join(['?'] * 7)),
+                    (
+                        RedditRateLimitQueueDatabase.fullname(thing),
+                        RedditRateLimitQueueDatabase.fullname(submission),
+                        RedditRateLimitQueueDatabase._replace_null(body),
+                        RedditRateLimitQueueDatabase._replace_null(title),
+                        RedditRateLimitQueueDatabase._replace_null(selftext),
+                        RedditRateLimitQueueDatabase._replace_null(url),
+                        time.time() + ratelimit_delay,
+                    ),
             )
-            if body:
-                logger.id(logger.debug, self,
-                        'body:\n\n{body}\n',
-                        body=body,
-                )
-            if title:
-                logger.id(logger.debug, self,
-                        'title:\n\n{title}\n',
-                        title=title,
-                )
-            if selftext:
-                logger.id(logger.debug, self,
-                        'selftext:\n\n{selftext}\n',
-                        selftext=selftext,
-                )
-            if url:
-                logger.id(logger.debug, self,
-                        'url:\n\n{url}\n',
-                        url=url,
-                )
-            # skip (and lose) data instead of raising an error
-            return
+            self.__update_has_elements()
 
-        self._db.execute(
-                'INSERT INTO'
-                ' queue(fullname, submission_fullname, body, title,'
-                '       selftext, url, ratelimit_reset)'
-                ' VALUES({0})'.format(', '.join(['?'] * 7)),
-                (
-                    RedditRateLimitQueueDatabase.fullname(thing),
-                    RedditRateLimitQueueDatabase.fullname(submission),
-                    RedditRateLimitQueueDatabase._replace_null(body),
-                    RedditRateLimitQueueDatabase._replace_null(title),
-                    RedditRateLimitQueueDatabase._replace_null(selftext),
-                    RedditRateLimitQueueDatabase._replace_null(url),
-                    time.time() + ratelimit_delay,
-                ),
-        )
-        self.__update_has_elements()
+        except UniqueConstraintFailed:
+            self.update(
+                    thing=thing,
+                    ratelimit_delay=ratelimit_delay,
+                    body=body,
+                    title=title,
+                    selftext=selftext,
+                    url=url,
+            )
 
     def _delete(self, thing, body=None, title=None, selftext=None, url=None):
         self._db.execute(
@@ -193,17 +183,18 @@ class RedditRateLimitQueueDatabase(Database):
         Returns the set of instagram users queued to be posted to thing
                 or an empty set if none are found
         """
+        from src import reddit
         from src.replies import Formatter
 
         try:
-            submission.fullname
+            reddit.fullname(submission)
         except AttributeError:
             # don't accidentally match a random non-submission record
             return set()
 
         cursor = self._db.execute(
             'SELECT fullname, body FROM queue WHERE submission_fullname = ?',
-            (submission.fullname,),
+            (reddit.fullname(submission),),
         )
 
         ig_users = set()

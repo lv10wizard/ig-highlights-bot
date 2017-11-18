@@ -454,6 +454,13 @@ O. post highlights of users to profile
     > how to handle extra from repo version?
         - update with extra -- but what if user deleted those lines?
 O. fix secondary process issuing instagram request when already ratelimited
+- add mention author to footer when replying from a mention
+- refactor reddit.do_* methods so that there isn't so much duplication
+    ? refactor _enqueue: the _queue_* methods are somewhat duplicated
+? fix broken links by HEAD-ing them?
+    - if 404 -> continue down table
+? refactor RedditRateLimitQueueDatabase so that it contains 1 table per
+    thing (replies, post submissions, and PMs)
 
 - lower memory footprint
 

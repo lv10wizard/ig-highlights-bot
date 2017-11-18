@@ -28,11 +28,82 @@ class Mentions(ProcessMixin, StreamMixin):
     def _stream_method(self):
         return self._reddit.inbox.mentions
 
+    def _send_cannot_reply_message(self, mention, submission):
+        """
+        Sends a pm to the author of the mention comment if the bot cannot reply.
+
+        Returns True if the bot is banned from the submission's subreddit
+                or has the submission's subreddit blacklisted
+        """
+        banned = reddit.is_banned_from(submission)
+        blacklisted = False
+
+        display_name = submission.subreddit.display_name
+        prefixed_name = reddit.prefix_subreddit(display_name)
+        reason = None
+
+        # XXX: check whether the bot is banned first because it automatically
+        # blacklists subreddits it has been banned from
+        if banned:
+            reason = 'I am banned from {0}'.format(prefixed_name)
+
+        else:
+            blacklisted = self.blacklist.is_blacklisted_name(prefixed_name)
+            if blacklisted:
+                reason = (
+                        'the moderators of {0}'
+                        ' have asked to be blacklisted'
+                ).format(prefixed_name)
+
+        if banned or blacklisted:
+            if not reason:
+                # this shouldn't happen
+                logger.id(logger.warn, self,
+                        'Cannot send pm to {color_author}: no reason!',
+                        color_author=reddit.author(mention),
+                )
+                logger.id(logger.debug, self,
+                        'banned? {yesno_banned}'
+                        '\tblacklisted? {yesno_blacklisted}',
+                        yesno_banned=banned,
+                        yesno_blacklisted=blacklisted,
+                )
+
+            else:
+                logger.id(logger.info, self,
+                        'Notifying {color_to} that I cannot respond to'
+                        ' {color_submission}',
+                        color_to=reddit.author(mention),
+                        color_submission=reddit.display_id(submission),
+                )
+
+                subject = 'Thank you for summoning me to {0}'
+                msg = (
+                        'Thank you for [summoning me](/{submission_id}),'
+                        ' but I cannot reply because {reason}.'
+                )
+
+                self._reddit.do_send_pm(
+                        to=reddit.author(mention),
+
+                        subject=subject.format(prefixed_name),
+
+                        body=msg.format(
+                            submission=reddit.display_id(submission),
+                            submission_id=submission.id,
+                            reason=reason,
+                        ),
+
+                        killed=self._killed,
+                )
+
+        return banned or blacklisted
+
     def _process_mention(self, mention):
         """
         Processes the submission the bot was summoned to by the given comment
         """
-        submission = mention.submission
+        submission = reddit.get_submission_for(mention)
         if not submission:
             # this shouldn't happen
             logger.id(logger.debug, self,
@@ -45,6 +116,16 @@ class Mentions(ProcessMixin, StreamMixin):
                 'Processing {color_submission}',
                 color_submission=reddit.display_id(submission),
         )
+
+        # TODO? handle other filtered and non-replyable comments?
+        #   - already replied
+        #   - linked private account
+        # > how to handle multiple non-replies to a single mention?
+        #   eg. multiple linked private accounts & a single mention
+        #       (don't want to spam mentioner with multiple PMs)
+        #   -> would need to factor failure out of Formatter -> Filter
+        if self._send_cannot_reply_message(mention, submission):
+            return
 
         replyable_thing = False
         ig_usernames, _, _ = self.filter.replyable_usernames(submission)
