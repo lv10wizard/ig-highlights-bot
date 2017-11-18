@@ -424,6 +424,7 @@ class Submitter(ProcessMixin, RedditInstanceMixin):
                         display_name=display_name,
                         title=title,
                         url=link,
+                        killed=self._killed,
                 )
 
             else:
