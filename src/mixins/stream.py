@@ -203,7 +203,11 @@ class _SubredditsStreamMixin(StreamMixin):
         except AttributeError:
             the_stream = None
 
-        if the_stream is None or self.subreddits.is_dirty:
+        if (
+                the_stream is None
+                or self.subreddits.is_dirty
+                or self.cfg.submit_enabled
+        ):
             with self.subreddits.updating():
                 logger.id(logger.info, self, 'Updating subreddits ...')
 
@@ -220,7 +224,7 @@ class _SubredditsStreamMixin(StreamMixin):
                 # force an update regardless of the diff if there is no cached
                 # stream (this may happen if the previously cached stream was
                 # discarded due to a praw GET error)
-                if bool(diff) or the_stream is None:
+                if bool(diff) or the_stream is None or self.cfg.submit_enabled:
                     new = subs_from_db - current_subreddits
                     if new:
                         logger.id(logger.info, self,
@@ -244,7 +248,10 @@ class _SubredditsStreamMixin(StreamMixin):
                         )
 
                     # add the bot's profile subreddit to the stream
-                    if self._reddit.profile_sub_name:
+                    if (
+                            self.cfg.submit_enabled
+                            and self._reddit.profile_sub_name
+                    ):
                         if self._reddit.profile_sub_name not in subs_from_db:
                             logger.id(logger.info, self,
                                     'Adding profile sub: {color}',
