@@ -20,11 +20,13 @@ class MentionsDatabase(Database):
         )
 
     def _insert(self, mention):
+        from src import reddit
+
         self._db.execute(
                 'INSERT INTO mentions(submission_fullname, comment_author)'
                 ' VALUES(?, ?)',
                 # assumption: mention cannot itself be a submission
-                (mention.submission.fullname, mention.author.name),
+                (reddit.fullname(mention.submission), mention.author.name),
         )
 
     def has_seen(self, mention):
@@ -32,10 +34,12 @@ class MentionsDatabase(Database):
         Returns True if the mention has been seen (ie, that the mention's author
         has already summoned the bot to that post)
         """
+        from src import reddit
+
         cursor = self._db.execute(
                 'SELECT submission_fullname FROM mentions'
                 ' WHERE submission_fullname = ? AND comment_author = ?',
-                (mention.submission.fullname, mention.author.name),
+                (reddit.fullname(mention.submission), mention.author.name),
         )
         return bool(cursor.fetchone())
 

@@ -21,16 +21,20 @@ class MessagesDatabase(Database):
         )
 
     def _insert(self, message):
+        from src import reddit
+
         self._db.execute(
                 'INSERT INTO messages(message_fullname) VALUES(?)',
-                (message.fullname,),
+                (reddit.fullname(message),),
         )
 
     def has_seen(self, message):
+        from src import reddit
+
         cursor = self._db.execute(
                 'SELECT message_fullname FROM messages'
                 ' WHERE message_fullname = ?',
-                (message.fullname,),
+                (reddit.fullname(message),),
         )
         return bool(cursor.fetchone())
 

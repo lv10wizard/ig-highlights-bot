@@ -20,9 +20,12 @@ class BadActorsDatabase(Database):
         """
         Returns whether the thing has ever been flagged as a bad actor
         """
+        from src import reddit
+
+        fullname = reddit.fullname(thing)
         query = 'SELECT * FROM {0} WHERE thing_fullname = ?'
-        active = self._db.execute(query.format('active'), (thing.fullname,))
-        inactive = self._db.execute(query.format('inactive'), (thing.fullname,))
+        active = self._db.execute(query.format('active'), (fullname,))
+        inactive = self._db.execute(query.format('inactive'), (fullname,))
         return bool(active.fetchone() or inactive.fetchone())
 
     @property
@@ -47,6 +50,8 @@ class BadActorsDatabase(Database):
         )
 
     def _insert(self, thing, data):
+        from src import reddit
+
         self.__prune(thing)
         if hasattr(thing, 'author') and bool(thing.author):
             self._db.execute(
@@ -54,7 +59,7 @@ class BadActorsDatabase(Database):
                     ' active(thing_fullname, created_utc, author_name, data)'
                     ' VALUES(?, ?, ?, ?)',
                     (
-                        thing.fullname,
+                        reddit.fullname(thing),
                         thing.created_utc,
                         thing.author.name,
                         data,

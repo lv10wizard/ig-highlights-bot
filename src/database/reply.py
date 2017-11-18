@@ -50,8 +50,8 @@ class ReplyDatabase(Database):
         if isinstance(ig_list, (list, tuple)):
             values = [
                     (
-                        thing.fullname,
-                        submission.fullname,
+                        reddit.fullname(thing),
+                        reddit.fullname(submission),
                         get_user(ig),
                     )
                     for ig in ig_list
@@ -60,8 +60,8 @@ class ReplyDatabase(Database):
             # assume ig_list is a single Instagram instance
             values = [
                     (
-                        thing.fullname,
-                        submission.fullname,
+                        reddit.fullname(thing),
+                        reddit.fullname(submission),
                         get_user(ig_list),
                     )
             ]
@@ -77,10 +77,12 @@ class ReplyDatabase(Database):
         Returns a set of thing fullnames that the bot has replied to for a
         given post
         """
+        from src import reddit
+
         cursor = self._db.execute(
                 'SELECT replied_fullname FROM comments'
                 ' WHERE submission_fullname = ?',
-                (submission.fullname,),
+                (reddit.fullname(submission),),
         )
         return set([row['replied_fullname'] for row in cursor])
 
@@ -89,9 +91,11 @@ class ReplyDatabase(Database):
         Returns the set of instagram user names that the bot has replied with
         for a given post
         """
+        from src import reddit
+
         cursor = self._db.execute(
                 'SELECT ig_user FROM comments WHERE submission_fullname = ?',
-                (submission.fullname,),
+                (reddit.fullname(submission),),
         )
         return set([row['ig_user'] for row in cursor])
 
@@ -99,10 +103,12 @@ class ReplyDatabase(Database):
         """
         Returns True if the bot has replied to the specified thing
         """
+        from src import reddit
+
         cursor = self._db.execute(
                 'SELECT replied_fullname FROM comments'
                 ' WHERE replied_fullname = ?',
-                (thing.fullname,),
+                (reddit.fullname(thing),),
         )
         return bool(cursor.fetchone())
 

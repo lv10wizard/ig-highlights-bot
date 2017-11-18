@@ -12,8 +12,10 @@ class ReplyQueueDatabase(Database):
 
     @staticmethod
     def get_fullname(thing):
+        from src import reddit
+
         try:
-            return thing.fullname
+            return reddit.fullname(thing)
         except AttributeError:
             return thing
 

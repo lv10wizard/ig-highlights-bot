@@ -236,9 +236,10 @@ class _ParserStrategy(object):
         """
         Returns a list of links found in thing
         """
+        fullname = reddit.fullname(self.thing)
         logger.id(logger.debug, self,
                 'Parsing {thing} ...',
-                thing=reddit.get_type_from_fullname(self.thing.fullname),
+                thing=reddit.get_type_from_fullname(fullname),
         )
 
         links = remove_duplicates(self._parse_links())

@@ -10,13 +10,15 @@ class BadUsernamesDatabase(Database):
 
     @staticmethod
     def get_fullname(thing):
+        from src import reddit
+
         try:
             submission = thing.submission
         except AttributeError:
             submission = thing
 
         try:
-            return submission.fullname
+            return reddit.fullname(submission)
         except AttributeError:
             # in case 'thing' is a string
             return submission
