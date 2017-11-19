@@ -1,3 +1,5 @@
+from six import string_types
+
 from ._database import Database
 
 
@@ -12,6 +14,9 @@ class BadUsernamesDatabase(Database):
     def get_fullname(thing):
         from src import reddit
 
+        if isinstance(thing, string_types):
+            return thing
+
         try:
             submission = reddit.get_submission_for(thing)
         except AttributeError:
@@ -20,7 +25,6 @@ class BadUsernamesDatabase(Database):
         try:
             return reddit.fullname(submission)
         except AttributeError:
-            # in case 'thing' is a string
             return submission
 
     def __init__(self, dry_run=False, *args, **kwargs):
