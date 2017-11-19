@@ -144,12 +144,13 @@ _INSTAGRAM_KEYWORD_SEP = r'\s*[\:\-]'
 # contains an instagram username.
 _IG_KEYWORD_PREFIX = [
         # match eg. '(IG): ', 'insta ', etc
-        r'\(?{0}\)?{1}?\s*'.format(
-        #    \_/   \__/\_/
-        #     |     /   |
-        #     |     \ optionally match any spaces
-        #     |   optionally match separators eg. ':'
-        #    match instagram keywords
+        r'[\[\(]?{0}[\)\]]?{1}?\s*'.format(
+        # \_____/\_/       \__/\_/
+        #    |    |         /   |
+        #    |    |         \ optionally match any spaces
+        #    |    |       optionally match separators eg. ':'
+        #    |   match instagram keywords
+        #  optionally match leading '[' or '('
             _INSTAGRAM_KEYWORD, _INSTAGRAM_KEYWORD_SEP,
         ),
 
@@ -213,10 +214,11 @@ IG_USER_STRING_REGEX = [
 
         # match a prefixed potential instagram username
         # eg. 'IG: foobar'
-        r'(?:^|\s+)(?:{1})@?(?P<prefix>{0})$'.format(
-        # \_______/\_____/\_______________/ \
-        #     |   |           |       only match if at the end of string
-        #     |   |        capture possible username string
+        r'(?:^|\s+)(?:{1})@?(?P<prefix>{0})[\]\)]?$'.format(
+        # \_______/\_____/\_______________/\_____/ \
+        #     |       |           |           |   match at the end of string
+        #     |       |           |         optionally match either ']' or ')'
+        #     |       |        capture possible username string
         #     / match instagram keywords prefix
         #   only match if at the beginning of the string
             USERNAME_PTN, _IG_KEYWORD_PREFIX,

@@ -194,6 +194,15 @@ def inezfulitko_markdown():
     return load_pickle('inezfulitko')
 
 @pytest.fixture(scope='session')
+def veronicabielik():
+    """
+    praw.models.Comment containing the string:
+
+    She's Veronica Bielik (instagram veronicabielik)
+    """
+    return load_pickle('veronicabielik')
+
+@pytest.fixture(scope='session')
 def capbarista_multiline_prefix():
     """
     praw.models.Comment containing a soft-linked user without '@'

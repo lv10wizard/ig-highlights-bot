@@ -104,6 +104,11 @@ def test_instagram_does_not_overmatch_at_ig_user_strings(string):
     'stephxohaven on insta and snap',
     'Allie love on the right. IG is baristaallie',
     '[Fullmetalifrit on IG](https://instagram.com/p/BWoPSy7A7Ig/) ',
+    'She\'s Veronica Bielik (instagram veronicabielik)',
+    'She\'s Veronica Bielik [instagram veronicabielik]',
+    'She\'s Veronica Bielik [instagram - veronicabielik]',
+    'She\'s Veronica Bielik (instagram: veronicabielik)',
+    'She\'s Veronica Bielik [instagram: veronicabielik]',
 ])
 def test_instagram_matches_has_ig_keyword_strings(string):
     assert instagram.HAS_IG_KEYWORD_REGEX.search(string)
@@ -133,6 +138,11 @@ def test_instagram_matches_has_ig_keyword_question_strings(string):
     ('> Karmabirdfly', 'Karmabirdfly'),
     ('   >>>>Karmabirdfly', 'Karmabirdfly'),
     ('  >>>>   Karmabirdfly', 'Karmabirdfly'),
+    ('She\'s Veronica Bielik (instagram veronicabielik)', 'veronicabielik'),
+    ('She\'s Veronica Bielik (instagram: veronicabielik)', 'veronicabielik'),
+    ('She\'s Veronica Bielik [instagram: veronicabielik]', 'veronicabielik'),
+    ('She\'s Veronica Bielik (instagram - veronicabielik)', 'veronicabielik'),
+    ('She\'s Veronica Bielik [instagram - veronicabielik]', 'veronicabielik'),
 ])
 def test_instagram_matches_potential_ig_user_strings(string, expected):
     match = instagram.IG_USER_STRING_REGEX.search(string)

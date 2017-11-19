@@ -245,6 +245,11 @@ def test_parser_matches_bolded_at_ig_user(inezfulitko_markdown):
     assert not I.ig_links
     assert I.ig_usernames == ['inezfulitko']
 
+def test_parser_matches_ig_keyword_user_string_in_parenthesis(veronicabielik):
+    V = Parser(veronicabielik)
+    assert not V.ig_links
+    assert V.ig_usernames == ['veronicabielik']
+
 def test_parser_matches_multiline_user_string(capbarista_multiline_prefix):
     C = Parser(capbarista_multiline_prefix)
     assert not C.ig_links
