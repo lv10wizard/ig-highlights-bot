@@ -98,6 +98,7 @@ config setting.
 ##### File locations
 
 *To delete all data saved by the program, run:* `./main.py --delete-data`
+(will ask confirmation)
 
 The program stores files in the following default locations:
 

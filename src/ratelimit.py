@@ -28,7 +28,9 @@ class Flag(object):
     time
     """
 
-    _PATH = resolve_path(database.Database.PATH_FMT.format('reddit-ratelimit'))
+    _PATH = resolve_path(
+            database.Database.format_path('reddit-ratelimit', dry_run=False)
+    )
 
     def __init__(self):
         self.__lock = multiprocessing.RLock()

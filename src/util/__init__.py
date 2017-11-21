@@ -1,4 +1,3 @@
-from errno import EEXIST
 import os
 
 
@@ -42,17 +41,28 @@ def remove_duplicates(seq):
     return [x for x in seq if not (x in seen or seen_add(x))]
 
 def mkdirs(path):
-    # https://stackoverflow.com/a/20667049
-    try:
-        os.makedirs(path, exist_ok=True) # python > 3.2
-    except TypeError: # python <= 3.2
+    from errno import EEXIST
+
+    from src.config import resolve_path
+    from src.util import logger
+
+    path = resolve_path(path)
+    if path and not os.path.exists(path):
+        logger.debug('Creating directories \'{path}\' ...',
+                path=path,
+        )
+
+        # https://stackoverflow.com/a/20667049
         try:
-            os.makedirs(path)
-        except OSError as e: # python > 2.5
-            if e.errno == EEXIST and os.path.isdir(path):
-                pass
-            else:
-                raise
+            os.makedirs(path, exist_ok=True) # python > 3.2
+        except TypeError: # python <= 3.2
+            try:
+                os.makedirs(path)
+            except OSError as e: # python > 2.5
+                if e.errno == EEXIST and os.path.isdir(path):
+                    pass
+                else:
+                    raise
 
 def choose_filename(dirname, name, ext):
     """
@@ -61,6 +71,8 @@ def choose_filename(dirname, name, ext):
     the full path with an incrementing integer appended after name and before
     ext (eg. {dirname}/{name}.{i}.{ext})
     """
+    from src.config import resolve_path
+
     resolved_dirname = resolve_path(dirname)
     i = 0
     path = None
@@ -134,5 +146,53 @@ def readline(path, comment_chars='#', debug=False):
                 'Failed to read \'{path}\'!',
                 path=path,
         )
+
+def confirm(msg, strict=False): # TODO: , in_loop=False):
+    """
+    Asks the user for confirmation.
+
+    msg (str) - the confirmation input string
+    strict (bool, optional) - whether the user's input must match the options
+                exactly
+            Default: False => user input does not have be exact
+
+    --- TODO
+    in_loop (bool, optional) - whether the call is in a quittable loop; adds
+                quit and confirm all options
+            Default: False => no quit/confirm-all options added
+    --------
+
+    Returns True if the user confirms input
+            or False if the user does not confirm
+            or None if the user wants to quit
+    """
+    from six.moves import input
+
+    from src.util import logger
+
+    options = ['Y', 'n']
+    # TODO: implement 'a' (the function needs memory so that the next call from
+    # the same caller returns True)
+    # if in_loop:
+    #     options += ['a', 'q']
+    msg = '{0} [{1}] '.format(msg, '/'.join(options))
+
+    confirm = input(msg)
+    while confirm not in options and strict:
+        logger.info('Unrecognized option: \'{opt}\'.'
+                ' Please enter one of: {unpack}\n',
+                opt=confirm,
+                unpack=options,
+        )
+        confirm = input(msg)
+
+    logger.debug('\'{input_msg}\' -> \'{opt}\'',
+            input_msg=msg.strip(),
+            opt=confirm,
+    )
+
+    if confirm == 'q':
+        return None
+    return confirm == 'Y'
 
 

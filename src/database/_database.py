@@ -1,6 +1,5 @@
 import abc
 import os
-import pprint
 import re
 import sqlite3
 import sys
@@ -14,7 +13,10 @@ from six import (
 import constants
 from constants import DATA_ROOT_DIR
 from src import config
-from src.util import logger
+from src.util import (
+        logger,
+        mkdirs,
+)
 
 
 class BaseDatabaseException(Exception): pass
@@ -127,8 +129,10 @@ class Database(object):
     Data storage handling (replied comments, etc) abstract base class
     """
 
-    PATH_FMT = os.path.join(DATA_ROOT_DIR, 'data', '{0}')
-    DRY_RUN_PATH_FMT = os.path.join(DATA_ROOT_DIR, 'data', 'dry_run', '{0}')
+    PATH_ROOT = os.path.join(DATA_ROOT_DIR, 'data')
+    BACKUPS_PATH_ROOT = os.path.join(PATH_ROOT, 'backups')
+    PATH_FMT = '{0}'
+    DRY_RUN_PATH_FMT = os.path.join('dry_run', '{0}')
 
     TABLENAME_RE = re.compile(r'^(\w+)\s*[(]')
     COLUMN_RE = re.compile(r'\s*(\w+).+?')
@@ -152,7 +156,7 @@ class Database(object):
                 raise
 
     @staticmethod
-    def format_path(basename, dry_run=None):
+    def _format_path(basename, dry_run=None):
         if dry_run is None:
             dry_run = constants.dry_run
 
@@ -161,6 +165,22 @@ class Database(object):
             return Database.PATH_FMT.format(basename)
         else:
             return Database.DRY_RUN_PATH_FMT.format(basename)
+
+    @staticmethod
+    def format_path(basename, dry_run=None):
+        return os.path.join(
+                Database.PATH_ROOT,
+                Database._format_path(basename, dry_run),
+        )
+
+    @staticmethod
+    def format_backup_path(basename, dry_run=None):
+        # change the ext to '.sql'
+        basename = '{0}.sql'.format(os.path.splitext(basename)[0])
+        return os.path.join(
+                Database.BACKUPS_PATH_ROOT,
+                Database._format_path(basename, dry_run),
+        )
 
     def __init__(self, dry_run=None):
         """
@@ -178,13 +198,10 @@ class Database(object):
     @path.setter
     def path(self, path):
         self._path = path
-        self._resolved_path = Database.resolve_path(path)
-        self._dirname = os.path.dirname(path)
-        self._resolved_dirname = Database.resolve_path(self._dirname)
-        self._basename = os.path.basename(path)
+        self._resolved_path = Database.resolve_path(self._path)
 
     def __str__(self):
-        return self._basename
+        return os.path.basename(self._path)
 
     def __enter__(self):
         return self._db
@@ -384,18 +401,16 @@ class Database(object):
         Returns db (_SqliteConnectionWrapper) if initialization succeeds
                 or None if an existing database is outdated
         """
+        dirname = os.path.dirname(self._path)
+        resolved_dirname = Database.resolve_path(dirname)
         if (
-                # check that _resolved_dirname is not the empty string in case
+                # check that resolved_dirname is not the empty string in case
                 # path == ':memory:'
-                self._resolved_dirname
-                and not os.path.exists(self._resolved_dirname)
+                resolved_dirname
+                and not os.path.exists(resolved_dirname)
         ):
-            logger.id(logger.debug, self,
-                    'Creating directories \'{dirname}\' ...',
-                    dirname=self._dirname,
-            )
             try:
-                os.makedirs(self._resolved_dirname)
+                mkdirs(resolved_dirname)
             except OSError as e:
                 raise FailedInit(e, Database.get_err_msg(e))
 

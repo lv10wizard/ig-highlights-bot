@@ -55,7 +55,7 @@ class Fetcher(object):
     _was_ratelimited = multiprocessing.Value(ctypes.c_bool, False)
 
     _RATELIMIT_RESET_PATH = resolve_path(
-            Database.PATH_FMT.format('instagram_ratelimit')
+            Database.format_path('instagram-ratelimit', dry_run=False)
     )
 
     _EXPOSE_PROPS = [

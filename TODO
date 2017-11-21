@@ -457,6 +457,9 @@ O. fix secondary process issuing instagram request when already ratelimited
 O. add mention author to footer when replying from a mention
 - refactor reddit.do_* methods so that there isn't so much duplication
     ? refactor _enqueue: the _queue_* methods are somewhat duplicated
+O. --backup, --load-backup
+    O. _db.iterdump(), read in from file when --load-backup
+    O. refactor confirmation -> util
 ? fix broken links by HEAD-ing them?
     - if 404 -> continue down table
 ? refactor RedditRateLimitQueueDatabase so that it contains 1 table per
