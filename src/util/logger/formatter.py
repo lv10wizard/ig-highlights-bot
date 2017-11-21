@@ -96,6 +96,11 @@ class Formatter(logging.Formatter):
         def handle_special_keyword(
                 keyword, format_func, *func_args, **func_kwargs
         ):
+            if keyword not in record.msg:
+                # don't process the special keyword if it won't be formatted
+                # in anyway
+                return None
+
             regex = Formatter.__get_regex(keyword)
             # format all matching keywords in record.kwargs
             keys = [
