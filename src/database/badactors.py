@@ -145,12 +145,12 @@ class BadActorsDatabase(Database):
                 -1 if thing has no author (deleted/removed)
         """
         self.__prune(thing)
-        if hasattr(thing, 'author') and bool(thing.author):
-            cursor = self._db.execute(
-                    'SELECT created_utc FROM active WHERE author_name = ?',
-                    (thing.author.name,),
-            )
-            return len(cursor.fetchall())
+
+        cursor = self._db.execute('SELECT count(*) FROM active')
+        row = cursor.fetchone()
+        if row:
+            return row[0]
+
         return -1
 
 

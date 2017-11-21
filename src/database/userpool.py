@@ -1,5 +1,4 @@
 import os
-import random
 import re
 import time
 
@@ -115,7 +114,7 @@ class UserPoolDatabase(Database):
                         ),
                     )
             )
-            removed = set(row['username'] for row in cursor.fetchall())
+            removed = set(row['username'] for row in cursor)
             if removed:
                 self._db.executemany(
                         'DELETE FROM pool WHERE username = ?',
@@ -142,7 +141,7 @@ class UserPoolDatabase(Database):
                 ' ORDER BY timestamp DESC',
                 (username,)
         )
-        return [row['link'] for row in cursor.fetchall()]
+        return [row['link'] for row in cursor]
 
     def size(self):
         self.__update_from_user_pool_file()
@@ -165,7 +164,7 @@ class UserPoolDatabase(Database):
                 '   last_post_time <= 0'
                 # or hasn't been posted recently
                 '   OR {now} - last_post_time > {interval}'
-                ')'.format(
+                ') ORDER BY RANDOM() LIMIT 1'.format(
                     now=time.time(),
                     interval=self.cfg.submit_user_repost_interval,
                     exclude=', '.join(
@@ -174,10 +173,10 @@ class UserPoolDatabase(Database):
                 )
         )
 
+        row = cursor.fetchone()
         username = None
-        username_pool = cursor.fetchall()
-        if username_pool:
-            username = random.choice(username_pool)['username']
+        if row:
+            username = row['username']
 
         return username
 
