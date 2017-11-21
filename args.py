@@ -58,6 +58,12 @@ except ValueError:
     # database class renamed? this shouldn't happen
     pass
 
+BACKUP_CHOICES = [
+        name for name in DATABASE_CHOICES
+        # don't bother backing up the ratelimit database
+        if name != 'InstagramRateLimitDatabase'
+]
+
 igdb_path = Database.format_path(InstagramDatabase.PATH)
 resolved_igdb_path = config.resolve_path(igdb_path)
 try:
@@ -128,7 +134,7 @@ def backup(cfg, *databases):
     import sqlite3
 
     if '*' in databases:
-        databases = DATABASE_CHOICES
+        databases = BACKUP_CHOICES
 
     for db_name in databases:
         db_class = get_class_from_name(db_name)
@@ -257,7 +263,7 @@ def load_backup(cfg, *databases):
     import time
 
     if '*' in databases:
-        databases = DATABASE_CHOICES
+        databases = BACKUP_CHOICES
 
     logger.info('** Loading from backup will wipe any changes in the'
             ' database **\n')
@@ -813,25 +819,26 @@ def parse():
     )
 
     database_choices = DATABASE_CHOICES + ['*']
+    backup_choices = BACKUP_CHOICES + ['*']
     parser.add_argument('--{0}'.format(DUMP),
             metavar='NAME', nargs='+', choices=database_choices,
             help='Dump the specified database(s) to stdout.'
             ' Choices: {0}'.format(database_choices),
     )
     parser.add_argument('--{0}'.format(BACKUP),
-            metavar='NAME', nargs='+', choices=database_choices,
+            metavar='NAME', nargs='+', choices=backup_choices,
             help='Backup the specified database(s) to an SQL text format.'
-            ' Backups are stored in \'{0}\'. See --{1} for choices.'.format(
-                Database.BACKUPS_PATH_ROOT, DUMP,
+            ' Backups are stored in \'{0}\'. Choices: {1}.'.format(
+                Database.BACKUPS_PATH_ROOT, backup_choices,
             ),
     )
     parser.add_argument('--{0}'.format(LOAD_BACKUP),
-            metavar='NAME', nargs='+', choices=database_choices,
+            metavar='NAME', nargs='+', choices=backup_choices,
             help='Load the specified database(s) from'
             ' its last --{0} dump. **This will cause any changes since the'
             ' last --{0} to be lost**'
-            ' (will ask for confirmation). See --{1} for choices.'.format(
-                BACKUP, DUMP,
+            ' (will ask for confirmation). See --{0} for choices.'.format(
+                BACKUP,
             ),
     )
 
