@@ -487,6 +487,9 @@ class Parser(object):
     _JARGON_REGEX = re.compile(
             '{0}'.format('|'.join(_JARGON_VARIATIONS)), flags=re.IGNORECASE
     )
+    # no longer need to keep the data from file in memory (but keep whether
+    # anything was loaded)
+    _JARGON_FROM_FILE = bool(_JARGON_FROM_FILE)
 
     @staticmethod
     def is_english(word):
