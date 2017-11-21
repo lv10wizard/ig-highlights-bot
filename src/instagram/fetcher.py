@@ -157,10 +157,10 @@ class Fetcher(object):
             time_left = expire - time.time()
 
         # try the self-imposed ratelimit
-        if time_left < 0:
-            num_remaining = RATELIMIT_THRESHOLD - Fetcher.ratelimit.num_used()
-            if num_remaining <= 0:
-                time_left = Fetcher.ratelimit.time_left()
+        # if time_left < 0:
+        #     num_remaining = RATELIMIT_THRESHOLD - Fetcher.ratelimit.num_used()
+        #     if num_remaining <= 0:
+        #         time_left = Fetcher.ratelimit.time_left()
 
         return time_left
 
@@ -192,18 +192,18 @@ class Fetcher(object):
         # try loading a previously recorded ratelimit
         Fetcher._load_ratelimit_reset()
 
-        num_used = Fetcher.ratelimit.num_used()
-        num_remaining = RATELIMIT_THRESHOLD - num_used
-        if num_remaining < 0:
-            logger.id(logger.warn, Fetcher.ME,
-                    'Ratelimit exceeded!'
-                    '\n\tused:      {num_used}'
-                    '\n\tthreshold: {threshold}'
-                    '\n\texcess:    {excess}',
-                    num_used=num_used,
-                    threshold=RATELIMIT_THRESHOLD,
-                    excess=abs(num_remaining),
-            )
+        # num_used = Fetcher.ratelimit.num_used()
+        # num_remaining = RATELIMIT_THRESHOLD - num_used
+        # if num_remaining < 0:
+        #     logger.id(logger.warn, Fetcher.ME,
+        #             'Ratelimit exceeded!'
+        #             '\n\tused:      {num_used}'
+        #             '\n\tthreshold: {threshold}'
+        #             '\n\texcess:    {excess}',
+        #             num_used=num_used,
+        #             threshold=RATELIMIT_THRESHOLD,
+        #             excess=abs(num_remaining),
+        #     )
 
         is_ratelimited = Fetcher.is_ratelimited
         Fetcher._was_ratelimited.value = is_ratelimited
@@ -472,8 +472,12 @@ class Fetcher(object):
 
         response = Fetcher.requestor.request(url, *args, **kwargs)
 
+        # XXX: self-imposed ratelimit accounting is has been commented out
+        # because I'm running into perpetually locked database issues (and
+        # the self-imposed ratelimiting isn't actually required).
+
         # account the ratelimit hit
-        Fetcher.account_ratelimit(response)
+        # Fetcher.account_ratelimit(response)
 
         if response is not None:
             if Fetcher.has_server_issue(response):
