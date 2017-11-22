@@ -64,7 +64,7 @@ from src.replies import Parser
     'cutie3.14', 'qt3.14159265359', 'cutie3.14159265359', 'qtpie', 'goodie',
     'goody', 'gooooody', 'gooooodieieieie', 'goodiebag', 'goodiebaaaagggg',
     'bangin', 'banging', 'baaaaangin', 'banggggginggggg', 'xd', 'XD', 'XDDDD',
-    'xdddddddddddddd', 'xxxdddddddddddddddddDDDdd',
+    'xdddddddddddddd', 'xxxdddddddddddddddddDDDdd', 'yummers', 'yummerzz',
 ] + ['o'*(i+2) for i in range(15)])
 def test_parser_detects_jargon(word):
     assert Parser.is_jargon(word)
