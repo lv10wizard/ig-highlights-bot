@@ -93,20 +93,15 @@ class InstagramQueueDatabase(Database):
 
         if stale:
             logger.id(logger.debug, self,
-                    'Resetting last_id of #{num} user{plural}: {color}',
+                    'Stale user{plural} (#{num}): {color}',
                     num=len(stale),
                     plural=('' if len(stale) == 1 else 's'),
                     color=stale,
             )
-            # reset the last_id of each stale user so that the next fetch for
-            # them starts from the beginning
+            # just remove stale users from the queue so that fetches are
+            # restarted the next time they are seen (if ever)
             with self._db:
-                for ig_user in stale:
-                    self._db.execute(
-                            'UPDATE queue SET last_id = ?, timestamp = ?'
-                            ' WHERE ig_user = ?',
-                            (None, time.time(), ig_user),
-                    )
+                self.delete(stale)
 
     def _insert(self, ig_user, last_id=None):
         if ig_user not in self:
@@ -125,7 +120,7 @@ class InstagramQueueDatabase(Database):
                     (ig_user,),
             )
 
-        return self._do_callback(do_delete, ig_usernames)
+        self._do_callback(do_delete, ig_usernames)
 
     def _update(self, ig_user, last_id=None):
         self._db.execute(

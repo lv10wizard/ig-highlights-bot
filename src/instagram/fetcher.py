@@ -869,7 +869,6 @@ class Fetcher(object):
         """
         Fetches & parses user meta data (eg. num followers, is private, etc)
         """
-        # TODO: skip if self.user is in ig_queue
         logger.id(logger.info, self, 'Fetching meta data ...')
 
         data = None
