@@ -85,12 +85,6 @@ class Controversial(ProcessMixin, StreamMixin):
                     # don't try to delete non-comments (eg. FAQ post)
                     continue
 
-                logger.id(logger.debug, self,
-                        'Processing {color_comment} ({score}) ...',
-                        color_comment=reddit.display_id(comment),
-                        score=comment.score,
-                )
-
                 seen.add(comment)
                 if comment.score <= threshold:
                     # score too low
@@ -153,6 +147,15 @@ class Controversial(ProcessMixin, StreamMixin):
                     # note the lowest score we see above the threshold so the
                     # delay can be adjusted
                     lowest_score = min(lowest_score, comment.score)
+
+            if seen:
+                logger.id(logger.debug, self,
+                        'Processed #{num} comment{plural}:'
+                        ' lowest score = {lowest}',
+                        num=len(seen),
+                        plural=('' if len(seen) == 1 else 's'),
+                        lowest=lowest_score,
+                )
 
             delay = 0
             if not self._killed.is_set():
