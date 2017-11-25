@@ -49,6 +49,12 @@ SECTION_INSTAGRAM               = 'INSTAGRAM'
 INSTAGRAM_CACHE_EXPIRE_TIME     = 'instagram_cache_expire_time'
 MIN_FOLLOWER_COUNT              = 'min_follower_count'
 
+SECTION_IMGUR                   = 'IMGUR'
+IMGUR_UPLOAD_ENABLED            = 'imgur_upload_enabled'
+IMGUR_CLIENT_ID                 = 'imgur_client_id'
+IMGUR_CLIENT_SECRET             = 'imgur_client_secret'
+IMGUR_HIGHLIGHTS_CREDITS_BUFFER = 'imgur_highlights_credits_buffer'
+
 SECTION_LOGGING                 = 'LOGGING'
 LOGGING_PATH                    = 'logging_path'
 LOGGING_LEVEL                   = 'logging_level'
@@ -456,6 +462,27 @@ class Config(object):
     @property
     def min_follower_count(self):
         return self.__get(SECTION_INSTAGRAM, MIN_FOLLOWER_COUNT, 'getint')
+
+    # ##################################################################
+    # [IMGUR]
+
+    @property
+    def imgur_upload_enabled(self):
+        return self.__get(SECTION_IMGUR, IMGUR_UPLOAD_ENABLED, 'getboolean')
+
+    @property
+    def imgur_client_id(self):
+        return self.__get(SECTION_IMGUR, IMGUR_CLIENT_ID)
+
+    @property
+    def imgur_client_secret(self):
+        return self.__get(SECTION_IMGUR, IMGUR_CLIENT_SECRET)
+
+    @property
+    def imgur_highlights_credits_buffer(self):
+        return self.__get(
+                SECTION_IMGUR, IMGUR_HIGHLIGHTS_CREDITS_BUFFER, 'getint'
+        )
 
     # ##################################################################
     # [LOGGING]

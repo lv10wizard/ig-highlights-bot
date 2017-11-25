@@ -94,6 +94,11 @@ def test_config__str__(tmpdir_factory):
     ('instagram_cache_expire_time', config.parse_time('7d')),
     ('min_follower_count', 1000),
 
+    ('imgur_upload_enabled', True),
+    ('imgur_client_id', 'foobar'),
+    ('imgur_client_secret', 'qwerty'),
+    ('imgur_highlights_credits_buffer', 1000),
+
     ('logging_path',
         config.resolve_path(
             os.path.join(constants.DATA_ROOT_DIR, 'logs'))),

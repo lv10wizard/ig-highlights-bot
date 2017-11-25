@@ -22,6 +22,13 @@ bad_actor_threshold = 3
 
 [INSTAGRAM]
 instagram_cache_expire_time = 7d
+min_follower_count = 1000
+
+[IMGUR]
+imgur_upload_enabled = true
+imgur_client_id = foobar
+imgur_client_secret = qwerty
+imgur_highlights_credits_buffer = 1000
 
 [LOGGING]
 logging_path = %(data_dir)s/logs
