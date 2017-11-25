@@ -211,7 +211,7 @@ class Formatter(object):
                 )
                 metadata.append(posts)
             if ig.num_followers is not None and ig.num_followers >= 0:
-                followers = '~{0} followers'.format(
+                followers = '{0} followers'.format(
                         Formatter.format_large_number(ig.num_followers)
                 )
                 metadata.append(followers)
