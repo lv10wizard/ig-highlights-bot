@@ -38,6 +38,9 @@ class Fetcher(object):
     _requestor = None
     _cfg = None
 
+    _manager = multiprocessing.Manager()
+    _in_progress = _manager.dict()
+
     # the lock that prevents multiple processes accidentally issuing requests
     # when the bot is already ratelimited
     _request_lock = multiprocessing.RLock()
@@ -776,6 +779,14 @@ class Fetcher(object):
         # -- queued data should imply expired I think
         return self.cache.expired or self.cache.queued_last_id
 
+    @property
+    def in_progress(self):
+        """
+        Returns True if the user is currently being fetched (either by this
+        process or another process)
+        """
+        return self.user in Fetcher._in_progress
+
     def _parse_meta_data(self, data):
         """
         Parses the user's meta data if it has not yet been parsed for this
@@ -967,6 +978,7 @@ class Fetcher(object):
                 # seeing one actual response indicates that the fetch has
                 # started in earnest
                 self._fetch_started = True
+                Fetcher._in_progress[self.user] = True
 
                 if response.status_code == 200:
                     self._exists = True
@@ -1020,6 +1032,11 @@ class Fetcher(object):
             )
             self._enqueue()
             raise
+
+        try:
+            del Fetcher._in_progress[self.user]
+        except KeyError:
+            pass
 
         if success is None:
             self._valid_response = False
