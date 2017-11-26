@@ -159,6 +159,10 @@ class Instagram(object):
 
         See top_media for return value documentation.
         """
+        if self.fetcher.in_progress:
+            # the user is currently being fetched (probably by another process)
+            return None
+
         media = None
 
         if self.fetcher.should_fetch:

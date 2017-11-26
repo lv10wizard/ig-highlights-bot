@@ -4,6 +4,7 @@ import time
 
 import constants
 from src import reddit
+from src.config import parse_time
 from src.database import (
         Database,
         UserPoolDatabase,
@@ -163,6 +164,14 @@ class Submitter(ProcessMixin, RedditInstanceMixin):
         delay = Instagram.request_delay
         if delay < 0:
             delay = Instagram.ratelimit_delay
+
+        if delay <= 0:
+            # another process is probably fetching the user's data
+            delay = parse_time('5m')
+            logger.id(logger.debug, self,
+                    'Setting fall-back delay: {time} (no fetch delay set)',
+                    time=delay,
+            )
 
         if delay > 0:
             expire = Instagram.request_delay_expire
