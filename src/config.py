@@ -49,11 +49,13 @@ SECTION_INSTAGRAM               = 'INSTAGRAM'
 INSTAGRAM_CACHE_EXPIRE_TIME     = 'instagram_cache_expire_time'
 MIN_FOLLOWER_COUNT              = 'min_follower_count'
 
-SECTION_IMGUR                   = 'IMGUR'
-IMGUR_UPLOAD_ENABLED            = 'imgur_upload_enabled'
+SECTION_UPLOAD                  = 'UPLOAD'
+UPLOAD_ENABLED                  = 'upload_enabled'
 IMGUR_CLIENT_ID                 = 'imgur_client_id'
 IMGUR_CLIENT_SECRET             = 'imgur_client_secret'
 IMGUR_HIGHLIGHTS_CREDITS_BUFFER = 'imgur_highlights_credits_buffer'
+GFYCAT_CLIENT_ID                = 'gfycat_client_id'
+GFYCAT_CLIENT_SECRET            = 'gfycat_client_secret'
 
 SECTION_LOGGING                 = 'LOGGING'
 LOGGING_PATH                    = 'logging_path'
@@ -221,7 +223,7 @@ class Config(object):
                 )
 
             for section in missing_sections:
-                if not self.__parser.remove(section):
+                if not self.__parser.remove_section(section):
                     # this shouldn't happen
                     logger.id(logger.warn, self,
                             'Failed to remove section [{section}]:'
@@ -264,10 +266,34 @@ class Config(object):
                     logger.id(logger.debug, self,
                             'Removing missing option:'
                             ' [{section}] \'{key}\' ({value})',
-                            secttion=section,
+                            section=section,
                             key=key,
                             value=value,
                     )
+
+                    failed_msg = (
+                            'Failed to remove missing option:'
+                            ' [{section}] \'{key}\' ({value})',
+                    )
+                    try:
+                        if not self.__parser.remove_option(section, key):
+                            # shouldn't happen
+                            logger.id(logger.warn, self,
+                                    failed_msg,
+                                    section=section,
+                                    key=key,
+                                    value=value,
+                            )
+
+                    except NoSectionError:
+                        # also shouldn't happen
+                        logger.id(logger.warn, self,
+                                failed_msg,
+                                section=section,
+                                key=key,
+                                value=value,
+                                exc_info=True,
+                        )
 
                 changed = changed or bool(only_in_fallback or only_in_fallback)
 
@@ -464,25 +490,33 @@ class Config(object):
         return self.__get(SECTION_INSTAGRAM, MIN_FOLLOWER_COUNT, 'getint')
 
     # ##################################################################
-    # [IMGUR]
+    # [UPLOAD]
 
     @property
-    def imgur_upload_enabled(self):
-        return self.__get(SECTION_IMGUR, IMGUR_UPLOAD_ENABLED, 'getboolean')
+    def upload_enabled(self):
+        return self.__get(SECTION_UPLOAD, UPLOAD_ENABLED, 'getboolean')
 
     @property
     def imgur_client_id(self):
-        return self.__get(SECTION_IMGUR, IMGUR_CLIENT_ID)
+        return self.__get(SECTION_UPLOAD, IMGUR_CLIENT_ID)
 
     @property
     def imgur_client_secret(self):
-        return self.__get(SECTION_IMGUR, IMGUR_CLIENT_SECRET)
+        return self.__get(SECTION_UPLOAD, IMGUR_CLIENT_SECRET)
 
     @property
     def imgur_highlights_credits_buffer(self):
         return self.__get(
-                SECTION_IMGUR, IMGUR_HIGHLIGHTS_CREDITS_BUFFER, 'getint'
+                SECTION_UPLOAD, IMGUR_HIGHLIGHTS_CREDITS_BUFFER, 'getint'
         )
+
+    @property
+    def gfycat_client_id(self):
+        return self.__get(SECTION_UPLOAD, GFYCAT_CLIENT_ID)
+
+    @property
+    def gfycat_client_secret(self):
+        return self.__get(SECTION_UPLOAD, GFYCAT_CLIENT_SECRET)
 
     # ##################################################################
     # [LOGGING]

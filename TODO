@@ -467,7 +467,16 @@ O. --backup, --load-backup
 
 - lower memory footprint
 
-? download user's media content & upload to imgur(?)
+? download user's media content & upload to imgur(?) (upload vids to gfycat)
+    - databases:
+        - per IG user imgur hashes + album hash
+        - per IG user gfycat IDs + album ID
+        - in progress imgur/gfycat uploads
+            (in case the bot is restarted so it can check if uploads finish)
+        - InstagramDatabase should no longer remove dead codes
+            (should probably flag them as dead, maybe?)
+        * alternatively: add imgur, gfycat tables to InstagramDatabase ?
+
     - keep database of downloaded urls per user
         > should probably be separate from InstagramDatabase cache
     - keep database of imgur image/album hashes so that albums can be updated
@@ -487,7 +496,7 @@ O. --backup, --load-backup
     https://github.com/Imgur/imgurpython
 
     - image upload with description:
-        [resized note if file was >10mb]
+        [link to gfycat if video]
         [caption]
 
         [date] ([link])

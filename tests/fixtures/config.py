@@ -24,11 +24,13 @@ bad_actor_threshold = 3
 instagram_cache_expire_time = 7d
 min_follower_count = 1000
 
-[IMGUR]
-imgur_upload_enabled = true
-imgur_client_id = foobar
-imgur_client_secret = qwerty
+[UPLOAD]
+upload_enabled = true
+imgur_client_id = imgur
+imgur_client_secret = rugmi
 imgur_highlights_credits_buffer = 1000
+gfycat_client_id = gfycat
+gfycat_client_secret = tacyfg
 
 [LOGGING]
 logging_path = %(data_dir)s/logs
