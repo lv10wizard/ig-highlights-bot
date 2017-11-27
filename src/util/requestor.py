@@ -69,6 +69,7 @@ class Requestor(object):
 
         else:
             msg = ['{method} {url}']
+            # TODO: don't log secrets (keys, passwords, etc)
             if args:
                 msg.append('args: {func_args}')
             if kwargs:

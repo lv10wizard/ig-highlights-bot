@@ -467,7 +467,17 @@ O. --backup, --load-backup
 
 - lower memory footprint
 
+- hide/obfuscate requestor sensitive data logging
+    eg. api secret keys, passwords, etc
+
 ? download user's media content & upload to imgur(?) (upload vids to gfycat)
+    - make uploaders thread safe
+        - gfycat
+        - imgur
+
+    - gfycat albums
+        - how to create so that they can be shared though?
+
     - databases:
         - per IG user imgur hashes + album hash
         - per IG user gfycat IDs + album ID
@@ -476,6 +486,15 @@ O. --backup, --load-backup
         - InstagramDatabase should no longer remove dead codes
             (should probably flag them as dead, maybe?)
         * alternatively: add imgur, gfycat tables to InstagramDatabase ?
+
+    - priority instagram fetching
+        - user data fetching = first priority
+        - video url fetching = lowest priority
+
+    - instagram video url fetching
+        1. fetch instagram video code urls -> parse
+            url = .find('meta', property='og:video:secure_url')['content']
+        2. gfycat.Uploader(...).upload()
 
     - keep database of downloaded urls per user
         > should probably be separate from InstagramDatabase cache

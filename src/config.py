@@ -56,6 +56,8 @@ IMGUR_CLIENT_SECRET             = 'imgur_client_secret'
 IMGUR_HIGHLIGHTS_CREDITS_BUFFER = 'imgur_highlights_credits_buffer'
 GFYCAT_CLIENT_ID                = 'gfycat_client_id'
 GFYCAT_CLIENT_SECRET            = 'gfycat_client_secret'
+GFYCAT_USERNAME                 = 'gfycat_username'
+GFYCAT_PASSWORD                 = 'gfycat_password'
 
 SECTION_LOGGING                 = 'LOGGING'
 LOGGING_PATH                    = 'logging_path'
@@ -517,6 +519,14 @@ class Config(object):
     @property
     def gfycat_client_secret(self):
         return self.__get(SECTION_UPLOAD, GFYCAT_CLIENT_SECRET)
+
+    @property
+    def gfycat_username(self):
+        return self.__get(SECTION_UPLOAD, GFYCAT_USERNAME)
+
+    @property
+    def gfycat_password(self):
+        return self.__get(SECTION_UPLOAD, GFYCAT_PASSWORD)
 
     # ##################################################################
     # [LOGGING]

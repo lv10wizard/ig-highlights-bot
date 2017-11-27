@@ -31,6 +31,8 @@ imgur_client_secret = rugmi
 imgur_highlights_credits_buffer = 1000
 gfycat_client_id = gfycat
 gfycat_client_secret = tacyfg
+gfycat_username = username
+gfycat_password = password
 
 [LOGGING]
 logging_path = %(data_dir)s/logs
