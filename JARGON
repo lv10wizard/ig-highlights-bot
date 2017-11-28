@@ -6,10 +6,13 @@
 \d+[A-Za-z]+(?:\d+me)? # '2spooky4me', '3cute5me', etc
 \w+e+l+f+(?:i+e+|e*y+) # 'selfie', 'pelfie', 'selfy', etc
 (?:\d+me_?irl\d+)?me_?i+rl # 'me_irl', '2me_irl4meirl', etc
+a+d+i+d+a+s+
 afai(?:cr|cs|ct|k|r) # as far as i ...
 afk
 a[fs]af*p # 'afap', 'asap', 'asafp'
 a+h+w*
+a+m+a+z+o+n+(?:p+r+i+m+e+)?
+a+m+e+r+i+c+a+n+e+a+g+l+e+
 (?:a+p+l+e*|b+u+b+l+e*)?[bw]+h*o+t+(?:i+e+|[ae]*y+)s* # 'applebooty', ...
 (?:a+p+l+e*|b+u+b+l+e*)?b+u+t+(?:o+c*k+)?s* # 'bubblebutt', ...
 aslp?
@@ -19,13 +22,16 @@ a+w+h*
 awol
 b+a+e+
 badass
+b+a+n+k+o+f+a+m+e+r+i+c+a+
 b+a+n+g+i+n+g*
+b+a+r+n+e+s+a+n+d+n+o+b+l+e+s*
 (?:b+a+)?z+i+n+g+a*
 b+e+c+a+u+s+e+
 b+e+(?:a+u+|y+[ou]+)t+[aei]+f+u+l+ # 'beautifullll', 'beeeeyoouteeaafulllll'
 b+[ei]+a*y*[ao]+t*c+h+ # 'beeyyyooootch', etc
 b+i*e+r+g+a+r+[dt]+e+n+ # 'biergarten'
-bitcoin
+b+i+t+b+u+c+k+e+t+
+b+i+t+c+o+i+n+
 b+o+ # 'boooooo', ...
 br[bls]
 b+r+(?:[eau]+|e+w+|o{2,})h* # 'bruh', 'brooooo', 'breeeeehh', etc
@@ -36,13 +42,20 @@ btw
 b+u+b+l+e* # 'bubbleeee', etc
 b+u+l+(?:s+h+e*i+e*t+)? # 'bull', 'buuuullshiiitt', etc
 bu+t+e+r+f+a+c+e+
+b+u+z+f+e+d+
 cgi
+c+h+a+s+e+
+c+o+c+a+c+o+l+a+
+c+o+k+e+
 c+o{2,}l+ # 'cooooool', etc
 co+lsto+ry+b+r+(?:[eaou]+|e+w+)h* # coolstorybro
+c+o+m+c+a+s+t+
+c+o+s+t+c+o+
 c+r+e+p+\w* # 'creeeeeepy', 'creeper', 'creepshot', etc
 (?:c+u+t+i*e+|q+t+)(?:p+i+e+|3[.]14\d*)?
 c+u+[sz]+
 d+a+f+u*(?:c*k*|q+) # 'dafuq', 'dafuuuuck', etc
+d+a+i+l+y+m+o+t+i+o+n+
 d+a+t+\w{3,} # 'datass', 'daaaateverything', etc
 d+[ao]+w*g+
 (?:d+a+|t+h+e+)?b+o+m+b*[sz]* # 'thebombbbb', 'bombbsssss'
@@ -52,6 +65,7 @@ di+nga+li+ng
 d+[ei]+n+g+[aeiou]+h*s+ # 'dinguuuus', etc
 d+[ir]+[dn]+l+ # 'dirndl' & misspellings
 dmhs
+d+o+r+i+t+o+s+
 d+o+w+n+(?:b+l+o+[uw]+s+e*|s+h+i+r+t+)s*
 d+o+w+n+v+o+t+e+d*
 d+u+d+e+
@@ -59,20 +73,26 @@ d+u+d+e+
 (?:d+u+m+b*)?a+s+(?:h*o+l+)?e*s*
 d+u+h+
 eli5
+e+m+a+i+l+
 emoji
 e+n+h+a+n+c+e+
+f+a+c+e+b+o+k+
 (?:f+a+p+s*)+ # 'fap', 'fapfapfap', 'faaappp', etc
-f+a+k+e+
+f+a+k+e+(?:n+e+w+s+)?
 [fg]+a+g+(?:o+t+)? # 'fagggg', 'gagggg', 'fagggootttt', etc
 f+a+m+
 fdau
 ffs
+f+i+r+e+f+o+x+
 f+m+l+
+f+o+r+e+v+e+r+2+1+
+f+o+x+n+e+w+s+
 f+r+i+e+n+d+z+o+n+e+d*
 f+r+o+n+t+(?:a+s+|b+u+t+)s*
 fubar
 fwiw
 g+a+g+
+g+a+m+e+s+t+o+p+
 g+a+y+
 g+[aou]+[hw]*[dt]+(?:d+a+(?:y+[au]*h*)?m+n*) # 'guhhd', 'gahdamn'
 # 'giggitygiggitygigggity', 'gigady', 'giggity', 'giggitygoo', etc
@@ -81,9 +101,13 @@ g+b?t+f+o+ # get (blown) the fuck out
 [gj]e+[sz](?:u[sz])? # 'geez', 'jeez', 'gees', 'geeeezus', etc
 gf?g # good (fucking) game
 gf[uy] # go fuck yourself
+g+f+y+c+a+t+
+g+i+t+h+u+b+
 gj
 gl(?:hf)?
+g+m+a+i+l+
 g+o+d+(?:[ie]+|e*y)(?:b+a+g+)? # 'goodieeee', 'goodiebag'
+g+o+g+l+e+
 g+o+t+e+m+ # 'gottem', 'gotem', 'goooottem', etc
 g+o+t+c+h+[au]+(?:f+a+m+)? # 'gotchufam', etc
 gracias
@@ -98,42 +122,58 @@ hm\w # hold my ...
 h*o+h*r+a+h* # 'Oorah', 'OOohrah', 'Hoorah', etc
 h+o+l+e*y+(?:m+o+l+(?:i+e+|e*y+))? # 'holymoly', etc
 h+o+m+(?:i+e+|y+) # 'homieeee', 'homeeeeyy', etc
+h+o+t+o+p+i+c+
 h+o+w+
 h*[ru]*n+[gr]*[fr]*h* # 'hnnngg', 'unghhh', 'nnggghh', 'unnggfffhh', etc
 hth # hope that helps
+h+u+l+u+
 i?ama
 ianal
 idf?[ck] # i don't (fucking) care/know
 iirc
+i+m+g+u+r+
 im(?:ns)h?o # in my (not so humble) opinion
 i+n+d+e+d+
+i+n+s+t+a+g+r+a+m+
 j+a+w+e+s+o+m+e+
 j+e+[bs]+u+s+(?:c+r*h*i*r*i*s+t+)?
 jk
+k+o+h+l+s+
+k+o+t+a+k+u+
 kthxbye
 l+a+w+d+y*
 l+e+[sz]+(?:b*i+a+n+|b*o+h*)?[sz]* # 'lezboooss', 'lesbiaaaan', etc
+l+e+v+i+s*
 (?:lm)?ftfy # 'lmftfy', 'ftfy'
 lmgtfy
 lmk
+l+u+l+u+(?:s+|l+e+m+o+n+s*)?
 make\w+?again # 'make[words]again' #FuckDonaldTrump
 malware
 m+a+m+a+(?:[cs]+i+t+a+)?
 m*e+h+
 m[fr]w
+m+i+c+r+o+s+o+f+t+
 mma
 m+o+a*r+e* # 'moaaaarrr', 'morrreeee', etc
 # 'fuuuck', 'fuuuuuh', 'fuccb0i', 'fuqboeyy', 'motherfuuuuu', 'muthafuckaaaa',
 (?:m+[ou]+h*t+h+(?:a+h*|e*r+))?[fs]+u+h*[ckq]*(?:e*r+|a+h*)?(?:b+[0o]+[iey]+)?
+m+o+u+n+t+a+i+n+d+e+w+
+m+o+z+i+l+a+
+m+s+n+b+c+
 mvp
+m+y+s+p+a+c+e+
 n+a+h+
 n+a+m+e+
 n+e+a+t+o*
 n+e+r+d+
+n+e+t+f+l+i+x+
+n+i+k+e+
 n+o*i+c+e+
 n+o+
 n?sf[lw]
 n+v+m+
+n+y+t+i+m+e+s+
 o[_\.\-]o # faces eg. 'o_O', 'o.o'
 o+[ck]+t+o+b+e+r+(?:f+e+s+t+)?
 o+h+
@@ -142,24 +182,35 @@ otoh
 omw
 o+w+(?:i+e+)? # 'ow', 'oww', 'owww', etc
 p2p
+p+a+c+s+u+n+
 p+a+w*g+
+p+e+t+s+(?:c+o+f+e+)?
+p+e+p+e+r+i+d+g+e+f+a+r+m+
+p+e+p+s+i+e*
 p+e+n+i+s+e*s*
 p+[eu]+r+f+e+c+t+(?:i+o+n+)?
 p+e+r+v+(?:e+r+t+)?
 (?:p+h+o+t+o+)?s+h+o+p+(?:e+d+|t+)? # 'photoshopped', 'shopped', etc
+p+i+z+a+h+u+t+
 p+(?:[aou]+h*)?l+[ae]*[sz]+e*
 pov
+p+o+r+n+h+u+b+
 ppl
 p+u+s+(?:i+e+|y+)s*
 pwn(?:ed|t)?
 qft
 r+e+
 r+e+a+r+p+u+s+(?:i+e+|y+)s*
+r+e+d+i+t+
+r+e+d+b+u+b+l+e+
+r+e+d+t+u+b+e+
 r+i+g+h+t+
 r+i+p+
 rtf?m # read the fine manual
 rule\d+ # 'rule34', etc
 s+(?:[aou]+h*)?w+e+t+ # 'sweeeeeet', 'saaaahweeeet',
+s+a+f+e+w+a+y+
+s+a+m+s+c+l+u+b+
 s+c*h+w+i+f+t+y+
 s+c*h+l+u+r+p+
 s+e+l+f+(?:p+i+c+|s+h+o+t+)?
@@ -172,10 +223,12 @@ snafu
 s+o+
 s+p+a+m+(?:i+e+|e*y+)?s*
 spo+py # 'spoopy', 'spoooopy', etc
+s+t+a+r+b+u+c+k+s*
 s+t+f+u+
 s+u+(?:c+k+|q+)[aou]+h*
 # 'suuuper', 'superboy', 'superman', 'supergirl', 'superwoman'
 s+u+p+e*r+(?:b+[0o]+[iy]+|g+i*r+l+|(?:w+o+)?m+[aey]+n+)?
+t+a+c+o+b+e+l+
 tb[hf]
 tb
 th?(?:ankz|n?x) # 'tnx', 'tx', 'thankz', 'tankz', 'thnx', ...
@@ -190,15 +243,24 @@ tmi
 t+r+i+p+(?:i+e*|e*y+)
 tryna
 tty?[ls]
+t+w+i+t+c+h+
+t+w+i+t+e+r+
 ty(?:vm)?
 # 'uuuuuh', 'uuuuuhhhhh', 'uhoh', 'ummmm', 'ughhh', etc
 u+[ghm]+(?:|o+h+)?
 u+p+s+(?:k+i+r+t+|h+o+r+t+)s*
 u+p+v+o+t+e+d*
+u+r+b+a+n+o+u+t+f+i+t+e+r+s+
+u+n+i+q+l+o+
+v+e+r+i+z+o+n+
+v+i+d+m+e+
+v+i+m+e+o+
 vip
 vlog
 wa*i+f+(?:e*y+|u+) # 'waifuuuu', 'wifey', etc
 w+a+i+t+
+w+a+l+m+a+r+t+
+w+a+s+h+i+n+g+t+o+n+p+o+s+t+
 w+e+l+ # 'welllll', etc
 w+h*[au]+t+ # 'whaaaat', 'waaaaat', 'wuuuuuuuutttt', etc
 w+h*e+l+p+
@@ -216,11 +278,14 @@ x+d+
 (?:x+o+)+x*
 y+[ae]+e*[hsy]+ # 'yaaaas', 'yeeeeesssss', 'yeahhhh', etc
 y+[aeu]+[hp]+ # 'yuuuhh', 'yeeeppp', yaaaahhh', etc
+y+a+h+o+
 y+e+[sz]+(?:i+e+|e*y+)?[sz]*
 y*[iu]+c+k+(?:i+e+|y+)? # 'ick', 'yucky', etc
 y+i+p+(?:i+e+|y+) # 'yippieeee', etc
 ymmv
 y+o+l+o+
+y+o+u+p+o+r+n+
+y+o+u+t+u+b+e+
 y+tho
 y+u+m+(?:i+e*|e*y+|e*r+)?[sz]*(?:n+e+s+)?
 yw
