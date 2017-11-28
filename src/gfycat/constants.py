@@ -16,5 +16,7 @@ FETCH_STATUS_URL = BASE_API_URL + '/gfycats/fetch/status/{0}'
 # data=json.dumps({'folderName': '...'})
 ALBUM_FOLDERS_URL = BASE_API_URL + '/me/album-folders'
 # .format(album_folders['id'])
-ALBUM_CREATE_URL = BASE_API_URL + '/me/albums/{0}'
+ALBUMS_URL = BASE_API_URL + '/me/albums/{0}'
+ALBUMS_NAME_URL = ALBUMS_URL + '/name'
+ALBUMS_ORDER_URL = ALBUMS_URL + '/order'
 

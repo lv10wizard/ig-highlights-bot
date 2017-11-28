@@ -3,9 +3,12 @@ import os
 import threading
 import time
 
+from six.moves.urllib.parse import quote_plus
+
 from .constants import (
         ALBUM_FOLDERS_URL,
-        ALBUM_CREATE_URL,
+        ALBUMS_URL,
+        ALBUMS_NAME_URL,
         BASE_URL,
         FETCH_URL,
         FETCH_STATUS_URL,
@@ -16,6 +19,7 @@ from src.database import Database
 from src.util import (
         logger,
         readline,
+        remove_duplicates,
         requestor,
 )
 from src.util.decorators import classproperty
@@ -279,6 +283,8 @@ class Uploader(object):
     _cfg = None
     _requestor = None
 
+    # TODO? make thread-safe
+
     _RATELIMIT_RESET_PATH = resolve_path(
             Database.format_path('gfycat-ratelimit', dry_run=False)
     )
@@ -315,6 +321,26 @@ class Uploader(object):
         return Uploader._requestor
 
     @classproperty
+    def _albums(cls):
+        """
+        A lazy-loaded cache of albums to prevent needless checks against album
+        existance.
+
+        Note: if a cached album is altered (deleted, removed, renamed), then
+        this cache will cause hte program to attempt invalid requests eg.
+        adding gfycats to a non-existant album.
+
+        Returns the cached dictionary of {title: album_id} pairs
+        """
+        try:
+            albums = Uploader.__albums
+        except AttributeError:
+            albums = {}
+            Uploader.__albums = albums
+
+        return albums
+
+    @classproperty
     def _access_token(cls):
         """
         Returns a valid access token if the config contains all of the required
@@ -329,8 +355,110 @@ class Uploader(object):
             Uploader.__token = token
         return token.value
 
+    @classproperty
+    def _root_album_id(cls):
+        """
+        Returns the root album id
+        """
+        try:
+            root_id = Uploader.__root_album_id
+        except AttributeError:
+            root_id = None
+            data = Uploader._get_album_folders()
+            if data:
+                try:
+                    root_id = data[0]['id']
+                except (IndexError, KeyError):
+                    logger.id(logger.warn, Uploader.ME,
+                            'Failed to get root album id:'
+                            ' response structure changed!',
+                            exc_info=True,
+                    )
+
+                Uploader.__root_album_id = root_id
+
+        return root_id
+
+    @staticmethod
+    def _get_album_folders(cls):
+        """
+        Requests album folder data from gfycat and caches the top-level albums
+        in the _album dictionary.
+
+        Returns the json data
+                or None if the request failed for any reason
+        """
+        data = None
+        response = Uploader.request_authed(ALBUM_FOLDERS_URL)
+        if hasattr(response, 'status_code') and response.status_code == 200:
+            try:
+                data = response.json()
+            except ValueError:
+                logger.id(logger.warn, Uploader.ME,
+                        'Failed to get album-folders: bad response!',
+                        exc_info=True,
+                )
+
+            else:
+                try:
+                    nodes = data[0]['nodes']
+                except KeyError:
+                    logger.id(logger.warn, Uploader.ME,
+                            'Failed to get album-folder nodes:'
+                            ' response structure changed!',
+                            exc_info=True,
+                    )
+
+                else:
+                    for node in nodes:
+                        try:
+                            title = node['title']
+                            album_id = node['id']
+                        except KeyError:
+                            logger.id(logger.warn, Uploader.ME,
+                                    'Failed to cache album:'
+                                    ' node structure changed!',
+                                    exc_info=True,
+                            )
+                            logger.id(logger.debug, Uploader.ME,
+                                    'node:\n{pprint}\n',
+                                    pprint=node,
+                            )
+
+                        else:
+                            Uploader._albums[title] = album_id
+
+        return data
+
+    @staticmethod
+    def request_authed(*args, **kwargs):
+        """
+        Issues an authed request
+
+        Returns the response if an authorized request was made
+                or False if no authorized request was made
+        """
+        response = False
+
+        access_token = Uploader._access_token
+        if access_token:
+            headers = {'Authorization': 'Bearer {0}'.format(access_token)}
+            try:
+                kwargs['headers'].update(headers)
+            except (AttributeError, KeyError):
+                kwargs['headers'] = headers
+
+            response = Uploader.request(*args, **kwargs)
+
+        return response
+
     @staticmethod
     def request(*args, **kwargs):
+        """
+        Issues a non-authed request
+
+        Returns the response
+        """
         response = Uploader.requestor.request(*args, **kwargs)
         if response is not None:
             try:
@@ -344,14 +472,152 @@ class Uploader(object):
 
         return response
 
-    # ##################################################################
+    def _resolve_album_id(user_or_album_id):
+        """
+        Returns the album_id string for the specified username or album_id
+                or None if no such album exists
 
-    # TODO: make thread-safe
+        * Note: this may incur a gfycat network hit
+        """
+        try:
+            album_id = Uploader._albums[user_or_album_id]
+        except KeyError:
+            album_id = None
+            data = Uploader._get_album_folders()
+            if data:
+                try:
+                    album_id = Uploader._albums[user_or_album_id]
+                except KeyError:
+                    if user_or_album_id in Uploader._albums.values():
+                        # album_id specified
+                        album_id = user_or_album_id
+
+            else:
+                # TODO? create album?
+                logger.id(logger.debug, Uploader.ME,
+                        'No such album: \'{album_id}\'',
+                        album_id=user_or_album_id,
+                )
+
+        return album_id
+
+    def add_to_album(user_or_album_id, order_list):
+        """
+        Adds the gfynames (eg. ['ThatRaggedCondor', 'FirmWarlikeChafer', ...]
+        to the end of the album.
+
+        user_or_album_id (str) - the album title (username) or album_id string
+                    of the album to add gfycats to
+        order_list (list) - a list of gfyname strings to add to the the album
+
+        Returns True if the gfycats were successfully added to the album
+                    or if the specified gfycats were already in the album
+                or False if adding the gfycats failed
+                or None if the album does not exist
+        """
+
+        logger.id(logger.info, Uploader.ME,
+                'Adding to album: {color} ...',
+                color=order_list,
+        )
+
+        album_id = Uploader._resolve_album_id(user_or_album_id)
+        if not album_id:
+            return None
+
+        success = False
+        response = Uploader.request_authed(ALBUMS_URL.format(album_id))
+        if hasattr(response, 'status_code') and response.status_code == 200:
+            failed_msg = 'Failed to add #{num} gfycat{plural} to album'
+            try:
+                data = response.json()
+            except ValueError:
+                logger.id(logger.warn, Uploader.ME,
+                        '{fail}:'
+                        ' could not determine existing gfycats in album!',
+                        num=len(order_list)
+                        plural=('' if len(order_list) == 1 else 's'),
+                        exc_info=True,
+                )
+
+            else:
+                try:
+                    published = [g['gfyName'] for g in data['publishedGfys']]
+                except KeyError:
+                    logger.id(logger.warn, Uploader.ME,
+                            '{fail}: response structure changed!',
+                            num=len(order_list)
+                            plural=('' if len(order_list) == 1 else 's'),
+                            exc_info=True,
+                    )
+
+                else:
+                    order_list = remove_duplicates(published + order_list)
+                    if len(order_list) <= len(published):
+                        logger.id(logger.info, Uploader.ME,
+                                'All gfynames already in album: skipping.',
+                        )
+                        success = True
+
+                    else:
+                        success = Uploader.set_album_order(album_id, order_list)
+                        if success:
+                            logger.id(logger.info, Uploader.ME,
+                                    'Successfully added to album: {color}',
+                                    color=order_list,
+                            )
+
+        return success
+
+    def set_album_order(user_or_album_id, order_list):
+        """
+        Sets the album gfyname order to the specified order
+
+        user_or_album_id (str) - the album title (username) or album_id string
+                    of the album to add gfycats to
+        order_list (list) - a list of gfyname strings to set the album order to
+
+        Returns True if the gfycats were successfully added to the album
+                    or if the specified gfycats were already in the album
+                or False if adding the gfycats failed
+                or None if the album does not exist
+        """
+
+        logger.id(logger.info, Uploader.ME,
+                'Setting album order: #{num} gfycat{plural} ...',
+                num=len(order_list),
+                plural=('' if len(order_list) == 1 else 's'),
+        )
+
+        album_id = Uploader._resolve_album_id(user_or_album_id)
+        if not album_id:
+            return None
+
+        success = False
+        response = Uploader.request_authed(
+                ALBUMS_ORDER_URL.format(album_id),
+                method='put',
+                data=json.dumps({
+                    'value': order_list,
+                }),
+        )
+        if hasattr(response, 'status_code') and response.status_code == 200:
+            logger.id(logger.info, Uploader.ME,
+                    'Successfully set order of album: #{num} gfycat{plural}!',
+                    num=len(order_list),
+                    plural=('' if len(order_list) == 1 else 's'),
+            )
+            success = True
+
+        return success
+
+    # ##################################################################
 
     def __init__(self, user, code, url):
         self.user = user
         self.code = code
         self.url = url
+        self.link_text = quote_plus(user)
         self.gfyname = None
 
     def __str__(self):
@@ -439,63 +705,157 @@ class Uploader(object):
 
         return completed
 
+    @property
+    def _album_exists(self):
+        """
+        Returns True if an album exists for the username
+        """
+        exists = self.user in Uploader._albums
+        if not exists:
+            # XXX: this may be spammy depending on how often this is called
+            # and whether _create_album is called successfully afterwards
+            data = Uploader._get_album_folders()
+            if data:
+                # assumption: _albums is cached properly if _get_album_folders
+                # returns data
+                exists = self.user in Uploader._albums
+
+        return exists
+
+    def create_album(self):
+        """
+        Creates an album for the username if it does not already exist
+
+        Returns True if the album is successfully created or already existed
+        """
+        if self._album_exists:
+            return True
+
+        success = False
+
+        logger.id(logger.info, self,
+                'Creating album: \'{user}\' ...',
+                user=self.user,
+        )
+
+        root_album_id = Uploader._root_album_id
+        if root_album_id:
+            response = Uploader.request_authed(
+                    ALBUMS_URL.format(root_album_id),
+                    method='post',
+                    data=json.dumps({
+                        'folderName': self.user,
+                    })
+            )
+            if hasattr(response, 'status_code') and response.status_code == 200:
+                # eg. '"9d179cab967b3bf6dd5bf861145ba72b"'
+                album_id = response.text
+                if album_id:
+                    album_id = album_id.strip('"')
+
+                    logger.id(logger.debug, self,
+                            'Created album \'{user}\' (id=\'{album_id}\')',
+                            user=self.user,
+                            album_id=album_id,
+                    )
+                    logger.id(logger.debug, self, 'Setting album link ...')
+
+                    # XXX: this endpoint is not documented but their desktop
+                    # web application hits it to set the link. without this,
+                    # the album is not linkable and behaves strangely.
+                    name = Uploader.request_authed(
+                            ALBUMS_NAME_URL.format(album_id),
+                            method='put',
+                            data=json.dumps({
+                                'value': self.link_text,
+                            }),
+                    )
+                    if hasattr(name, 'status_code') and name.status_code == 200:
+                        Uploader._albums[self.user] = album_id
+                        success = True
+                    else:
+                        logger.id(logger.info, self,
+                                'Failed to set album (\'{album_id}\')'
+                                ' link to {user}!',
+                                album_id=album_id,
+                                user=self.user,
+                        )
+
+                else:
+                    logger.id(logger.debug, self,
+                            'Cannot set album \'{user}\' link:'
+                            ' response did not include album id!',
+                            user=self.user,
+                    )
+
+        else:
+            # this may be spammy depending on how this method is called
+            logger.id(logger.debug, self,
+                    'Cannot create album \'{user}\':'
+                    ' failed to lookup root album id',
+                    user=self.user,
+            )
+
+        return success
+
     def upload(self):
         """
         Uploads the url to gfycat
+
+        Returns True if the upload request succeeds
+                    * Note: this does NOT mean that the upload succeeded but
+                            rather that the request for the upload was
+                            successfully received by gfycat
+                            -- use .completed to check the status of the
+                            upload
         """
         success = False
 
-        access_token = Uploader._access_token
-        if access_token:
-            logger.id(logger.info, self,
-                    'Uploading to gfycat: \'{code}\'',
-                    code=self.code,
-            )
+        logger.id(logger.info, self,
+                'Uploading to gfycat: \'{code}\'',
+                code=self.code,
+        )
 
-            response = Uploader.request(FETCH_URL,
-                    method='post',
-                    headers={
-                        'Authorization': 'Bearer {0}'.format(access_token),
-                    },
-                    data=json.dumps({
-                        'fetchUrl': self.url,
-                        'title': self.code,
-                        'noMd5': True,
-                        'nsfw': 1,
-                        'private': 1,
-                    }),
-            )
+        response = Uploader.request_authed(FETCH_URL,
+                method='post',
+                data=json.dumps({
+                    'fetchUrl': self.url,
+                    'title': self.code,
+                    'noMd5': True,
+                    'nsfw': 1,
+                    'private': 1,
+                }),
+        )
+        if hasattr(response, 'status_code') and response.status_code == 200:
+            try:
+                data = response.json()
+            except ValueError:
+                logger.id(logger.warn, self,
+                        'Failed to upload \'{code}\': bad response!',
+                        code=self.code,
+                        exc_info=True,
+                )
 
-            if response is not None and response.status_code == 200:
+            else:
                 try:
-                    data = response.json()
-                except ValueError:
+                    is_ok = data['isOk']
+                    if is_ok:
+                        self.gfyname = data['gfyname']
+                except KeyError:
                     logger.id(logger.warn, self,
-                            'Failed to upload \'{code}\': bad response!',
-                            code=self.code,
+                            'Gfycat fetch response structure changed!',
                             exc_info=True,
                     )
-
+                    logger.id(logger.debug, self,
+                            'data:\n{pprint}\n',
+                            pprint=data,
+                    )
                 else:
-                    try:
-                        is_ok = data['isOk']
-                        if is_ok:
-                            self.gfyname = data['gfyname']
-                    except KeyError:
-                        logger.id(logger.warn, self,
-                                'Gfycat fetch response structure changed!',
-                                exc_info=True,
-                        )
-                        logger.id(logger.debug, self,
-                                'data:\n{pprint}\n',
-                                pprint=data,
-                        )
-                    else:
-                        success = True
-                        logger.id(logger.debug, self,
-                                'Upload in progress: \'{gfyname}\'',
-                                gfyname=self.gfyname,
-                        )
+                    success = True
+                    logger.id(logger.debug, self,
+                            'Upload in progress: \'{gfyname}\'',
+                            gfyname=self.gfyname,
+                    )
 
         return success
 
