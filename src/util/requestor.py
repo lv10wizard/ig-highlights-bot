@@ -71,15 +71,15 @@ class Requestor(object):
             msg = ['{method} {url}']
             # TODO: don't log secrets (keys, passwords, etc)
             if args:
-                msg.append('args: {func_args}')
+                msg.append('args: {pprint_args}')
             if kwargs:
-                msg.append('kwargs: {func_kwargs}')
+                msg.append('kwargs: {pprint_kwargs}')
             logger.id(logger.debug, self,
                     '\n\t'.join(msg),
                     method=method.upper(),
                     url=url,
-                    func_args=args,
-                    func_kwargs=kwargs,
+                    pprint_args=args,
+                    pprint_kwargs=kwargs,
             )
 
             while response is None:
