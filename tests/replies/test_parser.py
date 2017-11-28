@@ -65,6 +65,20 @@ from src.replies import Parser
     'goody', 'gooooody', 'gooooodieieieie', 'goodiebag', 'goodiebaaaagggg',
     'bangin', 'banging', 'baaaaangin', 'banggggginggggg', 'xd', 'XD', 'XDDDD',
     'xdddddddddddddd', 'xxxdddddddddddddddddDDDdd', 'yummers', 'yummerzz',
+    'gfycat', 'instagram', 'facebook', 'facebooooook', 'twitter', 'twitterrr',
+    'verizon', 'comcast', 'myspace', 'myyyyspace', 'myspaaaace', 'youtube',
+    'youtuuuube', 'pornhub', 'google', 'yahoo', 'yahooooo', 'microsoft',
+    'bankofamerica', 'chase', 'safeway', 'kohls', 'pizzahut', 'tacobel',
+    'tacobell', 'doritos', 'mountaindew', 'cocacola', 'coooke', 'pepsi',
+    'pepsie', 'pepperidgefarm', 'vimeo', 'vidme', 'firefox', 'mozilla',
+    'github', 'bitbucket', 'gmail', 'gmaaaaail', 'emaaaaail', 'reddit',
+    'redddditttt', 'imgur', 'starbucks', 'peeeets', 'peetscoffee', 'costco',
+    'samsclub', 'walmart', 'waaaaalmaaaaart', 'gamestop', 'netflix', 'hulu',
+    'amazonprime', 'amazoooon', 'twitch', 'dailymotion', 'barnesandnoble',
+    'barnesandnobles', 'urbanoutfitters', 'uniqlo', 'pacsun', 'lulus',
+    'lululemon', 'lululemons', 'adidas', 'nike', 'americaneagle', 'levis',
+    'redbubble', 'redtube', 'buzzfeed', 'kotaku', 'msnbc', 'foxnews',
+    'hottopic', 'nytimes', 'washingtonpost', 'youporn',
 ] + ['o'*(i+2) for i in range(15)])
 def test_parser_detects_jargon(word):
     assert Parser.is_jargon(word)
