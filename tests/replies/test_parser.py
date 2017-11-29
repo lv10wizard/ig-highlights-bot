@@ -79,14 +79,16 @@ from src.replies import Parser
     'lululemon', 'lululemons', 'adidas', 'nike', 'americaneagle', 'levis',
     'redbubble', 'redtube', 'buzzfeed', 'kotaku', 'msnbc', 'foxnews',
     'hottopic', 'nytimes', 'washingtonpost', 'youporn',
-] + ['o'*(i+2) for i in range(15)])
+] + ['o'*(i+2) for i in range(15)] + ['_'*(i+1) for i in range(20)])
 def test_parser_detects_jargon(word):
     assert Parser.is_jargon(word)
 
 @pytest.mark.parametrize('word', [
-    'Daring', 'gorgeous', 'google', 'vyvan.le', 'hanny_madani', 'kaja_sbn',
+    'Daring', 'gorgeous', 'vyvan.le', 'hanny_madani', 'kaja_sbn',
     'haileypandolfi', 'viktoria_kay', 'linstahh', 'natalieannworth',
     'tiffanie_marie', 'tiffanie.marie', 'jessicabolusi', 'girl.6ix',
+    '_cassiebrown_', '___foo__bar._._', '.blah', 'asdf____', '___asdf',
+    'qwerty.', 'x_o_x_o_x',
 ])
 def test_parser_does_not_overmatch_jargon(word):
     assert not Parser.is_jargon(word)
