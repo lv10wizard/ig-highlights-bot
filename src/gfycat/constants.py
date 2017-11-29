@@ -18,5 +18,9 @@ ALBUM_FOLDERS_URL = BASE_API_URL + '/me/album-folders'
 # .format(album_folders['id'])
 ALBUMS_URL = BASE_API_URL + '/me/albums/{0}'
 ALBUMS_NAME_URL = ALBUMS_URL + '/name'
+ALBUMS_TITLE_URL = ALBUMS_URL + '/title'
+ALBUMS_DESCRIPTION_URL = ALBUMS_URL + '/description'
+ALBUMS_NSFW_URL = ALBUMS_URL + '/nsfw'
+ALBUMS_PUBLISHED_URL = ALBUMS_URL + '/published'
 ALBUMS_ORDER_URL = ALBUMS_URL + '/order'
 

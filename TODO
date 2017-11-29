@@ -475,8 +475,25 @@ O. --backup, --load-backup
         - gfycat
         - imgur
 
-    - gfycat albums
-        - how to create so that they can be shared though?
+    O. gfycat albums
+        O. how to create so that they can be shared though?
+            >> hit /me/albums/{albumId}/name endpoint
+
+    - gfycat ratelimiting (follow something similar to imgur (?))
+        - 10,000 credits / day where
+            1 upload = 10 credits
+            1 non-upload request = 1 credit
+            so: ~1,000 uploads / day or 10,000 requests / day
+        - leave buffer for highlight uploads (backlog uploads should never
+            eat into the buffer)
+
+    ? reupload DMCA'd gfycats
+        - check 'copyrightClaimant' on gfycats whenever doing a
+            'GET .../me/albums/{albumId}' request
+
+    * how to handle private users that have links for?
+        - what about case where user goes private before all known media can be
+            reuploaded?
 
     - databases:
         - per IG user imgur hashes + album hash
@@ -486,10 +503,40 @@ O. --backup, --load-backup
         - InstagramDatabase should no longer remove dead codes
             (should probably flag them as dead, maybe?)
         * alternatively: add imgur, gfycat tables to InstagramDatabase ?
+            > probably want to leave cache table as is
+              and add table:
+                rehosted(
+                    code TEXT NOT NULL,
+                    rehosted_code TEXT NOT NULL,
+                    hash TEXT NOT NULL,
+                    is_video INTEGER NOT NULL,
+                    fetch_url TEXT NOT NULL PRIMARY KEY
+                )
+              where:
+                rehosted_code = gfyname or imgur hash
+                hash = gfyid (lowercase gfyname) or imgur deletehash
+                fetch_url = media url
+                is_video = {0,1} whether media is a video
 
     - priority instagram fetching
         - user data fetching = first priority
-        - video url fetching = lowest priority
+            * should no longer remove
+            ? only fetch N media past last seen code
+                this would mean that ordering is no longer 100% accurate since
+                not all data would be re-fetched
+        - highlights media fetching = medium prio
+        - exhaustive media fetching = lowest prio
+
+    - instagram media fetching
+        - need to fetch all codes individually and get all sources in case
+            there are multiple media in a post
+            > images: remove_duplicates( ... 'display_url' )
+            > videos: remove_duplicates( ... 'video_url' )
+
+    - create two new log levels:
+        - database - should be the lowest level
+        - requests(?), maybe util(?) - should be higher than database,
+            lower than debug
 
     - instagram video url fetching
         1. fetch instagram video code urls -> parse
