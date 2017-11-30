@@ -470,7 +470,14 @@ O. --backup, --load-backup
 - hide/obfuscate requestor sensitive data logging
     eg. api secret keys, passwords, etc
 
+- refactor config to be a static class
+- refactor useragent to static constant (since it's program-wide)
+
 ? download user's media content & upload to imgur(?) (upload vids to gfycat)
+    * handle case where API keys are banned
+        > response will probably be 403
+        - also need to handle instagram ban
+
     - make uploaders thread safe
         - gfycat
         - imgur

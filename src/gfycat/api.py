@@ -44,6 +44,8 @@ def _resolve_album_id(user_or_album_id):
 
     return album_id
 
+# ######################################################################
+
 def create_album(album_name):
     """
     Creates an album if it does not already exist
@@ -126,6 +128,8 @@ def create_album(album_name):
         )
 
     return success
+
+# ######################################################################
 
 def add_to_album(user_or_album_id, to_add):
     """
@@ -233,6 +237,8 @@ def add_to_album(user_or_album_id, to_add):
 
     return success
 
+# ######################################################################
+
 def _put_album(user_or_album_id, prop, value):
     """
     Sets the respective albums meta data endpoint. See:
@@ -303,6 +309,8 @@ def _put_album(user_or_album_id, prop, value):
 
     return success
 
+# ######################################################################
+
 def set_album_title(user_or_album_id, title):
     """
     Sets the album title
@@ -316,6 +324,8 @@ def set_album_title(user_or_album_id, title):
             or None if the album does not exist
     """
     return _put_album(user_or_album_id, 'title', title)
+
+# ######################################################################
 
 def set_album_description(user_or_album_id, description):
     """
@@ -331,6 +341,8 @@ def set_album_description(user_or_album_id, description):
     """
     return _put_album(user_or_album_id, 'description', description)
 
+# ######################################################################
+
 def set_album_nsfw_flag(user_or_album_id, nsfw=1):
     """
     Sets the album nsfw flag
@@ -345,6 +357,8 @@ def set_album_nsfw_flag(user_or_album_id, nsfw=1):
     """
     return _put_album(user_or_album_id, 'nsfw', nsfw)
 
+# ######################################################################
+
 def set_album_published(user_or_album_id, published=0):
     """
     Sets the album public/hidden flag
@@ -358,6 +372,8 @@ def set_album_published(user_or_album_id, published=0):
             or None if the album does not exist
     """
     return _put_album(user_or_album_id, 'published', published)
+
+# ######################################################################
 
 def set_album_order(user_or_album_id, order_list):
     """
@@ -375,6 +391,8 @@ def set_album_order(user_or_album_id, order_list):
     # XXX: the gfynames in order_list MUST be lowercase
     order_list = [gfyname.lower() for gfyname in order_list]
     return _put_album(user_or_album_id, 'order', order_list)
+
+# ######################################################################
 
 def fetch_url(url, title):
     """
@@ -436,6 +454,8 @@ def fetch_url(url, title):
                 )
 
     return gfyname
+
+# ######################################################################
 
 def fetch_status(gfyname):
     """

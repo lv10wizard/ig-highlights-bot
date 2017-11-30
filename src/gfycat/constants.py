@@ -1,7 +1,7 @@
 
 BASE_URL = 'https://www.gfycat.com'
 
-# https://developers.gfycat.com/api/?curl#creating-gfycats
+# https://developers.gfycat.com/api/
 BASE_API_URL = 'https://api.gfycat.com/v1'
 
 TOKEN_URL = BASE_API_URL + '/oauth/token'
