@@ -27,7 +27,7 @@ class InstagramRateLimitDatabase(Database):
                 # exact same time
                 '   uid INTEGER PRIMARY KEY NOT NULL,'
                 '   timestamp REAL NOT NULL,'
-                '   url TEXT NOT NULL COLLATE NOCASE'
+                '   url TEXT NOT NULL'
                 ')'
         )
 

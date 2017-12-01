@@ -22,10 +22,6 @@ class Uploader(object):
     _requestor = None
     _ratelimit = None
 
-    _RATELIMIT_RESET_PATH = resolve_path(
-            Database.format_path('imgur-ratelimit', dry_run=False)
-    )
-
     @classproperty
     def ME(cls):
         try:
@@ -71,6 +67,34 @@ class Uploader(object):
         """
         pass
 
+    @classproperty
+    def is_post_ratelimited(cls):
+        """
+        Returns True if the client is imgur ratelimited from making POST
+        requests
+        """
+        pass
+
+    @classproperty
+    def ratelimit_time_left(cls):
+        """
+        Returns the number of seconds until the ratelimit resets
+                or 0 if the client is not currently imgur ratelimited
+        """
+        # TODO: return user reset if user-ratelimited otherwise return
+        # client reset
+        pass
+
+    @classproperty
+    def post_ratelimit_time_left(cls):
+        """
+        Returns the number of seconds until the post ratelimit resets
+                or 0 if the client is not currently imgur ratelimited
+        """
+        # TODO: return user reset if user-ratelimited otherwise return
+        # client reset
+        pass
+
     @staticmethod
     def _account_ratelimit(response):
         """
@@ -80,11 +104,19 @@ class Uploader(object):
             # XXX: assumption: only requests that the server responds to count
             # against the client's ratelimit pool
 
-            # TODO: account per-ip (X-RateLimit-User{Limit,Remaining,Reset})
-            # TODO: account per-client (X-RateLimit-Client{Limit,Remaining})
-            # TODO: (in ImgurRateLimitDatabase) always keep 1 credit as buffer
-            #   because I don't think imgur sends an accurate count
-            pass
+            # XXX: the X-RateLimit-User* headers do not always return an
+            # accurate value if the limit has been reset (this may only apply
+            # if request has not been issued in a while)
+
+            # XXX: credits appear to only be deducted if the response was not
+            # cached by imgur's servers (ie, credits will not be deducted for
+            # duplicated requests that occur within a short timeframe or
+            # possibly duplicated requests for resources that haven't changed
+            # since the last client request)
+            # eg. GET 'foobar' album followed immediately by another
+            # GET 'foobar' album will only deduct a single credit
+
+            Uploader.ratelimit.insert(response)
 
     @staticmethod
     def request(*args, **kwargs):
@@ -96,7 +128,7 @@ class Uploader(object):
         """
 
         headers = {
-                # XXX: this makes all requests non-authed
+                # XXX: this ensures that all requests non-authed
                 'Authorization': 'Client-ID {0}'.format(
                     Uploader.cfg.imgur_client_id
                 ),

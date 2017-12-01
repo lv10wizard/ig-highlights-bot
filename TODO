@@ -517,13 +517,18 @@ O. --backup, --load-backup
                     rehosted_code TEXT NOT NULL,
                     hash TEXT NOT NULL,
                     is_video INTEGER NOT NULL,
+                    available INTEGER NOT NULL,
+                    dmca INTEGER NOT NULL DEFAULT 0,
                     fetch_url TEXT NOT NULL PRIMARY KEY
                 )
               where:
                 rehosted_code = gfyname or imgur hash
                 hash = gfyid (lowercase gfyname) or imgur deletehash
-                fetch_url = media url
                 is_video = {0,1} whether media is a video
+                available = {0,1} whether instagram post is still available
+                dmca = {0,1} whether rehosted content was taken down due to
+                            DMCA
+                fetch_url = media url
 
     - priority instagram fetching
         - user data fetching = first priority
