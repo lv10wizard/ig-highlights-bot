@@ -6,4 +6,5 @@ BASE_API_URL = 'https://api.imgur.com/3'
 
 ALBUM_URL = BASE_API_URL + '/album'
 IMAGE_URL = BASE_API_URL + '/image'
+CREDITS_URL = BASE_API_URL + '/credits'
 

@@ -6,6 +6,25 @@ from .uploader import Uploader
 from src.util import logger
 
 
+def _is_success(response):
+    """
+    Returns True if the response data is success
+    """
+    success = False
+    if hasattr(response, 'status_code') and response.status_code == 200:
+        try:
+            data = response.json()
+        except ValueError:
+            logger.id(logger.warn, Uploader.ME,
+                    'Response does not contain valid json!',
+                    exc_info=True,
+            )
+
+        else:
+            success = data['success']
+
+    return success
+
 def get_album(album_hash):
     """
     Gets album information
@@ -23,14 +42,15 @@ def get_album(album_hash):
     )
 
     response = Uploader.request(ALBUM_URL + '/' + album_hash)
-    try:
-        return response.json()
-    except ValueError:
-        logger.id(logger.warn, Uploader.ME,
-                'Failed to get album \'{album_hash}\': bad json',
-                album_hash=album_hash,
-                exc_info=True,
-        )
+    if _is_success(response):
+        try:
+            return response.json()
+        except ValueError:
+            logger.id(logger.warn, Uploader.ME,
+                    'Failed to get album \'{album_hash}\': bad json',
+                    album_hash=album_hash,
+                    exc_info=True,
+            )
     return None
 
 # ######################################################################
@@ -44,18 +64,40 @@ def create_album(
 
     deletehashes (list, optional) - the image deletehashes that should be
                 included in the album
-    title (str, optional) - the title of the image
-    description (str, optional) - the description of the image
+    title (str, optional) - the title of the album
+    description (str, optional) - the description of the album
     privacy (str, optional) - the privacy level of the album. values are
                 'public', 'hidden', 'secret'. if None is specified, the value
                 will default to the logged in user's privacy setting
                     Default: 'hidden'
     cover (str, optional) - the image id to use as the cover of the album
 
-    Returns <<TODO>>
-
+    Returns True if the album is created successfully
+            or False if the album was not created
+            or None if the bot is imgur ratelimited or should otherwise retry
+                (eg. 500-level status code)
     """
-    pass
+
+    msg = ['Creating album']
+    if title:
+        msg.append('\'{title}\'')
+    logger.id(logger.info, Uploader.ME,
+            ' '.join(msg),
+            title=title,
+    )
+
+    response = Uploader.request(
+            ALBUM_URL,
+            method='post',
+            data={
+                'deletehashes': deletehashes,
+                'title': title,
+                'description': description,
+                'privacy': privacy,
+                'cover': cover,
+            },
+    )
+    return _is_success(response)
 
 # ######################################################################
 
@@ -64,8 +106,61 @@ def update_album(
         privacy='hidden', cover=None,
 ):
     """
+    Updates the information of an album
+
+    album_hash (str) - the deletehash of the album to update
+    deletehashes (list, optional) - the deletehashes of the images that should
+                be included in the album
+    title (str, optional) - the title of the album
+    description (str, optional) - the description of the album
+    privacy (str, optional) - the privacy level of the album. values are
+                'public', 'hidden', 'secret'. if None is specified, the value
+                will default to the logged in user's privacy setting
+                    Default: 'hidden'
+    cover (str, optional) - the image id to use as the cover of the album
+
+    Returns True if the album is successfully updated
+            or False if the album is not successfully updated
+            or None if the bot is imgur ratelimited or should otherwise retry
+                (eg. 500-level status code)
     """
-    pass
+
+    msg = []
+    if deletehashes:
+        msg.append('#{num} image{plural}')
+    if title:
+        msg.append('title: \'{title}\'')
+    if description:
+        msg.append('desc: \'{description}\'')
+    if privacy:
+        msg.append('privacy: \'{privacy}\'')
+    if cover:
+        msg.append('cover: \'{cover}\'')
+    logger.id(logger.info, Uploader.ME,
+            'Updating album \'{album_hash}\'{colon}{msg}',
+            album_hash=album_hash,
+            colon=(':' if msg else ''),
+            ' | '.join(msg),
+            num=len(deletehashes),
+            plural=('' if len(deletehashes) == 1 else 's'),
+            title=title,
+            description=description,
+            privacy=privacy,
+            cover=cover,
+    )
+
+    response = Uploader.request(
+            ALBUM_URL + '/' + album_hash,
+            method='put',
+            data={
+                'deletehashes': deletehashes,
+                'title': title,
+                'description': description,
+                'privacy': privacy,
+                'cover': cover,
+            },
+    )
+    return _is_success(response)
 
 # ######################################################################
 

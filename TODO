@@ -494,6 +494,10 @@ O. --backup, --load-backup
         - leave buffer for highlight uploads (backlog uploads should never
             eat into the buffer)
 
+    - test imgur/gfycat
+        - ratelimit (mock request call & fake ratelimit; check that request
+                call is NOT made)
+
     ? reupload DMCA'd gfycats
         - check 'copyrightClaimant' on gfycats whenever doing a
             'GET .../me/albums/{albumId}' request

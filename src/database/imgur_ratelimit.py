@@ -230,11 +230,32 @@ class ImgurRateLimitDatabase(Database):
 
         return remaining
 
+    def __get_limit(self, table):
+        """
+        Returns the request limit for the given ratelimit pool
+                or -1 if the given pool has no rows
+        """
+        self.__prune()
+
+        limit = -1
+        cursor = self._db.execute(
+                'SELECT limit FROM {0}'
+                ' ORDER BY limit ASC LIMIT 1'.format(table)
+        )
+        row = cursor.fetchone()
+        if row:
+            limit = row['limit']
+
+        return limit
+
     def __get_time_left(self, table, max_age):
         """
         Returns the time in seconds until the given ratelimit pool is reset
                 or 0 if not ratelimited for the given pool
         """
+        if self.__get_remaining(table) <= 0:
+            return 0
+
         self.__prune()
 
         time_left = 0
@@ -280,6 +301,12 @@ class ImgurRateLimitDatabase(Database):
         """
         return self.__get_remaining('client')
 
+    def get_client_limit(self):
+        """
+        Returns the total number of requests that can be made in the client pool
+        """
+        return self.__get_limit('client')
+
     def get_client_time_left(self):
         """
         Returns the time in seconds until the client ratelimit is reset
@@ -295,6 +322,12 @@ class ImgurRateLimitDatabase(Database):
         """
         return self.__get_remaining('user')
 
+    def get_user_limit(self):
+        """
+        Returns the total number of requests that can be made in the user pool
+        """
+        return self.__get_limit('user')
+
     def get_user_time_left(self):
         """
         Returns the time in seconds until the user ratelimit is reset
@@ -308,12 +341,35 @@ class ImgurRateLimitDatabase(Database):
         """
         return self.__get_remaining('post')
 
+    def get_post_limit(self):
+        """
+        Returns the total number of requests that can be made in the post pool
+        """
+        return self.__get_limit('post')
+
     def get_post_time_left(self):
         """
         Returns the time in seconds until the post ratelimit is reset
                 or 0 if not ratelimited for the post pool
         """
         return self.__get_time_left('post', ImgurRateLimitDatabase.POST_MAX_AGE)
+
+    def _get_count(self, table):
+        return self._db.execute(
+                'SELECT count(*) FROM {0}'.format(table)
+        ).fetchone()[0]
+
+    @property
+    def num_client(self):
+        return self._get_count('client')
+
+    @property
+    def num_user(self):
+        return self._get_count('user')
+
+    @property
+    def num_post(self):
+        return self._get_count('post')
 
 
 __all__ = [
