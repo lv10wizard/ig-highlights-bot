@@ -79,7 +79,7 @@ from src.replies import Parser
     'lululemon', 'lululemons', 'adidas', 'nike', 'americaneagle', 'levis',
     'redbubble', 'redtube', 'buzzfeed', 'kotaku', 'msnbc', 'foxnews',
     'hottopic', 'nytimes', 'washingtonpost', 'youporn', 'lololololo',
-    'leleleee',
+    'leleleee', 'phaaaat', 'phaattiee', 'phatty', 'phaaatttiesss', 'phatss',
 ] + ['o'*(i+2) for i in range(15)] + ['_'*(i+1) for i in range(20)])
 def test_parser_detects_jargon(word):
     assert Parser.is_jargon(word)

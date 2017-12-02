@@ -191,6 +191,7 @@ p+e+p+s+i+e*
 p+e+n+i+s+e*s*
 p+[eu]+r+f+e+c+t+(?:i+o+n+)?
 p+e+r+v+(?:e+r+t+)?
+p+h+a+t+(?:i+e*|e*y+)?[sz]*
 (?:p+h+o+t+o+)?s+h+o+p+(?:e+d+|t+)? # 'photoshopped', 'shopped', etc
 p+i+z+a+h+u+t+
 p+(?:[aou]+h*)?l+[ae]*[sz]+e*
