@@ -455,12 +455,13 @@ class Parser(object):
     _LAUGH_CONSONANTS = 'hjkwxz'
     _JARGON_VARIATIONS = [
             # https://stackoverflow.com/a/16453542
-            '(?:l+[ouea]+)+l+z*', # 'lol', 'lllool', 'lololol', etc
-            #   / \_____/ | \ \
-            #   \    |    |  \ optionally match trailing 'z's
-            #   \    |    | match any number of trailing 'l's
-            #   /    |  repeat 'lo', 'llooooo', etc
-            #   \  match 'lol', 'lul', 'lel', lal'
+            # 'lol', 'lllool', 'lololol', etc
+            r'(?:(?:l+[{0}]+)+[l{0}]+z*)+\b'.format(_LAUGH_VOWELS),
+            #      /  \____/ |\_____/ \
+            #      \    |    |   | optionally match trailing 'z's
+            #      \    |    | match any number of trailing 'l's
+            #      /    |  repeat 'lo', 'llooooo', etc
+            #      \  match 'lol', 'lul', 'lel', lal'
             #  match any number of leading 'l's
 
             'r+o+t*f+l+', # 'rofl', 'rotfl', 'rooofl', etc
@@ -490,6 +491,8 @@ class Parser(object):
     # no longer need to keep the data from file in memory (but keep whether
     # anything was loaded)
     _JARGON_FROM_FILE = bool(_JARGON_FROM_FILE)
+    _JARGON_VARIATIONS = bool(_JARGON_VARIATIONS)
+    _JARGON_VARIATIONS_WHOLE = bool(_JARGON_VARIATIONS_WHOLE)
 
     @staticmethod
     def is_english(word):

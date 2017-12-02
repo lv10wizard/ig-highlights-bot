@@ -78,7 +78,8 @@ from src.replies import Parser
     'barnesandnobles', 'urbanoutfitters', 'uniqlo', 'pacsun', 'lulus',
     'lululemon', 'lululemons', 'adidas', 'nike', 'americaneagle', 'levis',
     'redbubble', 'redtube', 'buzzfeed', 'kotaku', 'msnbc', 'foxnews',
-    'hottopic', 'nytimes', 'washingtonpost', 'youporn',
+    'hottopic', 'nytimes', 'washingtonpost', 'youporn', 'lololololo',
+    'leleleee',
 ] + ['o'*(i+2) for i in range(15)] + ['_'*(i+1) for i in range(20)])
 def test_parser_detects_jargon(word):
     assert Parser.is_jargon(word)
@@ -88,7 +89,7 @@ def test_parser_detects_jargon(word):
     'haileypandolfi', 'viktoria_kay', 'linstahh', 'natalieannworth',
     'tiffanie_marie', 'tiffanie.marie', 'jessicabolusi', 'girl.6ix',
     '_cassiebrown_', '___foo__bar._._', '.blah', 'asdf____', '___asdf',
-    'qwerty.', 'x_o_x_o_x',
+    'qwerty.', 'x_o_x_o_x', 'GisselleLynette',
 ])
 def test_parser_does_not_overmatch_jargon(word):
     assert not Parser.is_jargon(word)
@@ -201,7 +202,7 @@ def test_parser_does_not_over_match_prefix(nachosarah):
 
 def test_parser_matches_instagram_suffix(
         hanny_madani, kaja_sbn, eva_lo_dimelo, chaileeson, deliahatesyou,
-        diablo_sam, stephxohaven, fullmetalifrit_markdownlink,
+        diablo_sam, stephxohaven, gissellelynette, fullmetalifrit_markdownlink,
 ):
     H = Parser(hanny_madani)
     assert not H.ig_links
@@ -230,6 +231,10 @@ def test_parser_matches_instagram_suffix(
     S = Parser(stephxohaven)
     assert not S.ig_links
     assert S.ig_usernames == ['stephxohaven']
+
+    G = Parser(gissellelynette)
+    assert not G.ig_links
+    assert G.ig_usernames == ['gissellelynette']
 
     F = Parser(fullmetalifrit_markdownlink)
     assert not F.ig_links
