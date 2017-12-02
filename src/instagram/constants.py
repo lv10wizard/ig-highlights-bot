@@ -169,21 +169,20 @@ _IG_KEYWORD_PREFIX = [
 ]
 _IG_KEYWORD_PREFIX = '|'.join(_IG_KEYWORD_PREFIX)
 
-_IG_KEYWORD_SUFFIX = r'\s+(?:on\s+{0}|\({0}\))[!.]?'.format(
-#                         \_________/ \______/\___/
-#                              |         |      \
-#                              |         |  optionally match '!' or '.'
+_IG_KEYWORD_SUFFIX = r'\s+(?:on\s+{0}|\({0}\))'.format(
+#                         \_________/ \______/
+#                              |         |
 #                              |     match eg. '(IG)'
 #                         match ' on instagram'
         _INSTAGRAM_KEYWORD,
 )
-_IG_KEYWORD_SUFFIX_VALID_ENDING_CHARS = r'[\?\]]'
+_IG_KEYWORD_SUFFIX_VALID_ENDING_CHARS = r'[\?\]\)\!\.\,\:\;\-\/]'
 
 HAS_IG_KEYWORD_REGEX = re.compile(
-        '(?:(?:^|\s+){0}|\s*{1}(?:\s*\]|\s+|$))'.format(
-        #   \__________/ \___________________/
-        #        |                /
-        #        |            match instagram keyword suffix
+        '(?:(?:^|\s+){0}|\b{1}\b)'.format(
+        #   \__________/ \______/
+        #        |           \
+        #        |         match instagram keyword suffix
         #      match instagram keyword prefix
             _IG_KEYWORD_PREFIX,
             _IG_KEYWORD_SUFFIX,

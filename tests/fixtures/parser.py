@@ -176,6 +176,14 @@ def gissellelynette():
     return load_pickle('gissellelynette')
 
 @pytest.fixture(scope='session')
+def paullalimaa():
+    """
+    praw.models.Comment containing a soft-linked user without '@'
+    (Girl is paullalimaa on IG, ...)
+    """
+    return load_pickle('paullalimaa')
+
+@pytest.fixture(scope='session')
 def fullmetalifrit_markdownlink():
     """
     praw.models.Comment containing a soft-linked user without '@'

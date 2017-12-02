@@ -109,6 +109,13 @@ def test_instagram_does_not_overmatch_at_ig_user_strings(string):
     'She\'s Veronica Bielik [instagram - veronicabielik]',
     'She\'s Veronica Bielik (instagram: veronicabielik)',
     'She\'s Veronica Bielik [instagram: veronicabielik]',
+    'Girl is paullalimaa on IG, also [her is the vid]',
+    'Paulla Limaa (paullalimaa on IG)',
+    'Paulla Limaa [paullalimaa on IG]',
+    'paullalimaa on IG: foobar',
+    'paullalimaa on IG!',
+    'paullalimaa on IG.',
+    'paullalimaa on IG; she\'s pretty hot',
 ])
 def test_instagram_matches_has_ig_keyword_strings(string):
     assert instagram.HAS_IG_KEYWORD_REGEX.search(string)
@@ -143,6 +150,7 @@ def test_instagram_matches_has_ig_keyword_question_strings(string):
     ('She\'s Veronica Bielik [instagram: veronicabielik]', 'veronicabielik'),
     ('She\'s Veronica Bielik (instagram - veronicabielik)', 'veronicabielik'),
     ('She\'s Veronica Bielik [instagram - veronicabielik]', 'veronicabielik'),
+    ('Girl is paullalimaa on IG, also [her is the vid]', 'paullalimaa'),
 ])
 def test_instagram_matches_potential_ig_user_strings(string, expected):
     match = instagram.IG_USER_STRING_REGEX.search(string)
@@ -155,6 +163,7 @@ def test_instagram_matches_potential_ig_user_strings(string, expected):
     'chaileeson',
     'hanny_madani',
     'GisselleLynette',
+    'paullalimaa',
 ])
 def test_instagram_guesses_potential_ig_user_strings(string):
     match = instagram.IG_USER_STRING_REGEX.search(string)
@@ -307,7 +316,7 @@ def test_instagram_does_not_over_match_instagram_prefix(
 
 def test_instagram_matches_on_instagram_suffix(
         hanny_madani, kaja_sbn, eva_lo_dimelo, chaileeson, deliahatesyou,
-        stephxohaven,
+        stephxohaven, gissellelynette, paullalimaa,
 ):
     assert not instagram.IG_LINK_REGEX.search(hanny_madani.body)
     assert not instagram.IG_LINK_QUERY_REGEX.search(hanny_madani.body)
@@ -350,6 +359,20 @@ def test_instagram_matches_on_instagram_suffix(
     user_str_match = instagram.IG_USER_STRING_REGEX.search(stephxohaven.body.strip())
     assert user_str_match
     assert user_str_match.group('suffix') == 'stephxohaven'
+
+    assert not instagram.IG_LINK_REGEX.search(gissellelynette.body)
+    assert not instagram.IG_LINK_QUERY_REGEX.search(gissellelynette.body)
+    assert not instagram.IG_AT_USER_REGEX.search(gissellelynette.body)
+    user_str_match = instagram.IG_USER_STRING_REGEX.search(gissellelynette.body.strip())
+    assert user_str_match
+    assert user_str_match.group('suffix') == 'GisselleLynette'
+
+    assert not instagram.IG_LINK_REGEX.search(paullalimaa.body)
+    assert not instagram.IG_LINK_QUERY_REGEX.search(paullalimaa.body)
+    assert not instagram.IG_AT_USER_REGEX.search(paullalimaa.body)
+    user_str_match = instagram.IG_USER_STRING_REGEX.search(paullalimaa.body.strip())
+    assert user_str_match
+    assert user_str_match.group('suffix') == 'paullalimaa'
 
 def test_instagram_matches_user_linked_in_query(jessicabolusi_medialink):
     assert not instagram.IG_LINK_REGEX.search(jessicabolusi_medialink.body)
