@@ -154,6 +154,7 @@ def test_instagram_matches_potential_ig_user_strings(string, expected):
     'vyvan.le',
     'chaileeson',
     'hanny_madani',
+    'GisselleLynette',
 ])
 def test_instagram_guesses_potential_ig_user_strings(string):
     match = instagram.IG_USER_STRING_REGEX.search(string)
