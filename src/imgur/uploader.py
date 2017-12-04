@@ -221,8 +221,6 @@ class Uploader(object):
 
         Uploader._log_429(response, *args, **kwargs)
 
-        # TODO: choose longest delay between user/client & only apply
-        # post delay if this response was a POST
         # try to determine an appropriate time to wait
         try:
             is_post = kwargs['method'].lower() == 'post'
@@ -248,6 +246,8 @@ class Uploader(object):
         except KeyError:
             pass
 
+        # TODO: choose longest delay between user/client & only apply
+        # post delay if this response was a POST
         # TODO: write expire time to file & prevent requests
 
     @classproperty
