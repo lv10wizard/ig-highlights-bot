@@ -465,6 +465,37 @@ O. --backup, --load-backup
 ? refactor RedditRateLimitQueueDatabase so that it contains 1 table per
     thing (replies, post submissions, and PMs)
 
+- take post date into account when considering like/comment count
+    - interpolate follower count with cubic spline
+      ** may need a better interpolation function
+        https://en.wikipedia.org/wiki/Cubic_Hermite_spline
+        https://stackoverflow.com/a/31544486
+
+        from scipy import interpolate
+        timestamps = [ ... ]
+        num_followers = [ ... ]
+        # tuple (t, c, k) where
+        #   t = vector of knots
+        #   c = b-spline coefficients
+        #   k = degree of the spline
+        tck = interpolate.splrep(timestamps, num_followers)
+
+        t = ... # get post timestamp
+        followers_for_timestamp = interpolate.splev(t, tck).item()
+        # TODO: min(followers_for_timestamp, MIN_FOLLOWER_COUNT)
+        #   (in case the interp goes negative)
+
+      ** adds a dependency on scipy
+
+    - order: (num_likes * normalized_comments) / follower_count
+    - add table to instagram database:
+        followers(
+                timestamp REAL NOT NULL PRIMARY KEY,
+                num_followers INTEGER NOT NULL
+        )
+      to interpolate follower counts from
+    - update README dependencies (scipy)
+
 - lower memory footprint
 
 ? download user's media content & upload to imgur(?)

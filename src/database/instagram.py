@@ -3,7 +3,10 @@ import time
 
 from six import string_types
 
-from ._database import Database
+from ._database import (
+        Database,
+        UniqueConstraintFailed,
+)
 from src.util import logger
 
 
@@ -32,7 +35,12 @@ class InstagramDatabase(Database):
                 '   num_likes INTEGER NOT NULL,'
                 '   num_comments INTEGER DEFAULT 0,'
                 '   created REAL NOT NULL'
-                ')'
+                ')',
+
+                'followers('
+                '   timestamp REAL PRIMARY KEY NOT NULL,'
+                '   num_followers INTEGER NOT NULL'
+                ')',
         )
 
     def __unpack(self, item):
@@ -78,6 +86,17 @@ class InstagramDatabase(Database):
                 ' WHERE code = ?',
                 (num_likes, num_comments, code),
         )
+
+    def record_num_followers(self, num_followers):
+        with self._db:
+            try:
+                self._db.execute(
+                        'INSERT INTO followers(timestamp, num_followers)'
+                        ' VALUES(?, ?)',
+                        (time.time(), num_followers),
+                )
+            except UniqueConstraintFailed:
+                pass
 
     def size(self):
         cursor = self._db.execute('SELECT count(*) FROM cache')
