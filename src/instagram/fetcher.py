@@ -857,6 +857,9 @@ class Fetcher(object):
             )
             self.cache.flag_as_private()
 
+        if self._num_followers is not None:
+            self.cache.record_num_followers(self._num_followers)
+
         if self.has_enough_followers is False:
             logger.id(logger.info, self,
                     '{color_user} has too few followers:'
