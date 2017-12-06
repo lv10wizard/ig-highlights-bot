@@ -31,6 +31,7 @@ b+e+c+a+u+s+e+
 b+e+(?:a+u+|y+[ou]+)t+[aei]+f+u+l+ # 'beautifullll', 'beeeeyoouteeaafulllll'
 b+[ei]+a*y*[ao]+t*c+h+ # 'beeyyyooootch', etc
 b+i*e+r+g+a+r+[dt]+e+n+ # 'biergarten'
+b+i+g+u+n+[sz]*
 b+i+t+b+u+c+k+e+t+
 b+i+t+c+o+i+n+
 b+o+ # 'boooooo', ...
@@ -128,6 +129,7 @@ h+o+w+
 h*[ru]*n+[gr]*[fr]*h* # 'hnnngg', 'unghhh', 'nnggghh', 'unnggfffhh', etc
 hth # hope that helps
 h+u+l+u+
+h+(?:i+e*g*h*|y+)g+[ei]+n+(?:e+|i+[ck]+)
 i?ama
 ianal
 idf?[ck] # i don't (fucking) care/know
