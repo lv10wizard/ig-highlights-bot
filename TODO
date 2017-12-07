@@ -517,11 +517,9 @@ O. --backup, --load-backup
         O. how to create so that they can be shared though?
             >> hit /me/albums/{albumId}/name endpoint
 
-    - gfycat ratelimiting (follow something similar to imgur (?))
-        - 10,000 credits / day where
-            1 upload = 10 credits
-            1 non-upload request = 1 credit
-            so: ~1,000 uploads / day or 10,000 requests / day
+    - gfycat ratelimiting
+        - 1000 requests / rolling 24h
+            > treat all requests the same
         - leave buffer for highlight uploads (backlog uploads should never
             eat into the buffer)
 
