@@ -80,6 +80,8 @@ from src.replies import Parser
     'redbubble', 'redtube', 'buzzfeed', 'kotaku', 'msnbc', 'foxnews',
     'hottopic', 'nytimes', 'washingtonpost', 'youporn', 'lololololo',
     'leleleee', 'phaaaat', 'phaattiee', 'phatty', 'phaaatttiesss', 'phatss',
+    'higene', 'highgenic', 'hygenic', 'hygene', 'hygienic', 'hygienick',
+    'hiegiene', 'bigguns', 'biggun', 'biiiiigggunzzz',
 ] + ['o'*(i+2) for i in range(15)] + ['_'*(i+1) for i in range(20)])
 def test_parser_detects_jargon(word):
     assert Parser.is_jargon(word)

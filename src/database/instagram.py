@@ -38,8 +38,8 @@ class InstagramDatabase(Database):
                 ')',
 
                 'followers('
-                '   timestamp REAL PRIMARY KEY NOT NULL,'
-                '   num_followers INTEGER NOT NULL'
+                '   timestamp REAL NOT NULL,'
+                '   num_followers INTEGER PRIMARY KEY NOT NULL'
                 ')',
         )
 
