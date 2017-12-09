@@ -3,7 +3,10 @@ from six import iteritems
 from .constants import ALBUM_FOLDERS_URL
 from .token import AccessToken
 from src.config import resolve_path
-from src.database import Database
+from src.database import (
+        Database,
+        GfycatRateLimitDatabase,
+)
 from src.util import (
         logger,
         requestor,
@@ -110,6 +113,7 @@ class Uploader(object):
 
     _cfg = None
     _requestor = None
+    _ratelimit = None
 
     # TODO? make thread-safe
 
@@ -164,6 +168,12 @@ class Uploader(object):
         return Uploader._requestor
 
     @classproperty
+    def ratelimit(cls):
+        if not Uploader._ratelimit:
+            Uploader._ratelimit = GfycatRateLimitDatabase(Uploader.cfg)
+        return Uploader._ratelimit
+
+    @classproperty
     def albums(cls):
         """
         A lazy-loaded cache of albums to prevent needless checks against album
@@ -208,6 +218,15 @@ class Uploader(object):
         return root_id
 
     @staticmethod
+    def _account_ratelimit(response):
+        """
+        Accounts a ratelimit hit
+        """
+        if response is not None:
+            with Uploader.ratelimit:
+                Uploader.ratelimit.insert(response)
+
+    @staticmethod
     def request_authed(*args, **kwargs):
         """
         Issues an authed request
@@ -235,8 +254,15 @@ class Uploader(object):
         Issues a non-authed request
 
         Returns the response
+                or False if either gfycat ratelimited or requests are delayed
+                    due to a 500-level status code
         """
+
+        if Uploader._handle_ratelimit():
+            return False
+
         response = Uploader.requestor.request(*args, **kwargs)
+        Uploader._account_ratelimit(response)
         if response is not None:
             try:
                 data = response.json()

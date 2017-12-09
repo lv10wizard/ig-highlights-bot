@@ -68,7 +68,7 @@ class Uploader(object):
     @classproperty
     def ratelimit(cls):
         if not Uploader._ratelimit:
-            Uploader._ratelimit = ImgurRateLimitDatabase()
+            Uploader._ratelimit = ImgurRateLimitDatabase(Uploader.cfg)
         return Uploader._ratelimit
 
     @staticmethod
@@ -128,7 +128,8 @@ class Uploader(object):
             # eg. GET 'foobar' album followed immediately by another
             # GET 'foobar' album will only deduct a single credit
 
-            Uploader.ratelimit.insert(response)
+            with Uploader.ratelimit:
+                Uploader.ratelimit.insert(response)
 
     @staticmethod
     def _handle_ratelimit(*args, **kwargs):
@@ -316,7 +317,7 @@ class Uploader(object):
                     due to a 500-level status code
         """
 
-        if _handle_ratelimit(*args, **kwargs):
+        if Uploader._handle_ratelimit(*args, **kwargs):
             return False
 
         try:

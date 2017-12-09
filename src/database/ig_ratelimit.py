@@ -45,7 +45,7 @@ class InstagramRateLimitDatabase(Database):
         )
         if cursor.rowcount > 0:
             logger.id(logger.debug, self,
-                    'Pruned #{num} entr{plural} ...',
+                    'Pruned #{num} entr{plural}',
                     num=cursor.rowcount,
                     plural='ies' if cursor.rowcount != 1 else 'y',
             )
