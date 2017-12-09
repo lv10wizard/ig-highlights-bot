@@ -60,8 +60,8 @@ except ValueError:
 
 BACKUP_CHOICES = [
         name for name in DATABASE_CHOICES
-        # don't bother backing up the ratelimit database
-        if name != 'InstagramRateLimitDatabase'
+        # don't bother backing up the ratelimit databases
+        if not name.endswith('RateLimitDatabase')
 ]
 
 igdb_path = Database.format_path(InstagramDatabase.PATH)
