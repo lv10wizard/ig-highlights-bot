@@ -465,6 +465,18 @@ O. --backup, --load-backup
 ? refactor RedditRateLimitQueueDatabase so that it contains 1 table per
     thing (replies, post submissions, and PMs)
 
+- check that a post is approved
+    - list of subreddits (file? config?) to check
+    - add post ids to queue db IF post's subreddit is in list
+    - check comment.submission.id & submission.id to see if they are in
+        the subreddit's .new listing
+        > how often to check? or stream?
+            >> stream assumes that things will be queued BEFORE the stream
+                sees it otherwise would need to keep some stream elements in
+                memory (~5 or ~10 would probably work)
+        > check each subreddit individually?
+        (if id is in .new listing => add to reply_queue)
+
 - take post date into account when considering like/comment count
     - interpolate follower count with cubic spline
       ** may need a better interpolation function
