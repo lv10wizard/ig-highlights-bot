@@ -169,14 +169,16 @@ _IG_KEYWORD_PREFIX = [
 ]
 _IG_KEYWORD_PREFIX = '|'.join(_IG_KEYWORD_PREFIX)
 
-_IG_KEYWORD_SUFFIX = r'\s+(?:on\s+{0}|\({0}\))'.format(
-#                         \_________/ \______/
+_IG_KEYWORD_SUFFIX_VALID_LEADING = r'(?:on|[\-\:\=\~\>\<]+)'
+_IG_KEYWORD_SUFFIX_VALID_ENDING_CHARS = r'[\?\]\)\!\.\,\:\;\-\/]'
+_IG_KEYWORD_SUFFIX = r'\s+(?:{1}\s+{0}|\({0}\))'.format(
+#                         \__________/ \______/
 #                              |         |
 #                              |     match eg. '(IG)'
-#                         match ' on instagram'
+#                         match ' on instagram' or ' - ig', etc
         _INSTAGRAM_KEYWORD,
+        _IG_KEYWORD_SUFFIX_VALID_LEADING,
 )
-_IG_KEYWORD_SUFFIX_VALID_ENDING_CHARS = r'[\?\]\)\!\.\,\:\;\-\/]'
 
 HAS_IG_KEYWORD_REGEX = re.compile(
         '(?:(?:^|\s+){0}|\b{1}\b)'.format(

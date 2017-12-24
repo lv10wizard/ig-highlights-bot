@@ -205,7 +205,7 @@ def test_parser_does_not_over_match_prefix(nachosarah):
 def test_parser_matches_instagram_suffix(
         hanny_madani, kaja_sbn, eva_lo_dimelo, chaileeson, deliahatesyou,
         diablo_sam, stephxohaven, gissellelynette, paullalimaa,
-        fullmetalifrit_markdownlink,
+        fullmetalifrit_markdownlink, simpalicety,
 ):
     H = Parser(hanny_madani)
     assert not H.ig_links
@@ -246,6 +246,10 @@ def test_parser_matches_instagram_suffix(
     F = Parser(fullmetalifrit_markdownlink)
     assert not F.ig_links
     assert F.ig_usernames == ['fullmetalifrit']
+
+    AT = Parser(simpalicety)
+    assert not AT.ig_links
+    assert AT.ig_usernames == ['simpalicety']
 
 def test_parser_matches_instagram_suffix_question(
         nikinikiii_question, mollyjcurley_question,

@@ -89,6 +89,14 @@ def sugarnatty88():
     return load_pickle('sugarnatty88')
 
 @pytest.fixture(scope='session')
+def simpalicety():
+    """
+    praw.models.Comment containing a soft-linked user
+    (... - instagram)
+    """
+    return load_pickle('simpalicety')
+
+@pytest.fixture(scope='session')
 def nachosarah():
     """
     praw.models.Comment containing a soft-linked user
