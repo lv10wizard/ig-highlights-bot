@@ -56,7 +56,7 @@ class PotentialSubredditsDatabase(Database):
                 'UPDATE potential_subreddits'
                 ' SET count = ?'
                 ' WHERE subreddit_name = ?',
-                (thing.subreddit.display_name, count+1),
+                (count+1, thing.subreddit.display_name),
         )
 
     def count(self, thing):
