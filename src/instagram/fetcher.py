@@ -670,7 +670,7 @@ class Fetcher(object):
 
             do_wait(delay)
 
-    def _handle_bad_json(self, err):
+    def _handle_bad_json(self, err, response):
         """
         Handles the case where the media endpoint returns invalid json
         """
@@ -917,7 +917,7 @@ class Fetcher(object):
                         # either bad json or a non-user page
                         if response.text.strip().startswith('{'):
                             # most likely bad json
-                            self._handle_bad_json(e)
+                            self._handle_bad_json(e, response)
                         else:
                             # most likely a non-user page (eg. /about)
                             break
@@ -990,7 +990,7 @@ class Fetcher(object):
                         data = response.json()
                     except ValueError as e:
                         # I'm not sure why this happens
-                        self._handle_bad_json(e)
+                        self._handle_bad_json(e, response)
 
                     else:
                         self._reset_error_delay()
