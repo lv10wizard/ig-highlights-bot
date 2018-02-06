@@ -182,14 +182,31 @@ class Formatter(object):
                     link=ig.url,
                     suffix=(
                         Formatter.HEADER_HIGHLIGHTS
-                        if not ig.is_private
+                        # suffix with highlights if the account is both
+                        # public and the database is not flagged as private
+                        if not (ig.private or ig.is_private)
+                        # otherwise suffix as private
                         else Formatter.HEADER_PRIVATE
                     ),
             )
 
+            if bool(ig.private) != bool(ig.is_private):
+                # either the account is currently private but we have data for
+                # it OR the account is no longer private and we DO NOT have data
+                # for it
+                logger.id(logger.warn, self,
+                        '{color} private flag mismatch:'
+                        '\ncurrent private status: {current}'
+                        '\nflagged private status: {flagged}',
+                        color=ig,
+                        current=ig.private,
+                        flagged=ig.is_private,
+                )
+
             highlights = []
-            if not ig.private:
-                media = ig.top_media
+            media = ig.top_media
+
+            if not (ig.private or ig.is_private) and hasattr(media, '__iter__'):
                 for i, media_link in enumerate(media):
                     logger.id(logger.debug, self,
                             '[{i:>{pad}}/{num}] {color_user}: {link}',

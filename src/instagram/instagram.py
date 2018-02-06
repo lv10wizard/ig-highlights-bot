@@ -175,10 +175,12 @@ class Instagram(object):
                 (self.fetcher.valid_response and media is None)
                 or self.cache.is_private
         ):
-            if self.cache.size() == 0:
+            if self.cache.size() == 0 or not self.private:
                 # re-fetch an outdated existing cache
                 # (ie: an existing database file no longer reflects the
-                #  way the database behaves in code)
+                #  way the database behaves in code
+                #  OR the database is flagged as private but the live account
+                #  no longer is)
                 # XXX: this logging will be incorrect if the cache is created
                 # before this point
                 logger.id(logger.debug, self,
