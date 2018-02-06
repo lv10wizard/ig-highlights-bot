@@ -322,6 +322,8 @@ class Cache(object):
                 self.__the_inprogress_cache.close()
             except AttributeError:
                 pass
+            else:
+                self.__the_inprogress_cache = None
 
             logger.id(logger.debug, self,
                     'Removing \'{path}\' ...',

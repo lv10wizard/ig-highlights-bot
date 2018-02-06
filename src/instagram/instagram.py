@@ -175,7 +175,10 @@ class Instagram(object):
                 (self.fetcher.valid_response and media is None)
                 or self.cache.is_private
         ):
-            if self.cache.size() == 0 or not self.private:
+            if (
+                    self.cache.size() == 0
+                    or (self.cache.is_private and not self.private)
+            ):
                 # re-fetch an outdated existing cache
                 # (ie: an existing database file no longer reflects the
                 #  way the database behaves in code
