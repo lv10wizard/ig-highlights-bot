@@ -9,6 +9,7 @@ from six.moves import queue
 
 from src import (
         database,
+        reddit,
         replies,
 )
 from src.config import resolve_path
