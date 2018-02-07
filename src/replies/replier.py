@@ -275,6 +275,9 @@ class Replier(ProcessMixin, RedditInstanceMixin):
             try:
                 thing = self._thing_cache[fullname]
             except KeyError:
+
+                # FIXME: re-building (re-fetching) Messages does not work!
+
                 thing = self._reddit.get_thing_from_fullname(fullname)
                 if not thing:
                     logger.id(logger.warn, self,

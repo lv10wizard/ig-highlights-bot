@@ -15,6 +15,7 @@ from src import (
         bottiquette,
         database,
         reddit,
+        replies,
 )
 from src.mixins import (
         ProcessMixin,
@@ -192,12 +193,85 @@ class Messages(ProcessMixin, StreamMixin):
     def _stream_method(self):
         return self._reddit.inbox.messages
 
-    def _run_forever(self):
+    def _blacklist_from_message(self, message):
+        """
+        Adds or removes a user/subreddit from the blacklist
+
+        Returns True if the message contained a un/blacklist keyword
+                or False if the message did not contain an un/blacklist keyword
+                or None if the message parsing failed
+        """
         blacklist_re = re.compile(r'^({0}|{1})$'.format(
             BLACKLIST_SUBJECT,
             REMOVE_BLACKLIST_SUBJECT,
         ))
 
+        subject = message.subject.strip()
+        match = blacklist_re.search(subject)
+
+        if match:
+            # need to blacklist a subreddit or user
+            prefix, name = self._get_prefix_name(message)
+            if not name:
+                logger.id(logger.debug, self,
+                        'Message ({color_message}) \'{subject}\':'
+                        ' could not find name! skipping ...',
+                        color_message=message.id,
+                        subject=subject,
+                )
+                return None
+
+            do_reply = False
+            if self._is_add(match.group(1)):
+                logger.id(logger.info, self,
+                        'Adding {color_name} to blacklist ...',
+                        color_name=reddit.prefix(name, prefix),
+                )
+                do_reply = self.blacklist.add(name, prefix)
+
+            elif self._is_remove(match.group(1)):
+                logger.id(logger.info, self,
+                        'Removing {color_name} from blacklist ...',
+                        color_name=reddit.prefix(name, prefix),
+                )
+                do_reply = self.blacklist.remove(name, prefix)
+
+            else:
+                # subject regex changed but no code to handle ...
+                # XXX: flagging the message as unseen may not
+                # necessarily do anything if it does not remain the
+                # newest message
+
+                logger.id(logger.debug, self,
+                        'Unhandled subject: \'{subject}\'!'
+                        '\nmatch: \'{match}\'',
+                        subject=subject,
+                        match=match.group(1),
+                )
+
+                # send a pm to the maintainer in case logs aren't being
+                # monitored closely
+                pm_subject, pm_body = self._debug_pm(
+                        message, name, prefix, blacklist_re,
+                )
+                self._reddit.send_debug_pm(
+                        subject=pm_subject,
+                        body=pm_body,
+                )
+
+            if do_reply:
+                reply_text = self._format_reply(
+                        message=message,
+                        subject=match.group(1),
+                        name=name,
+                        prefix=prefix,
+                )
+                if reply_text:
+                    self._reddit.do_reply(message, reply_text, self._killed)
+
+        return bool(match)
+
+    def _run_forever(self):
         seen_from_robots = set()
         robots = bottiquette.RobotsTxt(self._reddit)
         messages_db = database.MessagesDatabase()
@@ -208,6 +282,8 @@ class Messages(ProcessMixin, StreamMixin):
         # check all items on the first run since stream_generator will fetch
         # the first 100 newest items (all of which may or may not be duplicates)
         first_run = True
+
+        filter_ = None
 
         while not self._killed.is_set():
             # add new banned subreddits from r/bottiquette:
@@ -278,75 +354,30 @@ class Messages(ProcessMixin, StreamMixin):
                 if message.was_comment:
                     continue
 
-                subject = message.subject.strip()
-                match = blacklist_re.search(subject)
-                # ignore random messages
-                if not match:
-                    logger.id(logger.debug, self,
-                            'Ignoring {color_message}: \'{subject}\'',
-                            color_message=message.id,
-                            subject=subject,
-                    )
-                    continue
+                if not self._blacklist_from_message(message):
+                    # other message: check if it's an instagram account in case
+                    # the user messaged the bot for pm'd highlights
+                    if not filter_:
+                        filter_ = replies.Filter(
+                                self.cfg, self._reddit.username_raw,
+                                self.blacklist,
+                        )
 
-                # need to blacklist a subreddit or user
-                prefix, name = self._get_prefix_name(message)
-                if not name:
-                    logger.id(logger.debug, self,
-                            'Message ({color_message}) \'{subject}\':'
-                            ' could not find name! skipping ...',
-                            color_message=message.id,
-                            subject=subject,
-                    )
-                    continue
+                    ig_usernames, _, _ = filter_.replyable_usernames(message)
+                    if ig_usernames:
+                        filter_.enqueue(message, ig_usernames)
 
-                do_reply = False
-                if self._is_add(match.group(1)):
-                    logger.id(logger.info, self,
-                            'Adding {color_name} to blacklist ...',
-                            color_name=reddit.prefix(name, prefix),
-                    )
-                    do_reply = self.blacklist.add(name, prefix)
-
-                elif self._is_remove(match.group(1)):
-                    logger.id(logger.info, self,
-                            'Removing {color_name} from blacklist ...',
-                            color_name=reddit.prefix(name, prefix),
-                    )
-                    do_reply = self.blacklist.remove(name, prefix)
-
-                else:
-                    # subject regex changed but no code to handle ...
-                    # XXX: flagging the message as unseen may not
-                    # necessarily do anything if it does not remain the
-                    # newest message
-
-                    logger.id(logger.debug, self,
-                            'Unhandled subject: \'{subject}\'!'
-                            '\nmatch: \'{match}\'',
-                            subject=subject,
-                            match=match.group(1),
-                    )
-
-                    # send a pm to the maintainer in case logs aren't being
-                    # monitored closely
-                    pm_subject, pm_body = self._debug_pm(
-                            message, name, prefix, blacklist_re,
-                    )
-                    self._reddit.send_debug_pm(
-                            subject=pm_subject,
-                            body=pm_body,
-                    )
-
-                if do_reply:
-                    reply_text = self._format_reply(
-                            message=message,
-                            subject=match.group(1),
-                            name=name,
-                            prefix=prefix,
-                    )
-                    if reply_text:
-                        self._reddit.do_reply(message, reply_text, self._killed)
+                    else:
+                        # ignore random messages
+                        logger.id(logger.debug, self,
+                                'Ignoring {color_message}:'
+                                '\'{subject}\' from {color}',
+                                color_message=message.id,
+                                subject=message.subject.strip(),
+                                color=reddit.prefix_user(
+                                    reddit.author(message)
+                                ),
+                        )
 
             # flag that duplicate items should now break out of the stream
             first_run = False

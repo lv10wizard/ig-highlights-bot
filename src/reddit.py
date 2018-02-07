@@ -162,6 +162,7 @@ def _network_wrapper(callback, thing, *args, **kwargs):
 
 def display_id(thing):
     def _display_id(thing):
+        # TODO? test isinstance instead of chaining try/excepts
         try:
             # comment
             return thing.permalink_url
@@ -171,7 +172,19 @@ def display_id(thing):
             try:
                 return thing.permalink
             except AttributeError:
-                pass # message or other thing
+                # message
+                try:
+                    subject = thing.subject
+                except AttributeError:
+                    # other thing
+                    pass
+
+                else:
+                    from_ = author(thing)
+                    if author(thing, replace_none=False):
+                        from_ = prefix_user(from_)
+
+                    return '{0} from {1}'.format(thing.subject, from_)
 
         return thing
 

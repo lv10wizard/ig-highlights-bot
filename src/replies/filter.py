@@ -57,7 +57,7 @@ class Filter(object):
             - thing's author not in hard-coded IGNORED_AUTHORS list
             - thing's id is not in hard-coded IGNORED_IDS list
             - thing not already replied to by the bot
-            - thing already queued for a reply
+            - thing not already queued for a reply
             - thing is not in the rate-limit queue
             - the bot has not replied too many times to the submission (too many
               defined in config)
@@ -80,6 +80,8 @@ class Filter(object):
             )
             return False
 
+        # TODO: check submission id against IGNORED_IDS so the bot does not
+        # reply to comments of INGORED_IDS submissions
         if hasattr(thing, 'id') and thing.id in Filter.IGNORED_IDS:
             logger.id(logger.info, self,
                     '{color_thing} is ignored: skipping.',
@@ -112,15 +114,18 @@ class Filter(object):
             return False
 
         submission = reddit.get_submission_for(thing)
-        replied = self.reply_history.replied_things_for_submission(submission)
-        if len(replied) > self.cfg.max_replies_per_post:
-            logger.id(logger.info, self,
-                    'I\'ve made too many replies (#{num}) to {color_post}:'
-                    ' skipping.',
-                    num=self.cfg.max_replies_per_post,
-                    color_post=reddit.display_id(submission),
+        if submission:
+            replied = self.reply_history.replied_things_for_submission(
+                    submission
             )
-            return False
+            if len(replied) > self.cfg.max_replies_per_post:
+                logger.id(logger.info, self,
+                        'I\'ve made too many replies (#{num}) to {color_post}:'
+                        ' skipping.',
+                        num=self.cfg.max_replies_per_post,
+                        color_post=reddit.display_id(submission),
+                )
+                return False
 
         if hasattr(thing, 'archived') and thing.archived:
             logger.id(logger.info, self,
@@ -291,6 +296,10 @@ class Filter(object):
         Returns a subset of the passed-in instagram usernames (the returned
                 set will be less than or equal to the passed-in set)
         """
+        if submission is None:
+            # not a submission: no need to prune anything
+            return ig_usernames
+
         orig_usernames = ig_usernames.copy()
         already_posted = self.reply_history.replied_ig_users_for_submission(
                 submission

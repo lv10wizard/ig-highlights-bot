@@ -16,6 +16,7 @@ from bs4 import (
 import enchant
 from praw.models import (
         Comment,
+        Message,
         Submission,
 )
 from six import add_metaclass
@@ -239,7 +240,10 @@ class _ParserStrategy(object):
         fullname = reddit.fullname(self.thing)
         logger.id(logger.debug, self,
                 'Parsing {thing} ...',
-                thing=reddit.get_type_from_fullname(fullname),
+                thing=(
+                    reddit.get_type_from_fullname(fullname)
+                    or self.thing.__class__.__name__
+                ),
         )
 
         links = remove_duplicates(self._parse_links())
@@ -442,6 +446,22 @@ class _SubmissionParser(_ParserStrategy):
 
         return links
 
+class _MessageParser(_ParserStrategy):
+    """
+    Message parsing strategy
+    """
+    @property
+    def _thing_text(self):
+        # treat the subject as part of the body
+        result = [self.thing.subject]
+        if self.thing.body: # XXX: I think a non-empty body is required
+            result.append(self.thing.body)
+        return '\n'.join(result)
+
+    @property
+    def _thing_html(self):
+        return self.thing.body_html or ''
+
 class Parser(object):
     """
     Parses reddit things for instagram user links
@@ -524,6 +544,8 @@ class Parser(object):
             self._strategy = _CommentParser(thing)
         elif isinstance(thing, Submission):
             self._strategy = _SubmissionParser(thing)
+        elif isinstance(thing, Message):
+            self._strategy = _MessageParser(thing)
         else:
             self._strategy = None
             logger.id(logger.warn, self,
