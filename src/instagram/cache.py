@@ -250,7 +250,7 @@ class Cache(object):
             # this shouldn't happen
             logger.id(logger.debug, self,
                     'Already saw \'{code}\' (was \'{path}\' not deleted?)',
-                    code=item['code'],
+                    code=item['shortcode'],
                     path=self.seenpath,
             )
 

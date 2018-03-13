@@ -45,14 +45,14 @@ class InstagramDatabase(Database):
 
     def __unpack(self, item):
         return (
-                item['code'],
-                item['likes']['count'],
-                item['comments']['count'],
-                item['date'],
+                item['shortcode'],
+                item['edge_liked_by']['count'],
+                item['edge_media_to_comment']['count'],
+                item['taken_at_timestamp'],
 
                 # TODO: store the following as well
-                # item['display_src'], # full-sized source url
-                # item['caption'],
+                # item['display_url'], # full-sized source url
+                # item['edge_media_to_caption']['edges']['node']['text'],
         )
 
     def _insert(self, item):

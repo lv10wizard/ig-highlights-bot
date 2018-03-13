@@ -672,7 +672,7 @@ class Fetcher(object):
 
     def _handle_bad_json(self, err, response):
         """
-        Handles the case where the media endpoint returns invalid json
+        Handles the case where the endpoint returns invalid json
         """
         try:
             num_tries = self.__bad_json_tries
@@ -738,24 +738,25 @@ class Fetcher(object):
             pass
 
     def _has_more(self, data):
-        return data['user']['media']['page_info']['has_next_page']
+        media = data['graphql']['user']['edge_owner_to_timeline_media']
+        return media['page_info']['has_next_page']
 
     def _parse_data(self, data):
         """
         Parses a single iteration of the user's media data
 
         Returns True if the final set of items was successfully parsed
-                or False if the /media endpoint returned no items
+                or False if the endpoint returned no items
                 or None if there are still more items to be processed
         """
         success = None
-        nodes = data['user']['media']['nodes']
+        nodes = data['graphql']['user']['edge_owner_to_timeline_media']['edges']
         if nodes:
-            self.last_id = nodes[-1]['id']
+            self.last_id = nodes[-1]['node']['id']
 
             with self.cache:
                 for item in nodes:
-                    self.cache.insert(item)
+                    self.cache.insert(item['node'])
 
             if not self._has_more(data):
                 # just parsed the last set of items
@@ -808,7 +809,9 @@ class Fetcher(object):
                         key=keys[0],
                         exc_info=True,
                 )
-                return None
+                # the json structure changing most likely indicates that a
+                # code change is required
+                raise
 
             if not isinstance(result, dict) or len(keys) == 1:
                 # either the current key resulted in a non-dictionary
@@ -840,15 +843,30 @@ class Fetcher(object):
                         attr=attr,
                 )
 
+        try:
+            data = data['graphql']
+        except KeyError:
+            logger.id(logger.warn, self,
+                    'Meta-data json structure changed!'
+                    ' No such key={key}',
+                    key='graphql',
+                    exc_info=True,
+            )
+
         set_meta_val('_private', data, 'user', 'is_private')
         set_meta_val('_verified', data, 'user', 'is_verified')
         set_meta_val('_full_name', data, 'user', 'full_name')
         set_meta_val('_external_url', data, 'user', 'external_url')
         # TODO: does an empty biography == None or == ''?
         set_meta_val('_biography', data, 'user', 'biography')
-        set_meta_val('_num_followers', data, 'user', 'followed_by', 'count')
-        set_meta_val('_num_follows', data, 'user', 'follows', 'count')
-        set_meta_val('_num_posts', data, 'user', 'media', 'count')
+        set_meta_val(
+                '_num_followers', data, 'user', 'edge_followed_by', 'count',
+        )
+        set_meta_val('_num_follows', data, 'user', 'edge_follow', 'count')
+        set_meta_val(
+                '_num_posts', data, 'user', 'edge_owner_to_timeline_media',
+                'count',
+        )
 
         if self._private:
             logger.id(logger.info, self,
@@ -886,7 +904,7 @@ class Fetcher(object):
         logger.id(logger.info, self, 'Fetching meta data ...')
 
         data = None
-        while not data:
+        while not data and not self._killed:
             response = Fetcher.request(META_ENDPOINT.format(self.user))
             if Fetcher._is_bad_response(response):
                 # wait out the delay
@@ -934,10 +952,14 @@ class Fetcher(object):
                 elif response.status_code // 100 == 4:
                     response.raise_for_status()
 
-        self._reset_error_delay()
+        if self._killed:
+            logger.id(logger.debug, self, 'Cancelling meta data fetch: killed!')
 
-        if data:
-            self._parse_meta_data(data)
+        else:
+            self._reset_error_delay()
+
+            if data:
+                self._parse_meta_data(data)
 
     def fetch_data(self):
         """
@@ -971,6 +993,7 @@ class Fetcher(object):
                 response = Fetcher.request(
                         META_ENDPOINT.format(self.user),
                         params={
+                            # FIXME: pagination is broken
                             'max_id': self.last_id,
                         },
                 )
