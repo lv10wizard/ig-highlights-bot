@@ -1026,7 +1026,12 @@ class Fetcher(object):
                     # function
                     self._get_meta_data()
 
-                    if not isinstance(self.user_id, int):
+                    if self.cache.is_bad:
+                        # user does not exist
+                        success = False
+                        break
+
+                    elif not isinstance(self.user_id, int):
                         # the metadata endpoint structure changed
                         logger.id(logger.critical, self,
                                 'Could not request data:'
