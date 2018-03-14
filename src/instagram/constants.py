@@ -25,8 +25,13 @@ BASE_URL = BASE_URL_VARIATIONS[0]
 # https://stackoverflow.com/a/33783840
 # XXX: the media endpoint seems to be shutdown as of Nov 7, 2017
 MEDIA_ENDPOINT = 'https://www.{0}/{{0}}/media'.format(BASE_URL)
+# XXX: the __a=1 endpoint no longer paginates as of March 13, 2018
 META_ENDPOINT = 'https://www.{0}/{{0}}/?__a=1'.format(BASE_URL)
 MEDIA_LINK_FMT = 'https://www.{0}/p/{{0}}'.format(BASE_URL)
+# https://stackoverflow.com/a/49266320
+# https://stackoverflow.com/a/47243409
+# paginated user media data endpoint
+GRAPH_QUERY_ENDPOINT = 'https://www.{0}/graphql/query'.format(BASE_URL)
 
 # https://stackoverflow.com/a/17087528
 # "30 symbols ... only letters, numbers, periods, and underscores"

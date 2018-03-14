@@ -8,7 +8,8 @@ from six import string_types
 
 from .constants import (
         MEDIA_ENDPOINT, # XXX: broken as of Nov 7, 2017 (always 404s)
-        META_ENDPOINT,
+        META_ENDPOINT, # XXX: pagination broken as of March 13, 2018
+        GRAPH_QUERY_ENDPOINT,
         RATELIMIT_THRESHOLD,
 )
 from .cache import Cache
@@ -527,6 +528,7 @@ class Fetcher(object):
         self.killed = killed
         self.cache = Cache(user)
         self.last_id = None
+        self.user_id = None
         self._fetch_started = False
         self._valid_response = True
 
@@ -722,7 +724,7 @@ class Fetcher(object):
             logger.id(logger.critical, self,
                     'Too many bad json retries! Did the endpoint change?'
                     ' ({endpoint})',
-                    endpoint=META_ENDPOINT,
+                    endpoint=response.url,
                     exc_info=True,
             )
             self._enqueue()
@@ -738,7 +740,7 @@ class Fetcher(object):
             pass
 
     def _has_more(self, data):
-        media = data['graphql']['user']['edge_owner_to_timeline_media']
+        media = data['data']['user']['edge_owner_to_timeline_media']
         return media['page_info']['has_next_page']
 
     def _parse_data(self, data):
@@ -750,7 +752,7 @@ class Fetcher(object):
                 or None if there are still more items to be processed
         """
         success = None
-        nodes = data['graphql']['user']['edge_owner_to_timeline_media']['edges']
+        nodes = data['data']['user']['edge_owner_to_timeline_media']['edges']
         if nodes:
             self.last_id = nodes[-1]['node']['id']
 
@@ -803,7 +805,7 @@ class Fetcher(object):
                         'data:\n{pprint_data}',
                         pprint_data=entire_data,
                 )
-                logger.id(logger.warn, self,
+                logger.id(logger.critical, self,
                         'Meta-data json structure changed!'
                         ' No such key=\'{key}\'',
                         key=keys[0],
@@ -852,6 +854,29 @@ class Fetcher(object):
                     key='graphql',
                     exc_info=True,
             )
+
+        if not isinstance(self.user_id, int):
+            self.user_id = parse(data, data, 'user', 'id')
+            try:
+                self.user_id = int(self.user_id)
+            except (TypeError, ValueError):
+                # either the json was bad or the user id type has fundamentally
+                # changed
+                logger.id(logger.debug, self,
+                        'data:\n\n{pprint_data}\n',
+                        pprint_data=data,
+                )
+                logger.id(logger.critical, self,
+                        'Malformed user-id: \'{value}\'',
+                        exc_info=True,
+                )
+                raise
+
+            if isinstance(self.user_id, int):
+                logger.id(logger.debug, self,
+                        'Found user_id: {user_id}',
+                        user_id=self.user_id,
+                )
 
         set_meta_val('_private', data, 'user', 'is_private')
         set_meta_val('_verified', data, 'user', 'is_verified')
@@ -990,11 +1015,40 @@ class Fetcher(object):
                 if self._killed:
                     break
 
+                if not isinstance(self.user_id, int):
+                    logger.id(logger.debug, self,
+                            'Looking up {color}\'s user id ...',
+                            color=self.user,
+                    )
+                    # technically, fetching the user id should be a separate
+                    # function but the metadata endpoint includes the user id
+                    # so it has been shoe-horned into the _get_meta_data
+                    # function
+                    self._get_meta_data()
+
+                    if not isinstance(self.user_id, int):
+                        # the metadata endpoint structure changed
+                        logger.id(logger.critical, self,
+                                'Could not request data:'
+                                ' user_id not set for {color}!',
+                                color=self.user,
+                        )
+                        raise ValueError(
+                                '{0}\'s user_id never set!'.format(self.user)
+                        )
+
                 response = Fetcher.request(
-                        META_ENDPOINT.format(self.user),
+                        GRAPH_QUERY_ENDPOINT,
                         params={
-                            # FIXME: pagination is broken
-                            'max_id': self.last_id,
+                            # XXX: static magic number (no idea how this
+                            # number is determined)
+                            # https://stackoverflow.com/a/49266320
+                            # https://stackoverflow.com/a/47243409
+                            'query_id': 17888483320059182,
+
+                            'id': self.user_id,
+                            'first': 20, # number of media to request
+                            'after': self.last_id,
                         },
                 )
                 if Fetcher._is_bad_response(response):
@@ -1017,7 +1071,6 @@ class Fetcher(object):
 
                     else:
                         self._reset_error_delay()
-                        self._parse_meta_data(data)
                         if self.has_enough_followers is False:
                             success = False
 

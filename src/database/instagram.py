@@ -46,7 +46,7 @@ class InstagramDatabase(Database):
     def __unpack(self, item):
         return (
                 item['shortcode'],
-                item['edge_liked_by']['count'],
+                item['edge_media_preview_like']['count'],
                 item['edge_media_to_comment']['count'],
                 item['taken_at_timestamp'],
 
