@@ -173,7 +173,8 @@ def display_id(thing):
             except AttributeError:
                 pass # message or other thing
 
-        return thing
+        # str() so that display_id can be fed safely directly to the logger
+        return str(thing)
 
     return _network_wrapper(_display_id, thing)
 
