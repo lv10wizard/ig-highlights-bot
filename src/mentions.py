@@ -56,7 +56,18 @@ class Mentions(ProcessMixin, StreamMixin):
                 ).format(prefixed_name)
 
         if banned or blacklisted:
-            if not reason:
+            # TODO: create mentions-pm.db
+            # TODO: check mentions-pm.db
+            # XXX: workaround for change in mentions.db causing all mentions to
+            # be re-parsed (mentions-pm.db did not yet exist)
+            #   (1521221506 is the time.time() when this code was written)
+            if mention.created_utc <= 1521221506:
+                logger.id(logger.debug, self,
+                        'WORKAROUND: Skipping duplicate pm to {color_author}',
+                        color_author=reddit.author(mention),
+                )
+
+            elif not reason:
                 # this shouldn't happen
                 logger.id(logger.warn, self,
                         'Cannot send pm to {color_author}: no reason!',
@@ -83,6 +94,7 @@ class Mentions(ProcessMixin, StreamMixin):
                         ' but I cannot reply because {reason}.'
                 )
 
+                # TODO: if success: insert into mentions-pm.db
                 self._reddit.do_send_pm(
                         to=reddit.author(mention),
 
@@ -113,7 +125,7 @@ class Mentions(ProcessMixin, StreamMixin):
             return
 
         logger.id(logger.info, self,
-                'Processing {color_submission}',
+                'Processing {color_submission} ...',
                 color_submission=reddit.display_id(submission),
         )
 
@@ -143,6 +155,7 @@ class Mentions(ProcessMixin, StreamMixin):
             if ig_usernames:
                 replyable_thing = True
                 self.filter.enqueue(comment, ig_usernames, mention)
+        # TODO? if not replying, determine reason(s) and PM mention author
         # TODO? reply once to the mention with all ig_usernames instead of to
         # each individual submission/comment
 

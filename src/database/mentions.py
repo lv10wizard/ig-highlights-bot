@@ -14,20 +14,36 @@ class MentionsDatabase(Database):
                 'mentions('
                 '   uid INTEGER PRIMARY KEY,'
                 '   submission_fullname TEXT NOT NULL,'
+                '   mention_fullname TEXT NOT NULL,'
                 '   comment_author TEXT NOT NULL,'
-                '   UNIQUE(submission_fullname, comment_author)'
+                '   UNIQUE('
+                '       submission_fullname,'
+                '       mention_fullname,'
+                '       comment_author'
+                '   )'
                 ')'
         )
 
     def _insert(self, mention):
         from src import reddit
 
-        fullname = reddit.fullname(reddit.get_submission_for(mention))
+        submission_fullname = reddit.fullname(
+                reddit.get_submission_for(mention)
+        )
+        mention_fullname = reddit.fullname(mention)
         self._db.execute(
-                'INSERT INTO mentions(submission_fullname, comment_author)'
-                ' VALUES(?, ?)',
+                'INSERT INTO'
+                ' mentions('
+                '   submission_fullname,'
+                '   mention_fullname,'
+                '   comment_author'
+                ') VALUES(?, ?, ?)',
                 # assumption: mention cannot itself be a submission
-                (fullname, mention.author.name),
+                (
+                    submission_fullname,
+                    mention_fullname,
+                    reddit.author(mention, replace_none=False),
+                ),
         )
 
     def has_seen(self, mention):
@@ -37,11 +53,11 @@ class MentionsDatabase(Database):
         """
         from src import reddit
 
-        fullname = reddit.fullname(reddit.get_submission_for(mention))
+        mention_fullname = reddit.fullname(mention)
         cursor = self._db.execute(
-                'SELECT submission_fullname FROM mentions'
-                ' WHERE submission_fullname = ? AND comment_author = ?',
-                (fullname, mention.author.name),
+                'SELECT mention_fullname FROM mentions'
+                ' WHERE mention_fullname = ? AND comment_author = ?',
+                (mention_fullname, reddit.author(mention, replace_none=False)),
         )
         return bool(cursor.fetchone())
 

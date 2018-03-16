@@ -96,7 +96,8 @@ class Filter(object):
             return False
 
         if thing in self.reply_queue:
-            # already queued for a reply; not sure how this would happen
+            # already queued for a reply (may happen if re-summoned to a
+            # post)
             logger.id(logger.info, self,
                     '{color_thing} is already queued for a reply: skipping.',
                     color_thing=reddit.display_id(thing),
