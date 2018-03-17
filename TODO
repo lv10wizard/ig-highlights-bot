@@ -510,6 +510,19 @@ O. --backup, --load-backup
 
 - lower memory footprint
 
+- pm mention author on success/failure so that they always have some indication
+    that the bot saw the summon
+    - need to get all instagram usernames found and then filter afterward
+        (instead of filter -> parse)
+        - link to previously replied usernames in post (may be spam-filtered)
+        - reason for no reply
+        ? include guessed usernames?
+    ? note that subreddit was added to list of crawled subreddits if added?
+    - mentions-pm database
+        (mention_fullname, mention_author, submission_fullname, time?)
+    - on-success pm should link to the bot's comment & note that it may not
+        be visible if spam-filtered (should be visible from bot's profile)
+
 ? download user's media content & upload to imgur(?)
     - keep database of downloaded urls per user
         > should probably be separate from InstagramDatabase cache
