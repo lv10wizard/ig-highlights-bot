@@ -66,7 +66,9 @@ class Controversial(ProcessMixin, StreamMixin):
                 # comments then
                 #   1. the bot is probably unwanted in general and
                 #   2. it will delete more the next pass
-                time_filter='all', limit=100,
+                # [March 20, 2018] increased limit to 200 because the stream
+                # is only returning 75 elements for some reason
+                time_filter='all', limit=200,
         )
 
     def _run_forever(self):
