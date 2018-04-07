@@ -1049,7 +1049,15 @@ class Fetcher(object):
                             # number is determined)
                             # https://stackoverflow.com/a/49266320
                             # https://stackoverflow.com/a/47243409
-                            'query_id': 17888483320059182,
+                            # XXX: forbidden as of April 6, 2018
+                            # 'query_id': 17888483320059182,
+
+                            # XXX: this query_hash will probably be invalidated
+                            # in the near future since it seems like these are
+                            # intended for instagram internal usage, not public
+                            # use.
+                            # https://stackoverflow.com/a/49270809
+                            'query_hash': '472f257a40c653c64c666ce877d59d2b',
 
                             'id': self.user_id,
                             'first': 20, # number of media to request
