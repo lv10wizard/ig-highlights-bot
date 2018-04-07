@@ -239,7 +239,16 @@ class Formatter(object):
                 metadata.append(Formatter.format_url(ig.external_url))
 
             user_reply.append(header)
-            user_reply.append(' - '.join(highlights))
+            if len(ig_list) == 1:
+                # place each highlight on its own line if there is only
+                # one user
+                user_reply.append(
+                        '\n'.join(['- {0}'.format(h) for h in highlights])
+                )
+            else:
+                # minimize the amount of vertical space the bot's replies
+                # eat by placing highlights on a single line
+                user_reply.append(' - '.join(highlights))
             if metadata:
                 # only format in metadata if we were able to fetch it
                 # (this shouldn't happen)
