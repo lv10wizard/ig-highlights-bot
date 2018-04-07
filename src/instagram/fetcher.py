@@ -100,6 +100,13 @@ class Fetcher(object):
                     headers={
                         'User-Agent': Instagram._useragent,
                     },
+                    cookies={
+                        # graphql queries return 403 when this cookie is not
+                        # present; I'm not entirely sure how/where this is set
+                        # (99% sure it is from one of their various minified
+                        #  javascript files)
+                        'ig_pr': '1',
+                    },
             )
         return Fetcher._requestor
 
@@ -1047,17 +1054,17 @@ class Fetcher(object):
                         params={
                             # XXX: static magic number (no idea how this
                             # number is determined)
+                            # XXX: it appears that query_{id/hash} are intended
+                            # for instagram's internal use. I have no idea
+                            # if/when they will be invalidated.
                             # https://stackoverflow.com/a/49266320
                             # https://stackoverflow.com/a/47243409
-                            # XXX: forbidden as of April 6, 2018
-                            # 'query_id': 17888483320059182,
+                            'query_id': 17888483320059182,
 
-                            # XXX: this query_hash will probably be invalidated
-                            # in the near future since it seems like these are
-                            # intended for instagram internal usage, not public
-                            # use.
+                            # XXX: query_hash has been commented out because it
+                            # doesn't really matter which is used
                             # https://stackoverflow.com/a/49270809
-                            'query_hash': '472f257a40c653c64c666ce877d59d2b',
+                            # 'query_hash': '472f257a40c653c64c666ce877d59d2b',
 
                             'id': self.user_id,
                             'first': 20, # number of media to request
